@@ -1,0 +1,443 @@
+/* ========================================================
+   APPLE DESIGN LANGUAGE - UI REBOOT
+   ======================================================== */
+
+:root {
+  /* Apple Color Palette */
+  --apple-bg: #FFFFFF;
+  --apple-bg-secondary: #F5F5F7;
+  --apple-bg-tertiary: #EBEBF0;
+
+  --apple-text-primary: #000000;
+  --apple-text-secondary: #86868B;
+
+  --apple-accent: #0071E3;
+  --apple-accent-hover: #0056B3;
+
+  --apple-success: #34C759;
+  --apple-warning: #FF9500;
+  --apple-error: #FF3B30;
+
+  /* Spacing */
+  --apple-spacing-xs: 4px;
+  --apple-spacing-sm: 8px;
+  --apple-spacing-md: 16px;
+  --apple-spacing-lg: 24px;
+  --apple-spacing-xl: 32px;
+  --apple-spacing-2xl: 48px;
+  --apple-spacing-3xl: 64px;
+
+  /* Corner Radius */
+  --apple-radius-sm: 8px;
+  --apple-radius-md: 12px;
+  --apple-radius-lg: 16px;
+
+  /* Shadows */
+  --apple-shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --apple-shadow-light: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --apple-shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --apple-shadow-deep: 0 12px 32px rgba(0, 0, 0, 0.16);
+
+  /* Transitions */
+  --apple-transition: cubic-bezier(0.34, 1.56, 0.64, 1) 250ms;
+}
+
+/* Base resets applying Apple Design */
+body,
+input,
+textarea,
+select,
+button {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+  background-color: var(--apple-bg);
+  color: var(--apple-text-primary);
+  margin: 0;
+  padding: 0;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  font-size: 15px;
+}
+
+/* Typography Scale */
+h1 {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 16px;
+}
+
+h2 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 16px;
+}
+
+h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+h4,
+h5,
+h6 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+small,
+.text-sm,
+.text-muted {
+  font-size: 13px !important;
+  color: var(--apple-text-secondary);
+}
+
+/* Main Layout Architecture */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--apple-bg);
+}
+
+.app-header {
+  height: 56px;
+  min-height: 56px;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--apple-bg);
+  border-bottom: 1px solid var(--apple-bg-tertiary);
+  z-index: 50;
+  box-sizing: border-box;
+}
+
+.app-main {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  flex: 1;
+  overflow: hidden;
+  transition: grid-template-columns var(--apple-transition);
+}
+
+/* Sidebar Styling */
+.apple-sidebar {
+  background-color: var(--apple-bg-secondary);
+  border-right: 1px solid var(--apple-bg-tertiary);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  transition: width var(--apple-transition), transform var(--apple-transition);
+  padding: var(--apple-spacing-md) var(--apple-spacing-sm);
+}
+
+.apple-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.apple-sidebar::-webkit-scrollbar-thumb {
+  background-color: #D1D1D6;
+  border-radius: 10px;
+}
+
+.apple-sidebar[data-collapsed="true"] {
+  width: 60px;
+  padding: var(--apple-spacing-md) 4px;
+}
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--apple-radius-sm);
+  color: var(--apple-text-primary);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  transition: background-color 150ms ease, color 150ms ease;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  border-left: 3px solid transparent;
+}
+
+.sidebar-nav-item:hover {
+  background-color: #E8E8ED;
+}
+
+.sidebar-nav-item.active {
+  background-color: #E8E8ED;
+  border-left-color: var(--apple-accent);
+}
+
+.sidebar-nav-icon {
+  font-size: 18px;
+  min-width: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.sidebar-section-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--apple-text-secondary);
+  font-weight: 600;
+  padding: 0 12px;
+  margin: var(--apple-spacing-md) 0 var(--apple-spacing-sm) 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar-divider {
+  height: 1px;
+  background-color: var(--apple-bg-tertiary);
+  margin: var(--apple-spacing-sm) 0;
+}
+
+/* Chat Area Styling */
+.chat-area {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--apple-bg);
+  position: relative;
+  overflow: hidden;
+}
+
+.messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--apple-spacing-lg) var(--apple-spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--apple-spacing-md);
+}
+
+.chat-message-bubble {
+  padding: var(--apple-spacing-md) var(--apple-spacing-lg);
+  border-radius: var(--apple-radius-md);
+  max-width: 80%;
+  font-size: 16px;
+  line-height: 1.5;
+  box-shadow: var(--apple-shadow-subtle);
+  animation: slideUp 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chat-message-user {
+  background-color: var(--apple-accent);
+  color: #FFFFFF;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-message-ai {
+  background-color: var(--apple-bg-secondary);
+  color: var(--apple-text-primary);
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+  border: 1px solid var(--apple-bg-tertiary);
+}
+
+.chat-input-wrapper {
+  padding: var(--apple-spacing-md) var(--apple-spacing-lg) var(--apple-spacing-lg);
+  background: linear-gradient(to top, rgba(255, 255, 255, 1) 70%, rgba(255, 255, 255, 0) 100%);
+  position: relative;
+}
+
+.chat-input-box {
+  background-color: var(--apple-bg-secondary);
+  border-radius: var(--apple-radius-md);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--apple-shadow-light);
+  border: 1px solid transparent;
+  transition: all 200ms ease;
+}
+
+.chat-input-box:focus-within {
+  border-color: var(--apple-accent);
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+}
+
+.chat-input-field {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  color: var(--apple-text-primary);
+  outline: none;
+}
+
+.chat-input-field::placeholder {
+  color: var(--apple-text-secondary);
+}
+
+.chat-send-btn {
+  background-color: var(--apple-accent);
+  color: #FFFFFF;
+  border: none;
+  border-radius: var(--apple-radius-sm);
+  padding: 10px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms, transform 150ms;
+}
+
+.chat-send-btn:hover {
+  background-color: var(--apple-accent-hover);
+}
+
+.chat-send-btn:active {
+  transform: scale(0.96);
+}
+
+.chat-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Generic Buttons - Apple Style */
+.btn-apple-primary {
+  background-color: var(--apple-accent);
+  color: #FFFFFF;
+  border-radius: var(--apple-radius-sm);
+  padding: 10px 16px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 200ms;
+}
+
+.btn-apple-secondary {
+  background-color: var(--apple-bg-secondary);
+  color: var(--apple-text-primary);
+  border-radius: var(--apple-radius-sm);
+  padding: 10px 16px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 200ms;
+}
+
+/* Modals */
+.apple-modal-backdrop {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.apple-modal-card {
+  background: var(--apple-bg);
+  border-radius: var(--apple-radius-lg);
+  padding: var(--apple-spacing-lg);
+  box-shadow: var(--apple-shadow-deep);
+}
+
+/* Override existing DashboardLayout Main Area content padding */
+.dashboard-layout__content {
+  padding: var(--apple-spacing-lg) var(--apple-spacing-md);
+  max-width: 100%;
+}
+
+/* Breakpoints */
+
+/* Tablet (768px - 1023px) */
+@media (max-width: 1023px) {
+  .app-main {
+    grid-template-columns: 60px 1fr;
+  }
+
+  .apple-sidebar {
+    width: 60px;
+    padding: var(--apple-spacing-md) 4px;
+  }
+
+  .sidebar-section-title,
+  .sidebar-nav-item span:not(.sidebar-nav-icon) {
+    display: none;
+  }
+
+  .sidebar-nav-item {
+    justify-content: center;
+    padding: 10px 0;
+  }
+
+  .sidebar-nav-icon {
+    font-size: 20px;
+    margin: 0;
+  }
+
+  .messages-container {
+    max-width: 100%;
+  }
+}
+
+/* Mobile (< 768px) */
+@media (max-width: 767px) {
+  .app-main {
+    grid-template-columns: 1fr;
+  }
+
+  .apple-sidebar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    width: 280px;
+    height: calc(100vh - 56px);
+    z-index: 1000;
+    transform: translateX(-100%);
+    box-shadow: var(--apple-shadow-deep);
+  }
+
+  .apple-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .chat-message-bubble {
+    max-width: 90%;
+  }
+
+  .chat-input-wrapper {
+    padding: var(--apple-spacing-sm) var(--apple-spacing-md) var(--apple-spacing-md);
+  }
+}
+
+/* Dark Mode Overrides */
+body.dark-mode {
+  --apple-bg: #000000;
+  --apple-bg-secondary: #1D1D1F;
+  --apple-bg-tertiary: #424245;
+  --apple-text-primary: #FFFFFF;
+  --apple-text-secondary: #A1A1A6;
+  --apple-shadow-subtle: 0 1px 3px rgba(255, 255, 255, 0.05);
+  --apple-shadow-light: 0 2px 8px rgba(255, 255, 255, 0.05);
+  --apple-shadow-medium: 0 4px 16px rgba(0, 0, 0, 1);
+  --apple-shadow-deep: 0 12px 32px rgba(0, 0, 0, 1);
+}

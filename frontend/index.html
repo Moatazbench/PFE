@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>frontend</title>
+  </head>
+  <body>
+    <!-- Error Catcher injected for diagnosis -->
+    <div id="react-error-overlay" style="display:none; position:fixed; z-index:999999; left:0; top:0; width:100%; height:100%; background:red; color:white; padding:2rem; overflow:auto;">
+      <h1>FATAL REACT ERROR</h1>
+      <pre id="react-error-log" style="white-space:pre-wrap; font-size:18px;"></pre>
+    </div>
+    <script>
+      window.addEventListener("error", function(e) {
+        document.getElementById("react-error-overlay").style.display = "block";
+        document.getElementById("react-error-log").innerText += e.message + "\n" + (e.error && e.error.stack ? e.error.stack : "") + "\n\n";
+      });
+      window.addEventListener("unhandledrejection", function(e) {
+        document.getElementById("react-error-overlay").style.display = "block";
+        document.getElementById("react-error-log").innerText += "Promise Rejection: " + e.reason + "\n\n";
+      });
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

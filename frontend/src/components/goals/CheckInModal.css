@@ -1,0 +1,55 @@
+.check-in-select {
+    font-weight: 600;
+    color: var(--text-dark);
+}
+.check-in-kpis {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: #f8fafc;
+    padding: 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+.check-in-kpis > label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+}
+.check-in-kpi-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.check-in-kpi-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.kpi-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+.kpi-values {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.kpi-number-input {
+    width: 70px !important;
+    padding: 4px 8px !important;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+.kpi-target {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+.kpi-slider {
+    width: 100%;
+    margin-top: 4px;
+}
