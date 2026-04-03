@@ -12,9 +12,16 @@ const app = express();
 
 // Security middlewares
 app.use(helmet({ crossOriginResourcePolicy: false }));
-app.use(cors({ 
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173', 
-  credentials: true 
+const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000'];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
 }));
 app.use(express.json());
 app.use(xss());
@@ -92,30 +99,30 @@ console.log('⏳ Connecting to MongoDB...');
 
 // Connect to MongoDB and then start the server
 mongoose.connect(mongoUri, {
-    serverSelectionTimeoutMS: 5000,
-    connectTimeoutMS: 10000,
+  serverSelectionTimeoutMS: 5000,
+  connectTimeoutMS: 10000,
 })
   .then(() => {
     console.log('✅ Connected to MongoDB');
-    
+
     // Start Cron Jobs
-    try { 
-      const { startDeadlineCron } = require('./cron/deadlineCron'); 
-      startDeadlineCron(); 
+    try {
+      const { startDeadlineCron } = require('./cron/deadlineCron');
+      startDeadlineCron();
     } catch (err) {
       console.error('Failed to start deadline cron:', err.message);
     }
-    
-    try { 
-      const { startReminderCron } = require('./cron/reminderCron'); 
-      startReminderCron(); 
+
+    try {
+      const { startReminderCron } = require('./cron/reminderCron');
+      startReminderCron();
     } catch (err) {
       console.error('Failed to start reminder cron:', err.message);
     }
-    
-    try { 
-      const { startGoalDeadlineCron } = require('./cron/goalDeadlineCron'); 
-      startGoalDeadlineCron(); 
+
+    try {
+      const { startGoalDeadlineCron } = require('./cron/goalDeadlineCron');
+      startGoalDeadlineCron();
     } catch (err) {
       console.error('Failed to start goal deadline cron:', err.message);
     }
