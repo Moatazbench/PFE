@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - develop
 
 jobs:
   docker:
@@ -39,3 +40,23 @@ jobs:
           tags: |
             moatazbench/pfe-frontend:latest
             moatazbench/pfe-frontend:${{ github.sha }}
+
+      - name: Jira comment (success)
+        if: success()
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_MSG: "CI: Docker build & push SUCCESS for ${{ github.ref_name }} @ ${{ github.sha }}"
+        run: |
+          bash .github/scripts/jira-comment.sh "$JIRA_MSG"
+
+      - name: Jira comment (failure)
+        if: failure()
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_MSG: "CI: Docker build & push FAILED for ${{ github.ref_name }} @ ${{ github.sha }}"
+        run: |
+          bash .github/scripts/jira-comment.sh "$JIRA_MSG"
