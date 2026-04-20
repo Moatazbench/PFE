@@ -47,7 +47,7 @@ jobs:
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-          JIRA_MSG: "CI: Docker build & push SUCCESS for ${{ github.ref_name }} @ ${{ github.sha }}"
+          JIRA_MSG: "${{ github.event.head_commit.message }} | CI SUCCESS on ${{ github.ref_name }} @ ${{ github.sha }}"
         run: |
           bash .github/scripts/jira-comment.sh "$JIRA_MSG"
 
@@ -57,6 +57,6 @@ jobs:
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-          JIRA_MSG: "CI: Docker build & push FAILED for ${{ github.ref_name }} @ ${{ github.sha }}"
+          JIRA_MSG: "${{ github.event.head_commit.message }} | CI FAILED on ${{ github.ref_name }} @ ${{ github.sha }}"
         run: |
           bash .github/scripts/jira-comment.sh "$JIRA_MSG"
