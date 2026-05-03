@@ -74,10 +74,14 @@ const ObjectiveSchema = new mongoose.Schema({
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   cycle: { type: mongoose.Schema.Types.ObjectId, ref: 'Cycle', required: true, index: true },
   category: { type: String, enum: ['individual', 'team'], default: 'individual' },
+  assignedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   weight: { type: Number, required: true, min: 1, max: 100 },
-  deadline: { type: Date, required: false },
   achievementPercent: { type: Number, min: 0, max: 100, default: null },
   selfAssessment: { type: String, default: '' },
+  finalSelfAssessment: { type: String, default: '' },
+  finalSelfRating: { type: Number, min: 1, max: 5, default: null },
+  finalSelfPercent: { type: Number, min: 0, max: 100, default: null },
+  finalSelfSubmittedAt: { type: Date, default: null },
   managerAdjustedPercent: { type: Number, min: 0, max: 100, default: null },
   managerComments: { type: String, default: '' },
   weightedScore: { type: Number, default: null },
@@ -128,13 +132,14 @@ const ObjectiveSchema = new mongoose.Schema({
     default: '',
   },
   evaluationComment: { type: String, default: '' },
+  evaluationNumericRating: { type: Number, min: 1, max: 5, default: null },
+  evaluationEvidence: { type: String, default: '' },
   evaluatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   evaluatedAt: { type: Date, default: null },
 
   validatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   validatedAt: { type: Date, default: null },
 
-  startDate: { type: Date, default: null },
   labels: [{ type: String, trim: true }],
   visibility: {
     type: String,
@@ -162,5 +167,17 @@ ObjectiveSchema.index({ owner: 1, cycle: 1 });
 ObjectiveSchema.index({ status: 1 });
 ObjectiveSchema.index({ category: 1 });
 ObjectiveSchema.index({ source: 1 });
+
+ObjectiveSchema.pre('save', function syncWeightedScore(next) {
+  if (this.achievementPercent == null || !Number.isFinite(this.weight)) {
+    this.weightedScore = null;
+    return next();
+  }
+
+  const normalizedAchievement = Math.max(0, Math.min(100, Number(this.achievementPercent)));
+  this.achievementPercent = normalizedAchievement;
+  this.weightedScore = Number(((Number(this.weight) * normalizedAchievement) / 100).toFixed(2));
+  next();
+});
 
 module.exports = mongoose.model('Objective', ObjectiveSchema);

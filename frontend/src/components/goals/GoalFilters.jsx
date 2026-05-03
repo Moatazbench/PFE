@@ -6,15 +6,14 @@ function GoalFilters({ activeTab, onTabChange, cycles, selectedCycle, onCycleCha
     var isManager = user && (user.role === 'TEAM_LEADER' || user.role === 'ADMIN' || user.role === 'HR');
 
     var tabs = [
-        { key: 'my', label: '📋 My Goals' },
+        { key: 'my', label: '📋 My Objectives' },
         { key: 'team', label: '👥 My Team' },
     ];
     if (isManager) {
-        tabs.push({ key: 'pending', label: '⏳ Pending Approvals' });
-        tabs.push({ key: 'change_requests', label: '📝 Change Requests' });
+        tabs.push({ key: 'pending', label: '⏳ Pending Review' });
         tabs.push({ key: 'awaiting_eval', label: '📊 Awaiting Evaluation' });
     }
-    tabs.push({ key: 'all', label: '🌐 All Goals' });
+    tabs.push({ key: 'all', label: '🌐 All Objectives' });
 
 
     return (
@@ -23,6 +22,7 @@ function GoalFilters({ activeTab, onTabChange, cycles, selectedCycle, onCycleCha
                 {tabs.map(function (tab) {
                     return (
                         <button
+                            type="button"
                             key={tab.key}
                             className={'goals-filters__tab' + (activeTab === tab.key ? ' goals-filters__tab--active' : '')}
                             onClick={function () { onTabChange(tab.key); }}

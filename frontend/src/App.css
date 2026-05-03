@@ -5579,7 +5579,7 @@
 .goals-table {
   background: #fff;
   border-radius: 16px;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
 }
 
@@ -5689,6 +5689,7 @@
 
 .goals-table__col--actions {
   position: relative;
+  overflow: visible;
 }
 
 .goals-table__action-btn {
@@ -5714,17 +5715,17 @@
   display: none;
   position: absolute;
   right: 0;
-  top: 100%;
+  top: calc(100% + 8px);
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  z-index: 100;
-  min-width: 150px;
+  z-index: 200;
+  min-width: 170px;
   padding: 6px;
 }
 
-.goals-table__action-menu:hover .goals-table__dropdown {
+.goals-table__action-menu--open .goals-table__dropdown {
   display: flex;
   flex-direction: column;
 }
@@ -6205,13 +6206,14 @@
 
 .goal-modal {
   background: #fff;
-  border-radius: 20px;
-  width: 650px;
+  border-radius: 24px;
+  width: 850px;
   max-width: 95vw;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-  animation: slideUp 0.3s ease;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid #f1f5f9;
 }
 
 @keyframes slideUp {
@@ -6230,14 +6232,18 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px 28px 16px;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 24px 36px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #f8fafc;
+  border-radius: 24px 24px 0 0;
 }
 
 .goal-modal__header h2 {
   margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1e293b;
+  letter-spacing: -0.02em;
 }
 
 .goal-modal__close {
@@ -6257,39 +6263,45 @@
 }
 
 .goal-modal__form {
-  padding: 20px 28px 28px;
+  padding: 24px 36px 36px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
 .goal-modal__field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .goal-modal__field label {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  color: #374151;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .goal-modal__field input,
 .goal-modal__field select,
 .goal-modal__field textarea {
-  padding: 10px 14px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  font-size: 0.9rem;
-  transition: border 0.2s;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  background: #f8fafc;
+  color: #1e293b;
 }
 
 .goal-modal__field input:focus,
 .goal-modal__field select:focus,
 .goal-modal__field textarea:focus {
-  border-color: #7C3AED;
+  border-color: #8b5cf6;
   outline: none;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
 }
 
 .goal-modal__field input[type="range"] {
@@ -6301,29 +6313,33 @@
 .goal-modal__row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 20px;
 }
 
 .goal-modal__actions {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   justify-content: flex-end;
-  padding-top: 8px;
+  padding-top: 16px;
+  margin-top: 12px;
+  border-top: 1px solid #f1f5f9;
 }
 
 .goal-modal__submit {
-  background: linear-gradient(135deg, #7C3AED, #6d28d9);
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
   color: #fff;
   border: none;
-  padding: 10px 24px;
-  border-radius: 10px;
+  padding: 12px 28px;
+  border-radius: 12px;
   font-weight: 600;
+  font-size: 0.95rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .goal-modal__submit:hover {
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 10px 20px -10px rgba(139, 92, 246, 0.5);
+  transform: translateY(-1px);
 }
 
 .goal-modal__submit:disabled {
@@ -6332,13 +6348,20 @@
 }
 
 .goal-modal__cancel {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: #f1f5f9;
+  color: #475569;
   border: none;
-  padding: 10px 24px;
-  border-radius: 10px;
+  padding: 12px 28px;
+  border-radius: 12px;
   font-weight: 600;
+  font-size: 0.95rem;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.goal-modal__cancel:hover {
+  background: #e2e8f0;
+  color: #1e293b;
 }
 
 /* Feed View */
@@ -6663,7 +6686,7 @@
 
 .validation-panel__grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
 }
 
@@ -6731,6 +6754,15 @@
   color: #065f46;
   font-size: 0.9rem;
   text-align: center;
+}
+
+.validation-warning {
+  background: #fffbeb;
+  border: 1px solid #facc15;
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #92400e;
+  font-size: 0.9rem;
 }
 
 /* ===== EDIT BUTTON, DELETE BUTTON ON TABLE ROWS ===== */

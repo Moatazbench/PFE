@@ -1,6 +1,18 @@
 // AI Controller — Context-aware, randomized responses
 // Each function uses template pools + random selection to generate different outputs every time
 
+const aiService = require('../services/aiService');
+const reviewContextService = require('../services/reviewContextService');
+const Objective = require('../models/Objective');
+const User = require('../models/User');
+const { createAuditLog } = require('../utils/auditHelper');
+
+const REVIEW_ROLES = ['ADMIN', 'HR', 'TEAM_LEADER'];
+
+function getRequesterId(req) {
+    return String(req.user?.id || req.user?._id || '');
+}
+
 function pickRandom(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -10,97 +22,136 @@ function pickMultiple(arr, count) {
     return shuffled.slice(0, Math.min(count, shuffled.length));
 }
 
-// ============ GOAL GENERATION ============
-exports.generateGoal = async (req, res) => {
+// ============ AI GOAL SUGGESTIONS ============
+exports.generateGoalSuggestions = async (req, res) => {
     try {
-        const { role, department, context } = req.body;
-        const dept = (department || 'General').toLowerCase();
-        const ctx = (context || '').toLowerCase();
+        const requesterId = getRequesterId(req);
+        const { role, context } = req.body;
+        const userId = req.body.userId || requesterId;
 
-        const goalTemplates = {
-            sales: [
-                { title: 'Increase Quarterly Revenue by {pct}%', desc: 'Drive revenue growth through expanded outreach and improved conversion rates targeting {segment} clients.' },
-                { title: 'Expand Client Base by {num} Accounts', desc: 'Develop and execute a targeted acquisition strategy to bring in {num} new enterprise accounts this quarter.' },
-                { title: 'Improve Sales Conversion Rate to {pct}%', desc: 'Optimize the sales funnel by refining lead qualification, follow-up cadences, and proposal quality.' },
-                { title: 'Reduce Average Sales Cycle by {num} Days', desc: 'Streamline the sales process through better pipeline management and faster stakeholder alignment.' },
-                { title: 'Launch {num} New Product Partnerships', desc: 'Identify and establish strategic partnerships that create cross-selling opportunities and increase deal sizes.' },
-                { title: 'Achieve {pct}% Customer Retention Rate', desc: 'Implement proactive account management practices to reduce churn and increase customer lifetime value.' },
-            ],
-            engineering: [
-                { title: 'Reduce System Latency by {pct}%', desc: 'Optimize database queries, implement caching layers, and refactor critical code paths for better performance.' },
-                { title: 'Achieve {pct}% Code Coverage', desc: 'Establish comprehensive unit and integration testing to improve code quality and reduce production bugs.' },
-                { title: 'Migrate {num} Legacy Services to Microservices', desc: 'Decompose monolithic components into scalable, independently deployable microservices.' },
-                { title: 'Reduce Deployment Time by {pct}%', desc: 'Automate CI/CD pipelines and implement blue-green deployments for faster, safer releases.' },
-                { title: 'Implement Zero-Downtime Architecture', desc: 'Design and deploy infrastructure that supports rolling updates without service interruption.' },
-                { title: 'Reduce Bug Escape Rate by {pct}%', desc: 'Strengthen pre-release testing processes and implement automated regression test suites.' },
-            ],
-            hr: [
-                { title: 'Improve Employee Engagement Score by {pct}%', desc: 'Design and execute engagement initiatives based on survey insights and industry best practices.' },
-                { title: 'Reduce Time-to-Hire by {num} Days', desc: 'Streamline the recruitment pipeline through ATS optimization and structured interview processes.' },
-                { title: 'Launch {num} Professional Development Programs', desc: 'Create targeted learning paths for career progression and skill development across departments.' },
-                { title: 'Achieve {pct}% Training Completion Rate', desc: 'Ensure all team members complete mandatory and elective training modules within the evaluation period.' },
-                { title: 'Reduce Voluntary Turnover by {pct}%', desc: 'Implement retention strategies including career pathing, mentorship programs, and competitive compensation reviews.' },
-            ],
-            marketing: [
-                { title: 'Increase Website Traffic by {pct}%', desc: 'Drive organic and paid traffic through SEO optimization, content marketing, and targeted campaigns.' },
-                { title: 'Generate {num} Marketing Qualified Leads', desc: 'Develop multi-channel lead generation campaigns targeting high-intent prospects.' },
-                { title: 'Improve Brand Awareness Score by {pct}%', desc: 'Execute brand awareness campaigns across digital and traditional channels to increase market visibility.' },
-                { title: 'Launch {num} Successful Marketing Campaigns', desc: 'Plan, execute, and measure ROI-positive campaigns across email, social, and digital advertising channels.' },
-            ],
-            general: [
-                { title: 'Improve Team Productivity by {pct}%', desc: 'Streamline workflows, eliminate bottlenecks, and implement agile methodologies to boost output quality.' },
-                { title: 'Complete {num} Strategic Projects On Time', desc: 'Deliver key strategic initiatives within scope, timeline, and budget constraints.' },
-                { title: 'Reduce Operational Costs by {pct}%', desc: 'Identify and implement cost optimization measures while maintaining service quality standards.' },
-                { title: 'Achieve {pct}% Stakeholder Satisfaction', desc: 'Improve communication, deliver consistent results, and proactively address stakeholder needs.' },
-                { title: 'Implement {num} Process Improvements', desc: 'Analyze current processes, identify inefficiencies, and deploy measurable improvements within the quarter.' },
-                { title: 'Develop Cross-Functional Collaboration Framework', desc: 'Establish formal collaboration channels and shared objectives between departments to break down silos.' },
-                { title: 'Enhance Data-Driven Decision Making', desc: 'Implement dashboards, reporting tools, and KPI tracking to support evidence-based strategic decisions.' },
-            ]
+        // Gather real employee data from DB
+        const Evaluation = require('../models/Evaluation');
+
+        // Get last completed objectives (max 5, lean)
+        const completedObjectives = await Objective.find({
+            owner: userId,
+            status: { $in: ['evaluated', 'locked', 'approved'] },
+        })
+            .sort({ updatedAt: -1 })
+            .limit(5)
+            .select('title evaluationRating achievementPercent')
+            .lean();
+
+        // Get latest evaluation for strengths/weaknesses
+        const latestEval = await Evaluation.findOne({ employeeId: userId })
+            .sort({ createdAt: -1 })
+            .select('strengths areasForImprovement overallComments')
+            .lean();
+
+        // Get user role from DB if not provided
+        let userRole = role || req.user?.role || 'EMPLOYEE';
+        if (userId !== requesterId) {
+            const targetUser = await User.findById(userId).select('role').lean();
+            if (targetUser) userRole = targetUser.role;
+        }
+
+        // Build compact input for AI (strict limit)
+        const employeeData = {
+            role: userRole,
+            strengths: latestEval?.strengths || '',
+            weaknesses: latestEval?.areasForImprovement || '',
+            completedObjectives: completedObjectives.map(o => ({
+                title: o.title,
+                rating: o.evaluationRating || '',
+                achievement: o.achievementPercent || 0,
+            })),
         };
 
-        // Determine which template pool to use
-        var pool = goalTemplates.general;
-        var deptKeys = Object.keys(goalTemplates);
-        for (var i = 0; i < deptKeys.length; i++) {
-            if (dept.includes(deptKeys[i]) || ctx.includes(deptKeys[i])) {
-                pool = goalTemplates[deptKeys[i]];
-                break;
-            }
-        }
-
-        var template = pickRandom(pool);
-        var pct = pickRandom([10, 15, 20, 25, 30]);
-        var num = pickRandom([3, 5, 8, 10, 12]);
-        var segments = ['enterprise', 'mid-market', 'SMB', 'strategic', 'high-value'];
-
-        var title = template.title.replace('{pct}', pct).replace('{num}', num);
-        var description = template.desc.replace('{pct}', pct).replace('{num}', num).replace('{segment}', pickRandom(segments));
-
-        // Append user context if provided
+        // Add optional context
         if (context && context.trim()) {
-            description += ' Context: ' + context.trim() + '.';
+            employeeData.context = context.trim().slice(0, 200);
         }
 
-        var successIndicators = [
-            'Measurable progress tracked weekly with final target achieved by deadline.',
-            'Key milestones completed on schedule with documented evidence of improvement.',
-            'Quantitative metrics show consistent upward trend reaching target threshold.',
-            'Stakeholder feedback confirms positive impact with supporting data validation.',
-            'Dashboard metrics demonstrate sustained improvement over the evaluation period.',
-        ];
+        // Try AI generation
+        let suggestions = null;
+        if (aiService.isConfigured()) {
+            suggestions = await aiService.generateGoalSuggestions(employeeData);
+        }
 
-        var weights = [15, 20, 25, 30];
+        // Fallback: rule-based from real data
+        if (!suggestions) {
+            suggestions = buildGoalSuggestionsFallback(employeeData);
+        }
 
-        res.json({
-            title: title,
-            description: description,
-            weight: pickRandom(weights),
-            successIndicator: pickRandom(successIndicators)
-        });
+        res.json({ success: true, suggestions });
     } catch (err) {
-        res.status(500).json({ message: 'AI generation failed' });
+        console.error('Goal suggestion error:', err.message);
+        res.status(500).json({ message: 'Goal suggestion failed' });
     }
 };
+
+// Rule-based fallback using real employee data
+function buildGoalSuggestionsFallback(employeeData) {
+    const suggestions = [];
+    const weaknesses = (employeeData.weaknesses || '').toLowerCase();
+    const strengths = (employeeData.strengths || '').toLowerCase();
+    const completedTitles = (employeeData.completedObjectives || []).map(o => o.title.toLowerCase());
+
+    // Weakness-based improvement goals
+    const weaknessGoals = [
+        { keywords: ['communicat', 'collaborat', 'team'], title: 'Strengthen Cross-Team Communication', desc: 'Establish regular sync meetings and document collaboration outcomes to improve team alignment.', indicator: 'Complete weekly cross-team syncs for 3 months with documented action items.' },
+        { keywords: ['time', 'deadline', 'punctual', 'delay'], title: 'Improve Deadline Adherence', desc: 'Implement structured project planning with milestone tracking to consistently meet deadlines.', indicator: 'Achieve 90%+ on-time delivery rate over the next quarter.' },
+        { keywords: ['technical', 'skill', 'learn', 'knowledge'], title: 'Close Technical Skill Gap', desc: 'Complete targeted training and apply new skills to at least one active project.', indicator: 'Complete 2 certified training modules and deliver 1 project using the new skills within 60 days.' },
+        { keywords: ['leadership', 'manag', 'mentor', 'delegat'], title: 'Develop Leadership Capabilities', desc: 'Lead a cross-functional initiative and mentor at least one junior team member.', indicator: 'Successfully lead 1 initiative and document mentoring outcomes within 90 days.' },
+        { keywords: ['quality', 'accuracy', 'detail', 'error'], title: 'Raise Output Quality Standards', desc: 'Implement review checklists and self-audit processes to reduce errors in deliverables.', indicator: 'Reduce error rate by 30% as measured by QA feedback in the next review cycle.' },
+        { keywords: ['initiat', 'proactiv', 'owner'], title: 'Increase Proactive Initiative', desc: 'Identify and propose solutions for at least 2 process improvements without being asked.', indicator: 'Submit 2 documented improvement proposals with measurable impact within 60 days.' },
+    ];
+
+    weaknessGoals.forEach(goal => {
+        if (suggestions.length >= 3) return;
+        const isRelevant = goal.keywords.some(k => weaknesses.includes(k));
+        const isNotRepeat = !completedTitles.some(t => t.includes(goal.title.toLowerCase().slice(0, 20)));
+        if (isRelevant && isNotRepeat) {
+            suggestions.push({ title: goal.title, description: goal.desc, successIndicator: goal.indicator });
+        }
+    });
+
+    // Strength-based growth goals
+    const strengthGoals = [
+        { keywords: ['communicat', 'present'], title: 'Lead Knowledge-Sharing Sessions', desc: 'Organize and deliver presentations to share expertise with broader teams.', indicator: 'Deliver 3 knowledge-sharing sessions with positive attendee feedback within the quarter.' },
+        { keywords: ['technical', 'engineer', 'develop'], title: 'Architect a Key Technical Solution', desc: 'Design and implement a technical solution that addresses a critical business need.', indicator: 'Deliver 1 documented architecture with successful production deployment.' },
+        { keywords: ['leadership', 'manag', 'team'], title: 'Scale Team Impact Through Delegation', desc: 'Develop team members by delegating high-impact tasks and coaching through execution.', indicator: 'Successfully delegate 3 significant tasks with documented outcomes within 90 days.' },
+        { keywords: ['analytic', 'data', 'insight'], title: 'Build Data-Driven Decision Framework', desc: 'Create dashboards or reports that enable evidence-based decisions for the team.', indicator: 'Deliver 1 dashboard or report used in at least 2 strategic decisions within the quarter.' },
+    ];
+
+    strengthGoals.forEach(goal => {
+        if (suggestions.length >= 3) return;
+        const isRelevant = goal.keywords.some(k => strengths.includes(k));
+        const isNotRepeat = !completedTitles.some(t => t.includes(goal.title.toLowerCase().slice(0, 20)));
+        if (isRelevant && isNotRepeat) {
+            suggestions.push({ title: goal.title, description: goal.desc, successIndicator: goal.indicator });
+        }
+    });
+
+    // Fill remaining with generic goals
+    const genericGoals = [
+        { title: 'Improve Process Efficiency', description: 'Identify and eliminate 2 workflow bottlenecks to reduce cycle time.', successIndicator: 'Document 2 process improvements with measured time savings within 60 days.' },
+        { title: 'Enhance Professional Skills', description: 'Complete a targeted training program aligned with career growth objectives.', successIndicator: 'Complete 1 certified course and apply learnings to a current project within 90 days.' },
+        { title: 'Strengthen Stakeholder Relationships', description: 'Proactively engage key stakeholders to improve alignment and collaboration.', successIndicator: 'Establish regular check-ins with 3 stakeholders and track satisfaction improvement.' },
+    ];
+
+    let genericIndex = 0;
+    while (suggestions.length < 2 && genericIndex < genericGoals.length) {
+        const g = genericGoals[genericIndex];
+        const isNotRepeat = !completedTitles.some(t => t.includes(g.title.toLowerCase().slice(0, 15)));
+        if (isNotRepeat) suggestions.push(g);
+        genericIndex++;
+    }
+
+    // Add fallback warning
+    suggestions.forEach(s => { s._fallback = true; });
+    return suggestions;
+}
 
 // ============ KPI SUGGESTIONS ============
 exports.suggestKpis = async (req, res) => {
@@ -322,6 +373,101 @@ exports.prioritizeNotifications = async (req, res) => {
     }
 };
 
+async function runReviewFlow(req, res, mode) {
+    try {
+        const requesterId = getRequesterId(req);
+        const { employeeId, cycleId, objectiveId } = req.body;
+
+        if (!employeeId || !cycleId) {
+            return res.status(400).json({ message: 'employeeId and cycleId are required' });
+        }
+
+        if (mode === 'manager_review') {
+            if (!REVIEW_ROLES.includes(req.user.role)) {
+                return res.status(403).json({ message: 'Forbidden: insufficient permissions for manager review' });
+            }
+            if (!objectiveId) {
+                return res.status(400).json({ message: 'objectiveId is required for manager review drafts' });
+            }
+            const objective = await Objective.findById(objectiveId).populate('owner', 'manager');
+            if (!objective) {
+                return res.status(404).json({ message: 'Objective not found' });
+            }
+            const ownerId = String(objective.owner?._id || objective.owner || '');
+            if (ownerId !== String(employeeId)) {
+                return res.status(400).json({ message: 'Objective does not belong to the requested employee' });
+            }
+            if (!['ADMIN', 'HR'].includes(req.user.role)) {
+                const managerId = String(objective.owner?.manager || '');
+                if (managerId !== requesterId) {
+                    return res.status(403).json({ message: 'Forbidden: not authorized to review this employee' });
+                }
+            }
+        }
+
+        if (mode === 'final_self_assessment' && String(employeeId) !== requesterId && !['ADMIN', 'HR'].includes(req.user.role)) {
+            const targetEmployee = await User.findById(employeeId).select('manager').lean();
+            if (!targetEmployee) {
+                return res.status(404).json({ message: 'Employee not found' });
+            }
+            if (String(targetEmployee.manager || '') !== requesterId) {
+                return res.status(403).json({ message: 'Forbidden: insufficient permissions for self-assessment draft' });
+            }
+        }
+
+        const context = await reviewContextService.buildReviewContext({
+            employeeId,
+            cycleId,
+            objectiveId: objectiveId || null,
+        });
+
+        let result;
+        switch (mode) {
+            case 'midyear_summary':
+                if (!REVIEW_ROLES.includes(req.user.role)) {
+                    return res.status(403).json({ message: 'Forbidden: insufficient permissions for midyear review' });
+                }
+                result = await aiService.generateMidyearReview(context);
+                break;
+            case 'final_self_assessment':
+                if (requesterId !== String(employeeId) && !REVIEW_ROLES.includes(req.user.role)) {
+                    return res.status(403).json({ message: 'Forbidden: only the employee or HR/Admin can request final self assessment' });
+                }
+                result = await aiService.generateFinalSelfReview(context);
+                break;
+            case 'manager_review':
+                if (!REVIEW_ROLES.includes(req.user.role)) {
+                    return res.status(403).json({ message: 'Forbidden: insufficient permissions for manager review' });
+                }
+                result = await aiService.generateManagerReview(context);
+                break;
+            default:
+                return res.status(400).json({ message: 'Invalid review mode' });
+        }
+
+        createAuditLog({
+            entityType: 'ai_review',
+            entityId: employeeId,
+            action: `ai_review_${mode}`,
+            performedBy: requesterId,
+            userName: req.user?.name || '',
+            userRole: req.user?.role || '',
+            description: `AI ${mode === 'final_self_assessment' ? 'final self-assessment' : mode === 'manager_review' ? 'manager review' : 'mid-year summary'} generated for employee ${employeeId} in cycle ${cycleId}${objectiveId ? ` objective ${objectiveId}` : ''}`,
+            newValue: { mode, employeeId, cycleId, objectiveId },
+            ipAddress: req.ip,
+        });
+
+        res.json({ success: true, review: result });
+    } catch (err) {
+        console.error('AI review flow error:', err);
+        res.status(500).json({ message: 'AI review generation failed', details: err.message });
+    }
+}
+
+exports.generateMidyearReview = async (req, res) => runReviewFlow(req, res, 'midyear_summary');
+exports.generateFinalSelfReview = async (req, res) => runReviewFlow(req, res, 'final_self_assessment');
+exports.generateManagerReview = async (req, res) => runReviewFlow(req, res, 'manager_review');
+
 // ============ UNIFIED AI ASSIST ENDPOINT ============
 exports.assist = async (req, res) => {
     try {
@@ -453,3 +599,399 @@ exports.draftCheckin = async (req, res) => {
         res.status(500).json({ success: false, message: err.message });
     }
 };
+
+// ============ OBJECTIVE QUALITY ANALYSIS (SMART Detection) ============
+exports.analyzeObjectiveQuality = async (req, res) => {
+    try {
+        const { title, description, successIndicator } = req.body;
+        const combined = ((title || '') + ' ' + (description || '') + ' ' + (successIndicator || '')).toLowerCase();
+        
+        const issues = [];
+        const strengths = [];
+        
+        // Check for vague language
+        const vagueWords = ['improve', 'better', 'good', 'enhance', 'explore', 'consider', 'investigate', 'think about', 'maybe'];
+        const vagueCount = vagueWords.filter(word => combined.includes(word)).length;
+        if (vagueCount >= 2) {
+            issues.push({
+                type: 'vague_language',
+                severity: 'medium',
+                message: 'Objective uses vague language. Add specific metrics or numbers (e.g., "Increase by 25%", "Reduce to 80ms").',
+                examples: vagueWords.filter(w => combined.includes(w))
+            });
+        }
+        
+        // Check for measurability (SMART: Measurable)
+        const measurableIndicators = ['%', '$', '#', 'achieve', 'reach', 'reduce', 'increase', 'complete', 'deliver'];
+        const hasMeasurable = measurableIndicators.some(ind => combined.includes(ind));
+        if (!hasMeasurable && !successIndicator) {
+            issues.push({
+                type: 'not_measurable',
+                severity: 'high',
+                message: 'Success Indicator is missing or vague. Define how you will measure success (e.g., "Achieve 90% accuracy by Q3").'
+            });
+        } else if (hasMeasurable) {
+            strengths.push('Contains measurable metrics');
+        }
+        
+        // Check for timeframe (SMART: Time-bound)
+        const timeFrames = ['q1', 'q2', 'q3', 'q4', 'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december', 'week', 'month', 'quarter', 'end of', 'by'];
+        const hasTimeFrame = timeFrames.some(tf => combined.includes(tf));
+        if (!hasTimeFrame) {
+            issues.push({
+                type: 'no_deadline',
+                severity: 'medium',
+                message: 'No clear timeframe specified. Add when this objective must be achieved (e.g., "by end of Q2").'
+            });
+        } else {
+            strengths.push('Contains clear deadline or timeframe');
+        }
+        
+        // Check for actionability (SMART: Specific)
+        const actionVerbs = ['implement', 'deliver', 'build', 'design', 'develop', 'launch', 'achieve', 'reduce', 'increase', 'optimize', 'establish', 'create'];
+        const hasAction = actionVerbs.some(verb => combined.includes(verb));
+        if (!hasAction) {
+            issues.push({
+                type: 'not_specific',
+                severity: 'medium',
+                message: 'Use action verbs to clarify what will be done. Examples: Implement, Deliver, Build, Launch, Achieve.'
+            });
+        } else {
+            strengths.push('Contains clear action verb');
+        }
+        
+        // Check for realistic scope
+        if (title && title.length < 10) {
+            issues.push({
+                type: 'title_too_short',
+                severity: 'low',
+                message: 'Objective title is quite short. Expand it to be more descriptive (at least 10 characters).'
+            });
+        } else if (title && title.length > 100) {
+            issues.push({
+                type: 'title_too_long',
+                severity: 'low',
+                message: 'Objective title is very long (>100 chars). Consider shortening for clarity.'
+            });
+        }
+        
+        const overallQuality = issues.filter(i => i.severity === 'high').length === 0 ? 'good' : 'needs_improvement';
+        
+        res.json({
+            success: true,
+            quality: overallQuality,
+            issues,
+            strengths,
+            smartScore: {
+                specific: issues.some(i => i.type === 'not_specific') ? false : true,
+                measurable: issues.some(i => i.type === 'not_measurable') ? false : true,
+                achievable: true, // Generally assume achievable unless title suggests otherwise
+                relevant: true,   // Assume relevant in business context
+                timeBound: issues.some(i => i.type === 'no_deadline') ? false : true
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// ============ OBJECTIVE REFINEMENT SUGGESTIONS ============
+exports.refineObjective = async (req, res) => {
+    try {
+        const { title, description, successIndicator, context } = req.body;
+        const combined = ((title || '') + ' ' + (description || '')).toLowerCase();
+        
+        const suggestions = [];
+        
+        // Suggest more specific metrics
+        if (!combined.match(/\b(\d+%|[$€£]\d+|#\d+|\d+\s*(hours|days|weeks|months))\b/)) {
+            suggestions.push({
+                type: 'add_metrics',
+                suggestion: 'Add specific targets. For example: "Increase from 70% to 85%" or "Reduce from 50ms to 30ms".',
+                example: 'Improve system performance to 30ms response time by Q3 2026'
+            });
+        }
+        
+        // Suggest timeframe
+        if (!combined.match(/\b(q[1-4]|january|february|march|april|may|june|july|august|september|october|november|december|\d{4}|end of|by)\b/i)) {
+            suggestions.push({
+                type: 'add_deadline',
+                suggestion: 'Specify when this must be achieved. Use quarter format (Q1-Q4) or specific dates.',
+                example: 'Achieve 90% customer satisfaction by end of Q3 2026'
+            });
+        }
+        
+        // Suggest alignment with team goals
+        if (context && context.departmentGoals) {
+            suggestions.push({
+                type: 'align_department',
+                suggestion: 'Ensure alignment with your department\'s strategic priorities.',
+                example: 'Map this objective to 1-2 department-level goals for better impact visibility'
+            });
+        }
+        
+        // Suggest adding KPI strategy
+        if (!description || description.length < 50) {
+            suggestions.push({
+                type: 'add_kpi_plan',
+                suggestion: 'Consider how you\'ll track progress. What leading and lagging indicators matter?',
+                example: 'Weekly dashboard updates, bi-weekly stakeholder reviews, monthly milestone checks'
+            });
+        }
+        
+        // Template-based refinement suggestions
+        const refinedSuggestions = [
+            {
+                template: 'Increase [metric] from [current] to [target] by [deadline] through [actions]',
+                example: 'Increase customer satisfaction from 75% to 90% by Q3 through bi-weekly feedback loops and faster issue resolution'
+            },
+            {
+                template: 'Deliver [deliverable] with [quality standard] by [deadline] for [stakeholder] to achieve [business outcome]',
+                example: 'Deliver 3 new features with 95% test coverage by Q2 for Product team to improve NPS by 10 points'
+            },
+            {
+                template: 'Reduce [metric] from [current] to [target] by [deadline] by implementing [approach]',
+                example: 'Reduce average bug resolution time from 4 days to 2 days by Q2 by implementing automated testing'
+            }
+        ];
+        
+        res.json({
+            success: true,
+            suggestions,
+            refinementTemplates: refinedSuggestions,
+            recommendedFormat: 'Use the format: [Action Verb] [Object] [Target] by [Deadline] through [Method]'
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+
+exports.generateDevelopmentPlan = async (req, res) => {
+    try {
+        const { userId, evaluationId } = req.body;
+
+        if (!userId) {
+            return res.status(400).json({ success: false, message: 'userId is required' });
+        }
+
+        const Evaluation = require('../models/Evaluation');
+
+        let evaluation = null;
+        if (evaluationId) {
+            evaluation = await Evaluation.findOne({ _id: evaluationId, employeeId: userId }).lean();
+        } else {
+            evaluation = await Evaluation.findOne({ employeeId: userId }).sort({ createdAt: -1 }).lean();
+        }
+
+        const objectives = await Objective.find({ owner: userId })
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .select('title status achievementPercent weight evaluationRating evaluationComment managerComments')
+            .lean();
+
+        // If no Evaluation doc AND no evaluated objectives → nothing to work with
+        if (!evaluation && (!objectives || objectives.length === 0)) {
+            return res.status(404).json({ success: false, message: 'No evaluation data found for this user. Complete at least one objective evaluation first.' });
+        }
+
+        // Build compact structured data for AI — works with or without an Evaluation doc
+        const dataContext = {
+            score: evaluation?.finalScore != null ? evaluation.finalScore : (evaluation?.suggestedScore ?? null),
+            period: evaluation?.period || '',
+            feedback: evaluation?.overallComments || '',
+            strengths: evaluation?.strengths || '',
+            improvements: evaluation?.areasForImprovement || '',
+            recommendations: evaluation?.developmentRecommendations || '',
+            nextSteps: evaluation?.nextSteps || '',
+            objectives: objectives.map(o => ({
+                title: o.title,
+                status: o.status,
+                achievement: o.achievementPercent || 0,
+                rating: o.evaluationRating || '',
+                managerNote: o.managerComments || o.evaluationComment || '',
+            })),
+        };
+
+        const competencies = [];
+
+        // Try AI generation if configured
+        if (aiService.isConfigured()) {
+            const aiPlan = await aiService.generateDevelopmentPlan(dataContext);
+            if (aiPlan) {
+                return res.json({ success: true, plan: aiPlan });
+            }
+        }
+
+        // Fallback: structured non-AI summary
+        return res.json({ success: true, plan: buildDevelopmentPlanFallback(userId, evaluation || {}, competencies, objectives) });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+function buildDevelopmentPlanFallback(userId, evaluation, competencies, goals) {
+    const score = evaluation.finalScore != null ? evaluation.finalScore : evaluation.suggestedScore;
+    const normalizedGoals = Array.isArray(goals) ? goals : [];
+    const normalizedCompetencies = Array.isArray(competencies) ? competencies : [];
+    const lowProgressGoals = normalizedGoals.filter(function (goal) {
+        return Number(goal.currentProgress || 0) < 60;
+    });
+    const onTrackGoals = normalizedGoals.filter(function (goal) {
+        return Number(goal.currentProgress || 0) >= 60;
+    });
+    const lowCompetencies = normalizedCompetencies.filter(function (competency) {
+        return Number(competency.maxScore || 0) > 0 && ((Number(competency.score || 0) / Number(competency.maxScore || 1)) * 100) < 60;
+    });
+
+    const strengths = [];
+    const gapAreas = [];
+    const actions = [];
+
+    if (evaluation.strengths) {
+        strengths.push(evaluation.strengths);
+    }
+    if (onTrackGoals.length > 0) {
+        strengths.push('Recent goals show stronger execution on ' + onTrackGoals.map(function (goal) { return goal.title; }).join(', ') + '.');
+    }
+    if (score != null && score >= 7) {
+        strengths.push('Your evaluation score of ' + score + ' reflects a solid overall performance level.');
+    }
+    if (strengths.length === 0) {
+        strengths.push('Your evaluation has been completed for ' + (evaluation.period || 'the latest review period') + '.');
+        strengths.push('The available review data provides a foundation for targeted development actions.');
+    }
+
+    if (evaluation.areasForImprovement) {
+        gapAreas.push(evaluation.areasForImprovement);
+    }
+    lowCompetencies.forEach(function (competency) {
+        gapAreas.push(competency.name + ' is below the target range at ' + competency.score + '/' + competency.maxScore + '.');
+    });
+    lowProgressGoals.forEach(function (goal) {
+        gapAreas.push(goal.title + ' is currently at ' + (goal.currentProgress || 0) + '% progress.');
+    });
+    if (score != null && score < 7) {
+        gapAreas.push('The evaluation score of ' + score + ' suggests room to strengthen consistency and delivery quality.');
+    }
+    if (gapAreas.length === 0) {
+        gapAreas.push('Translate evaluation feedback into clearer next-step priorities.');
+        gapAreas.push('Build a more measurable follow-through plan for the next review period.');
+    }
+
+    if (evaluation.areasForImprovement) {
+        actions.push({
+            action_title: 'Address feedback themes',
+            description: 'Break the manager feedback into 2 or 3 specific behaviors to improve and review progress weekly.',
+            rationale: 'The evaluation highlights this improvement area: "' + evaluation.areasForImprovement + '".',
+            suggested_timeline: 'Next 30 days',
+            success_metric: 'Document 2-3 improvement commitments and complete weekly check-ins against them.'
+        });
+    }
+
+    if (evaluation.developmentRecommendations) {
+        actions.push({
+            action_title: 'Apply review recommendations',
+            description: 'Convert the development recommendations into practical actions, learning steps, or coaching conversations tied to your role.',
+            rationale: 'The evaluation includes this recommendation: "' + evaluation.developmentRecommendations + '".',
+            suggested_timeline: 'Within 2 weeks',
+            success_metric: 'Create and begin executing a written action list based on the evaluation recommendations.'
+        });
+    }
+
+    lowProgressGoals.forEach(function (goal) {
+        if (actions.length < 5) {
+            actions.push({
+                action_title: 'Recover goal momentum',
+                description: 'Create a short recovery plan for "' + goal.title + '" with a clear next milestone, blocker review, and checkpoint date.',
+                rationale: '"' + goal.title + '" is currently at ' + (goal.currentProgress || 0) + '% progress with status "' + (goal.status || 'unknown') + '".',
+                suggested_timeline: 'Next 14 days',
+                success_metric: 'Increase progress on "' + goal.title + '" beyond the current ' + (goal.currentProgress || 0) + '% baseline.'
+            });
+        }
+    });
+
+    lowCompetencies.forEach(function (competency) {
+        if (actions.length < 5) {
+            actions.push({
+                action_title: 'Strengthen core skill',
+                description: 'Focus practice, coaching, or targeted learning on ' + competency.name + ' and apply it in current work within the next review window.',
+                rationale: competency.name + ' is measured at ' + competency.score + '/' + competency.maxScore + ', which is below the 60% threshold.',
+                suggested_timeline: 'Next 30 days',
+                success_metric: 'Demonstrate improvement in a follow-up review or through manager-observed application of the skill.'
+            });
+        }
+    });
+
+    if (score != null && score < 7 && actions.length < 5) {
+        actions.push({
+            action_title: 'Raise performance consistency',
+            description: 'Set a weekly operating rhythm to review priorities, track commitments, and close gaps before the next evaluation cycle.',
+            rationale: 'The evaluation score is ' + score + ', indicating an opportunity to improve overall consistency.',
+            suggested_timeline: 'Next 30 days',
+            success_metric: 'Maintain a weekly review cadence and show measurable improvement in delivery or feedback quality.'
+        });
+    }
+
+    if (evaluation.nextSteps && actions.length < 5) {
+        actions.push({
+            action_title: 'Execute next steps',
+            description: 'Translate the recorded next steps into a dated checklist and share progress updates with your manager.',
+            rationale: 'The evaluation already lists next steps: "' + evaluation.nextSteps + '".',
+            suggested_timeline: 'This month',
+            success_metric: 'Complete the agreed next steps and provide at least one documented progress update.'
+        });
+    }
+
+    while (actions.length < 3) {
+        actions.push({
+            action_title: 'Track development weekly',
+            description: 'Set one weekly checkpoint to review feedback themes, current priorities, and concrete progress on your development focus areas.',
+            rationale: 'The available evaluation data is limited, so consistent follow-through is the clearest way to turn feedback into improvement.',
+            suggested_timeline: 'Weekly for 30 days',
+            success_metric: 'Complete four consecutive weekly check-ins with written progress notes.'
+        });
+    }
+
+    return {
+        summary: buildDevelopmentPlanSummary(evaluation, normalizedGoals, lowCompetencies, score),
+        strengths: strengths.slice(0, 2),
+        gap_areas: gapAreas.slice(0, 3),
+        recommended_actions: actions.slice(0, 5).map(function (action) {
+            return {
+                action_title: action.action_title || 'Untitled',
+                description: action.description || '',
+                rationale: action.rationale || '',
+                suggested_timeline: action.suggested_timeline || 'TBD',
+                success_metric: action.success_metric || ''
+            };
+        })
+    };
+}
+
+function buildDevelopmentPlanSummary(evaluation, goals, lowCompetencies, score) {
+    const parts = [];
+
+    if (score != null) {
+        parts.push('This employee received an evaluation score of ' + score + ' for ' + (evaluation.period || 'the latest review period') + '.');
+    } else {
+        parts.push('This development plan is based on the latest available evaluation record for ' + (evaluation.period || 'the current review period') + '.');
+    }
+
+    if (evaluation.overallComments) {
+        parts.push('Manager feedback notes: "' + evaluation.overallComments + '".');
+    }
+
+    if (goals.length > 0) {
+        const avgProgress = Math.round(goals.reduce(function (sum, goal) {
+            return sum + Number(goal.currentProgress || 0);
+        }, 0) / goals.length);
+        parts.push('Across the recent goals reviewed, average progress is ' + avgProgress + '%.');
+    } else if (lowCompetencies.length > 0) {
+        parts.push('The plan prioritizes the lowest-rated competency areas identified in the available data.');
+    } else {
+        parts.push('Because the available record is limited, the plan focuses on turning the evaluation feedback into specific and measurable next steps.');
+    }
+
+    return parts.join(' ');
+}

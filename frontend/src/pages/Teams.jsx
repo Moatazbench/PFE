@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
 
 function Teams() {
@@ -18,16 +18,15 @@ function Teams() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  var API = 'http://localhost:5000';
-
   async function fetchData() {
     try {
       var [teamsRes, usersRes] = await Promise.all([
-        axios.get(API + '/api/teams'),
-        axios.get(API + '/api/users')
+        api.get('/api/teams'),
+        api.get('/api/users')
       ]);
-      setTeams(teamsRes.data);
-      setUsers(usersRes.data);
+      setTeams(Array.isArray(teamsRes.data) ? teamsRes.data : teamsRes.data.teams || []);
+      var userData = usersRes.data;
+      setUsers(Array.isArray(userData) ? userData : userData.users || []);
     } catch (err) {
       console.error('Fetch data error:', err);
     } finally {
@@ -63,12 +62,26 @@ function Teams() {
     setError('');
     setSuccess('');
 
+    // === FRONTEND VALIDATION ===
+    if (!formData.name || !formData.name.trim()) {
+      setError('Team name is required.');
+      return;
+    }
+    if (!formData.leader) {
+      setError('A team leader is required. Please select a team leader.');
+      return;
+    }
+    if (!formData.members || formData.members.length === 0) {
+      setError('At least one team member (collaborator) is required. Please select at least one member.');
+      return;
+    }
+
     try {
       if (editingTeam) {
-        await axios.put(API + '/api/teams/' + editingTeam._id, formData);
+        await api.put('/api/teams/' + editingTeam._id, formData);
         setSuccess('Team updated successfully!');
       } else {
-        await axios.post(API + '/api/teams', formData);
+        await api.post('/api/teams', formData);
         setSuccess('Team created successfully!');
       }
       setShowModal(false);
@@ -80,7 +93,7 @@ function Teams() {
 
   async function handleDelete(id) {
     try {
-      await axios.delete(API + '/api/teams/' + id);
+      await api.delete('/api/teams/' + id);
       fetchData();
     } catch (err) {
       setError('Failed to delete team');
@@ -213,10 +226,11 @@ function Teams() {
               </div>
 
               <div className="form-group">
-                <label>👔 Team Leader (Manager):</label>
+                <label>👔 Team Leader (Manager): <span style={{color:'red'}}>*</span></label>
                 <select
                   value={formData.leader}
                   onChange={function (e) { setFormData({ ...formData, leader: e.target.value }); }}
+                  required
                 >
                   <option value="">-- Select Leader --</option>
                   {getManagers().map(function (u) {
@@ -230,7 +244,7 @@ function Teams() {
               </div>
 
               <div className="form-group">
-                <label>👤 Team Members (Collaborators):</label>
+                <label>👤 Team Members (Collaborators): <span style={{color:'red'}}>*</span> <span style={{fontSize:'0.85em', color:'#6b7280'}}>(min. 1 required)</span></label>
                 <div className="members-selection">
                   {getCollaborators().length === 0 ? (
                     <p className="no-data">No collaborators available</p>
@@ -253,7 +267,7 @@ function Teams() {
                     })
                   )}
                 </div>
-                <p className="form-hint">Selected: {formData.members.length} member(s)</p>
+                <p className="form-hint" style={formData.members.length === 0 ? {color: '#ef4444', fontWeight: 'bold'} : {}}>Selected: {formData.members.length} member(s){formData.members.length === 0 ? ' — at least 1 required' : ''}</p>
               </div>
 
               <div className="modal-actions">

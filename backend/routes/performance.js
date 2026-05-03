@@ -1,100 +1,93 @@
 const express = require('express');
 const router = express.Router();
-const Goal = require('../models/Goal');
-const GoalReview = require('../models/GoalReview');
+const Objective = require('../models/Objective');
 const Team = require('../models/Team');
 const auth = require('../middleware/auth');
 
-/**
- * Compute performance summary for an employee in a cycle.
- */
-async function computeSummary(employeeId, cycleId) {
-  const goals = await Goal.find({ employeeId, cycleId })
-    .populate('cycleId', 'name year');
+function roundScore(value) {
+  return Number(Number(value || 0).toFixed(2));
+}
 
-  if (goals.length === 0) {
+function calculateObjectiveScore(objective) {
+  const achievement = Number.isFinite(Number(objective.achievementPercent)) ? Number(objective.achievementPercent) : 0;
+  return roundScore((Number(objective.weight || 0) * achievement) / 100);
+}
+
+function getPerformanceLabel(score) {
+  if (score >= 90) return 'Exceeded Expectations';
+  if (score >= 75) return 'Achieved';
+  if (score >= 50) return 'Partially Achieved';
+  return 'Below Expectations';
+}
+
+async function computeSummary(employeeId, cycleId) {
+  const objectives = await Objective.find({
+    owner: employeeId,
+    cycle: cycleId,
+    status: { $nin: ['rejected', 'cancelled', 'archived'] },
+  })
+    .populate('owner', 'name email role')
+    .populate('cycle', 'name year')
+    .sort({ createdAt: 1 });
+
+  if (objectives.length === 0) {
     return {
       employeeId,
+      employee: null,
       cycleId,
-      goals: [],
-      weightedAverage: 0,
+      objectives: [],
+      performanceScore: 0,
       averageRating: 0,
       performanceLabel: 'Below Expectations',
-      totalGoals: 0,
+      totalObjectives: 0,
+      totalWeight: 0,
     };
   }
 
-  // Get end-year manager ratings for each goal
-  const goalIds = goals.map(g => g._id);
-  const endyearReviews = await GoalReview.find({
-    goalId: { $in: goalIds },
-    phase: 'endyear',
-    reviewType: 'manager_assessment',
-  });
-
-  const reviewMap = {};
-  endyearReviews.forEach(r => {
-    reviewMap[String(r.goalId)] = r;
-  });
-
-  let weightedSum = 0;
+  let weightedScore = 0;
   let totalWeight = 0;
   let ratingSum = 0;
   let ratingCount = 0;
 
-  const goalDetails = goals.map(g => {
-    const review = reviewMap[String(g._id)];
-    const completion = g.finalCompletion != null ? g.finalCompletion : g.currentProgress || 0;
-    const weight = g.weight || 0;
-    const rating = review ? review.rating : null;
+  const objectiveDetails = objectives.map((objective) => {
+    const score = calculateObjectiveScore(objective);
+    weightedScore += score;
+    totalWeight += Number(objective.weight || 0);
 
-    weightedSum += (weight * completion) / 100;
-    totalWeight += weight;
-
-    if (rating != null) {
-      ratingSum += rating;
-      ratingCount++;
+    if (objective.evaluationNumericRating != null) {
+      ratingSum += Number(objective.evaluationNumericRating);
+      ratingCount += 1;
     }
 
     return {
-      _id: g._id,
-      title: g.title,
-      weight,
-      currentProgress: g.currentProgress,
-      finalCompletion: g.finalCompletion,
-      effectiveCompletion: completion,
-      rating,
-      status: g.status,
+      _id: objective._id,
+      title: objective.title,
+      weight: objective.weight,
+      achievementPercent: objective.achievementPercent || 0,
+      weightedScore: score,
+      category: objective.category,
+      status: objective.status,
+      evaluationRating: objective.evaluationRating || '',
+      evaluationNumericRating: objective.evaluationNumericRating,
     };
   });
 
-  // Weighted average: normalized to 100 if total weight is 100
-  const weightedAverage = totalWeight > 0
-    ? Number(((weightedSum / totalWeight) * 100).toFixed(2))
-    : 0;
-  const averageRating = ratingCount > 0
-    ? Number((ratingSum / ratingCount).toFixed(2))
-    : 0;
-
-  let performanceLabel;
-  if (weightedAverage >= 100) performanceLabel = 'Exceeded Expectations';
-  else if (weightedAverage >= 80) performanceLabel = 'Achieved';
-  else if (weightedAverage >= 50) performanceLabel = 'Partially Achieved';
-  else performanceLabel = 'Below Expectations';
+  const performanceScore = roundScore(weightedScore);
+  const averageRating = ratingCount > 0 ? roundScore(ratingSum / ratingCount) : 0;
 
   return {
     employeeId,
+    employee: objectives[0]?.owner || null,
     cycleId,
-    goals: goalDetails,
-    weightedAverage,
+    objectives: objectiveDetails,
+    performanceScore,
     averageRating,
-    performanceLabel,
-    totalGoals: goals.length,
-    totalWeight,
+    performanceLabel: getPerformanceLabel(performanceScore),
+    totalObjectives: objectives.length,
+    totalWeight: roundScore(totalWeight),
   };
 }
 
-// --- GET /api/performance/summary/:employeeId/:cycleId ---
 router.get('/summary/:employeeId/:cycleId', auth, async (req, res) => {
   try {
     const { employeeId, cycleId } = req.params;
@@ -105,41 +98,29 @@ router.get('/summary/:employeeId/:cycleId', auth, async (req, res) => {
   }
 });
 
-// --- GET /api/performance/team-summary/:managerId/:cycleId ---
 router.get('/team-summary/:managerId/:cycleId', auth, async (req, res) => {
   try {
     const { managerId, cycleId } = req.params;
+    if (req.user.id !== managerId && !['ADMIN', 'HR'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Forbidden' });
+    }
 
-    // Find all employees under this manager
-    // 1. Via Goal model (goals assigned to this manager)
-    const managedGoals = await Goal.find({ managerId, cycleId }).distinct('employeeId');
-
-    // 2. Also via Team model
     const team = await Team.findOne({ leader: managerId });
-    const teamMembers = team ? team.members.map(m => String(m)) : [];
-
-    // Merge unique employee IDs
-    const employeeSet = new Set([
-      ...managedGoals.map(id => String(id)),
-      ...teamMembers,
-    ]);
-    const employeeIds = Array.from(employeeSet);
+    const employeeIds = team ? team.members.map((member) => String(member)) : [];
 
     const summaries = [];
-    for (const empId of employeeIds) {
-      const summary = await computeSummary(empId, cycleId);
-      // Only include employees who actually have goals
-      if (summary.totalGoals > 0) {
+    for (const employeeId of employeeIds) {
+      const summary = await computeSummary(employeeId, cycleId);
+      if (summary.totalObjectives > 0) {
         summaries.push(summary);
       }
     }
 
-    // Team-level aggregates
-    const teamWeightedAvg = summaries.length > 0
-      ? Number((summaries.reduce((s, e) => s + e.weightedAverage, 0) / summaries.length).toFixed(2))
+    const teamPerformanceScore = summaries.length > 0
+      ? roundScore(summaries.reduce((sum, summary) => sum + summary.performanceScore, 0) / summaries.length)
       : 0;
-    const teamAvgRating = summaries.length > 0
-      ? Number((summaries.reduce((s, e) => s + e.averageRating, 0) / summaries.length).toFixed(2))
+    const teamAverageRating = summaries.length > 0
+      ? roundScore(summaries.reduce((sum, summary) => sum + summary.averageRating, 0) / summaries.length)
       : 0;
 
     res.json({
@@ -147,8 +128,8 @@ router.get('/team-summary/:managerId/:cycleId', auth, async (req, res) => {
       managerId,
       cycleId,
       employeeCount: summaries.length,
-      teamWeightedAverage: teamWeightedAvg,
-      teamAverageRating: teamAvgRating,
+      teamPerformanceScore,
+      teamAverageRating,
       employees: summaries,
     });
   } catch (err) {

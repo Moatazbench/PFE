@@ -9,31 +9,12 @@ const ScoreHistorySchema = new mongoose.Schema({
   reason:        { type: String, default: '' },
 }, { _id: true });
 
-// Per-goal assessment embedded in the evaluation
-const GoalAssessmentSchema = new mongoose.Schema({
-  goalId: {
+// Objective references kept inside the evaluation.
+const ObjectiveAssessmentSchema = new mongoose.Schema({
+  objectiveId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Goal',
+    ref: 'Objective',
     required: true,
-  },
-  achievementPercent: {
-    type: Number,
-    min: 0,
-    max: 100,
-    default: 0,
-  },
-  goalStatus: {
-    type: String,
-    enum: ['not_started', 'in_progress', 'completed', 'exceeded'],
-    default: 'not_started',
-  },
-  comments: {
-    type: String,
-    default: '',
-  },
-  reviewed: {
-    type: Boolean,
-    default: false,
   },
 }, { _id: true });
 
@@ -94,25 +75,25 @@ const EvaluationSchema = new mongoose.Schema({
     index: true,
   },
 
-  // Goal assessments
-  goalAssessments: [GoalAssessmentSchema],
+  // Objective scope for this evaluation
+  objectiveAssessments: [ObjectiveAssessmentSchema],
 
   // Scoring
   scoringMethod: {
     type: String,
-    enum: ['simple_average', 'weighted_average'],
-    default: 'weighted_average',
+    enum: ['objective_weighted_sum', 'simple_average', 'weighted_average'],
+    default: 'objective_weighted_sum',
   },
   suggestedScore: {
     type: Number,
-    min: 1,
-    max: 10,
+    min: 0,
+    max: 100,
     default: null,
   },
   finalScore: {
     type: Number,
-    min: 1,
-    max: 10,
+    min: 0,
+    max: 100,
     default: null,
   },
   scoreHistory: [ScoreHistorySchema],
@@ -157,5 +138,6 @@ const EvaluationSchema = new mongoose.Schema({
 EvaluationSchema.index({ employeeId: 1, cycleId: 1 });
 EvaluationSchema.index({ evaluatorId: 1, cycleId: 1 });
 EvaluationSchema.index({ cycleId: 1, status: 1 });
+EvaluationSchema.index({ 'objectiveAssessments.objectiveId': 1 });
 
 module.exports = mongoose.model('Evaluation', EvaluationSchema);

@@ -25,9 +25,6 @@ router.post('/', auth, evaluationController.createEvaluation);
 // Update evaluation (comments, feedback, score)
 router.put('/:id', auth, evaluationController.updateEvaluation);
 
-// Update a specific goal assessment within an evaluation
-router.patch('/:id/goal/:goalId', auth, evaluationController.updateGoalAssessment);
-
 // Workflow actions
 router.post('/:id/submit', auth, evaluationController.submitEvaluation);
 router.post('/:id/approve', auth, role('HR', 'ADMIN'), evaluationController.approveEvaluation);

@@ -26,7 +26,7 @@ function EvaluateGoalModal({ goal, onClose, onEvaluated }) {
                 evaluationComment: comment,
                 managerAdjustedPercent: adjustedPercent,
             });
-            toast.success('Goal evaluated successfully!');
+            toast.success('Objective evaluated successfully!');
             if (onEvaluated) onEvaluated();
             onClose();
         } catch (err) {
@@ -38,7 +38,7 @@ function EvaluateGoalModal({ goal, onClose, onEvaluated }) {
         <div className="goal-modal-overlay" onClick={onClose}>
             <div className="goal-modal" onClick={function (e) { e.stopPropagation(); }} style={{ maxWidth: '550px' }}>
                 <div className="goal-modal__header">
-                    <h2>📊 Evaluate Goal</h2>
+                    <h2>📊 Evaluate Objective</h2>
                     <button className="goal-modal__close" onClick={onClose}>✕</button>
                 </div>
 

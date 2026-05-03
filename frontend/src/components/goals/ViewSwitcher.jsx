@@ -12,8 +12,10 @@ function ViewSwitcher({ activeView, onChange }) {
             {views.map(function (v) {
                 return (
                     <button
+                        type="button"
                         key={v.key}
                         className={'goals-view-switcher__btn' + (activeView === v.key ? ' goals-view-switcher__btn--active' : '')}
+                        aria-pressed={activeView === v.key}
                         onClick={function () { onChange(v.key); }}
                     >
                         <span>{v.icon}</span> {v.label}

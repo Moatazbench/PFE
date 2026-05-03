@@ -4,8 +4,8 @@ const auth = require('../middleware/auth');
 const Team = require('../models/Team');
 const User = require('../models/User');
 const Task = require('../models/Task');
-const Goal = require('../models/Goal');
-const Review = require('../models/Review');
+const Objective = require('../models/Objective');
+const Evaluation = require('../models/Evaluation');
 const rateLimiter = require('../middleware/rateLimiter');
 
 // GET /api/team-members
@@ -15,13 +15,13 @@ router.get('/', rateLimiter, auth, async (req, res) => {
 
     // 1. Find the user's team
     let team = await Team.findOne({ leader: userId })
-      .populate('leader', 'name email role profileImage')
-      .populate('members', 'name email role profileImage');
+      .populate('leader', 'name email role profileImage isActive')
+      .populate('members', 'name email role profileImage isActive');
 
     if (!team) {
       team = await Team.findOne({ members: userId })
-        .populate('leader', 'name email role profileImage')
-        .populate('members', 'name email role profileImage');
+        .populate('leader', 'name email role profileImage isActive')
+        .populate('members', 'name email role profileImage isActive');
     }
 
     let usersToProcess = [];
@@ -41,8 +41,8 @@ router.get('/', rateLimiter, auth, async (req, res) => {
       }
     } else if (['ADMIN', 'HR'].includes(req.user.role)) {
       // Fallback: If no team but has admin/hr perms, show all active users
-      const allUsers = await User.find({ isActive: true, isDeleted: false })
-        .select('name email role profileImage');
+      const allUsers = await User.find({ isDeleted: false })
+        .select('name email role profileImage isActive');
       usersToProcess = allUsers;
       teamName = "Company Wide";
     }
@@ -52,8 +52,6 @@ router.get('/', rateLimiter, auth, async (req, res) => {
     }
 
     // 2. Fetch stats for each user asynchronously
-    const statuses = ['available', 'busy', 'do_not_disturb', 'offline'];
-    
     const aggregatedData = await Promise.all(usersToProcess.map(async (user) => {
       try {
         const uId = user._id;
@@ -61,33 +59,37 @@ router.get('/', rateLimiter, auth, async (req, res) => {
         const tasksCompletedCount = await Task.countDocuments({ assignee: uId, status: 'done' });
         const tasksActiveCount = await Task.countDocuments({ assignee: uId, status: { $nin: ['done', 'cancelled'] } });
 
-        const activeGoalsCount = await Goal.countDocuments({ 
-          employeeId: uId, 
-          status: { $nin: ['draft', 'locked', 'final_evaluated'] } 
+        const activeObjectivesCount = await Objective.countDocuments({
+          owner: uId,
+          status: { $nin: ['draft', 'rejected', 'cancelled', 'archived', 'locked'] }
         });
 
-        const pendingReviewsCount = await Review.countDocuments({
-          reviewer: uId,
-          status: 'pending'
+        const pendingReviewsCount = await Evaluation.countDocuments({
+          evaluatorId: uId,
+          status: { $in: ['draft', 'in_progress', 'rejected'] }
         });
 
-        const goals = await Goal.find({ 
-          employeeId: uId, 
-          status: { $nin: ['draft', 'locked', 'final_evaluated'] } 
+        const objectives = await Objective.find({
+          owner: uId,
+          status: { $nin: ['draft', 'rejected', 'cancelled', 'archived', 'locked'] }
         });
         
         let progress = 0;
-        if (goals.length > 0) {
-          const totalProgress = goals.reduce((sum, g) => sum + (g.currentProgress || 0), 0);
-          progress = Math.round(totalProgress / goals.length);
+        if (objectives.length > 0) {
+          const totalProgress = objectives.reduce((sum, objective) => sum + (objective.achievementPercent || 0), 0);
+          progress = Math.round(totalProgress / objectives.length);
         } else if (tasksActiveCount > 0 || tasksCompletedCount > 0) {
           progress = Math.round((tasksCompletedCount / (tasksActiveCount + tasksCompletedCount)) * 100);
-        } else {
-          progress = Math.floor(Math.random() * 60) + 10;
         }
 
-        const mockStatusIndex = (uId.toString().charCodeAt(0) + new Date().getHours()) % 4;
-        const calculatedStatus = statuses[mockStatusIndex] || 'available';
+        let calculatedStatus = 'available';
+        if (user.isActive === false) {
+          calculatedStatus = 'offline';
+        } else if (pendingReviewsCount > 0 || tasksActiveCount >= 6) {
+          calculatedStatus = 'do_not_disturb';
+        } else if (tasksActiveCount >= 3 || activeObjectivesCount >= 3) {
+          calculatedStatus = 'busy';
+        }
 
         return {
           id: uId,
@@ -99,7 +101,7 @@ router.get('/', rateLimiter, auth, async (req, res) => {
           progress: progress,
           tasksCompleted: tasksCompletedCount,
           activeTasks: tasksActiveCount,
-          activeGoals: activeGoalsCount,
+          activeGoals: activeObjectivesCount,
           pendingReviews: pendingReviewsCount
         };
       } catch (innerError) {

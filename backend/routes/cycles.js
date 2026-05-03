@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Cycle = require('../models/Cycle');
 const Objective = require('../models/Objective');
+const Evaluation = require('../models/Evaluation');
 const HRDecision = require('../models/HRDecision');
 const auth = require('../middleware/auth');
 const role = require('../middleware/role');
@@ -10,16 +11,6 @@ const validate = require('../middleware/validate');
 const schemas = require('../validators/schemas');
 const { notifyAllActiveUsers } = require('../utils/notificationHelper');
 const { createAuditLog } = require('../utils/auditHelper');
-
-
-
-function compareDates(date1, date2) {
-  var d1 = new Date(date1);
-  var d2 = new Date(date2);
-  d1.setHours(0, 0, 0, 0);
-  d2.setHours(0, 0, 0, 0);
-  return d1.getTime() - d2.getTime();
-}
 
 /**
  * Validate that phase dates are sequential when provided.
@@ -79,16 +70,10 @@ router.get('/:id', rateLimiter, auth, async function (req, res) {
 // ========== CREATE CYCLE (ADMIN / HR) ==========
 router.post('/', rateLimiter, auth, role('ADMIN', 'HR'), validate(schemas.cycle.create), async function (req, res) {
   try {
-    var { name, year, evaluationStart, evaluationEnd, status,
+    var { name, year, status,
           phase1Start, phase1End, phase2Start, phase2End, phase3Start, phase3End, currentPhase } = req.body;
 
     if (req.user.role !== 'ADMIN') {
-      // Legacy evaluation date validation
-      if (evaluationStart && evaluationEnd && compareDates(evaluationEnd, evaluationStart) < 0) {
-        return res.status(400).json({ message: 'Evaluation end date cannot be before start date' });
-      }
-
-      // Phase date sequential validation
       var phaseError = validatePhaseDatesFromBody(req.body, null);
       if (phaseError) {
         return res.status(400).json({ message: phaseError });
@@ -99,8 +84,6 @@ router.post('/', rateLimiter, auth, role('ADMIN', 'HR'), validate(schemas.cycle.
       name: name,
       year: year,
       status: status || 'draft',
-      evaluationStart: evaluationStart || null,
-      evaluationEnd: evaluationEnd || null,
       phase1Start: phase1Start || null,
       phase1End: phase1End || null,
       phase2Start: phase2Start || null,
@@ -129,7 +112,7 @@ router.post('/', rateLimiter, auth, role('ADMIN', 'HR'), validate(schemas.cycle.
 // ========== UPDATE CYCLE — PUT (ADMIN / HR, backward compatible) ==========
 router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR'), validate(schemas.cycle.update), async function (req, res) {
   try {
-    var { name, year, evaluationStart, evaluationEnd, status,
+    var { name, year, status,
           phase1Start, phase1End, phase2Start, phase2End, phase3Start, phase3End, currentPhase } = req.body;
     var cycle = await Cycle.findById(req.params.id);
     if (!cycle) {
@@ -140,13 +123,6 @@ router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR'), validate(schemas.cycl
     }
 
     if (req.user.role !== 'ADMIN') {
-      var evalStart = evaluationStart || cycle.evaluationStart;
-      var evalEnd = evaluationEnd || cycle.evaluationEnd;
-      if (evalStart && evalEnd && compareDates(evalEnd, evalStart) < 0) {
-        return res.status(400).json({ message: 'Evaluation end date cannot be before start date' });
-      }
-
-      // Phase date sequential validation (merge with existing)
       var phaseError = validatePhaseDatesFromBody(req.body, cycle);
       if (phaseError) {
         return res.status(400).json({ message: phaseError });
@@ -167,21 +143,34 @@ router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR'), validate(schemas.cycl
 
     // Check if transitioning to closed — generate HR decisions
     if (status === 'closed' && cycle.status !== 'closed') {
-      const objectives = await Objective.find({ cycle: cycle._id, status: 'validated' });
+      const evaluations = await Evaluation.find({
+        cycleId: cycle._id,
+        status: { $in: ['submitted', 'approved', 'completed'] },
+      });
 
-      const userScores = {};
-      objectives.forEach(o => {
-        const ownerId = String(o.owner);
-        if (!userScores[ownerId]) userScores[ownerId] = { individual: 0, team: 0 };
-        if (o.category === 'individual') userScores[ownerId].individual += (o.weightedScore || 0);
-        if (o.category === 'team') userScores[ownerId].team += (o.weightedScore || 0);
+      const objectiveMap = {};
+      const cycleObjectives = await Objective.find({
+        cycle: cycle._id,
+        status: { $nin: ['rejected', 'cancelled', 'archived'] },
+      });
+      cycleObjectives.forEach(function (objective) {
+        const ownerId = String(objective.owner);
+        if (!objectiveMap[ownerId]) {
+          objectiveMap[ownerId] = { individual: 0, team: 0 };
+        }
+        const weightedScore = Number(objective.weightedScore || 0);
+        if (objective.category === 'team') {
+          objectiveMap[ownerId].team += weightedScore;
+        } else {
+          objectiveMap[ownerId].individual += weightedScore;
+        }
       });
 
       const decisions = [];
-      for (const [userId, scores] of Object.entries(userScores)) {
-        const indScore = Math.min(scores.individual, 100) * 0.70;
-        const teamScore = Math.min(scores.team, 100) * 0.30;
-        const finalScore = Number((indScore + teamScore).toFixed(2));
+      for (const evaluation of evaluations) {
+        const userId = String(evaluation.employeeId);
+        const scores = objectiveMap[userId] || { individual: 0, team: 0 };
+        const finalScore = Number((evaluation.finalScore ?? evaluation.suggestedScore ?? 0).toFixed(2));
 
         let action = 'satisfactory';
         if (finalScore >= 90) action = 'reward';
@@ -207,8 +196,6 @@ router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR'), validate(schemas.cycl
     }
 
     if (status) cycle.status = status;
-    if (evaluationStart) cycle.evaluationStart = evaluationStart;
-    if (evaluationEnd) cycle.evaluationEnd = evaluationEnd;
 
     if (req.user.role === 'ADMIN') cycle.$ignoreSequentialValidation = true;
 
@@ -236,29 +223,19 @@ router.patch('/:id', rateLimiter, auth, role('ADMIN', 'HR'), validate(schemas.cy
       return res.status(400).json({ message: 'Cannot edit a closed cycle' });
     }
 
-    var { name, year, evaluationStart, evaluationEnd, status,
+    var { name, year, status,
           phase1Start, phase1End, phase2Start, phase2End, phase3Start, phase3End, currentPhase } = req.body;
 
     if (req.user.role !== 'ADMIN') {
-      // Phase date sequential validation (merge with existing)
       var phaseError = validatePhaseDatesFromBody(req.body, cycle);
       if (phaseError) {
         return res.status(400).json({ message: phaseError });
-      }
-
-      // Legacy evaluation date validation
-      var evalStart = evaluationStart || cycle.evaluationStart;
-      var evalEnd = evaluationEnd || cycle.evaluationEnd;
-      if (evalStart && evalEnd && compareDates(evalEnd, evalStart) < 0) {
-        return res.status(400).json({ message: 'Evaluation end date cannot be before start date' });
       }
     }
 
     // Apply updates (only fields that are provided)
     if (name !== undefined) cycle.name = name;
     if (year !== undefined) cycle.year = year;
-    if (evaluationStart !== undefined) cycle.evaluationStart = evaluationStart || null;
-    if (evaluationEnd !== undefined) cycle.evaluationEnd = evaluationEnd || null;
     if (status !== undefined) cycle.status = status;
     if (phase1Start !== undefined) cycle.phase1Start = phase1Start || null;
     if (phase1End !== undefined) cycle.phase1End = phase1End || null;
@@ -296,6 +273,78 @@ router.patch('/:id/phase', rateLimiter, auth, role('ADMIN', 'HR'), validate(sche
 
     var { currentPhase } = req.body;
     var oldPhase = cycle.currentPhase;
+
+    // ===== PHASE TRANSITION VALIDATION =====
+    var phaseOrder = ['phase1', 'phase2', 'phase3', 'closed'];
+    var newIndex = phaseOrder.indexOf(currentPhase);
+
+    if (newIndex === -1) {
+      return res.status(400).json({ message: 'Invalid phase: ' + currentPhase });
+    }
+
+    // ADMIN can freely move between any phases — no guards
+    if (currentPhase === 'phase2') {
+      var objBlockingStatuses = ['draft', 'pending', 'submitted', 'pending_approval', 'revision_requested', 'assigned', 'acknowledged', 'rejected'];
+      var unapprovedObjectives = await Objective.find({
+        cycle: cycle._id,
+        status: { $in: objBlockingStatuses }
+      }).select('_id title status owner').populate('owner', 'name');
+
+      var totalObjectives = await Objective.countDocuments({ cycle: cycle._id });
+
+      if (totalObjectives === 0) {
+        return res.status(400).json({
+          message: 'Cannot advance to Mid-Year Execution: No objectives exist in this cycle.'
+        });
+      }
+
+      if (unapprovedObjectives.length > 0) {
+        return res.status(400).json({
+          message: unapprovedObjectives.length + ' objectives are not yet approved. Resolve before advancing.',
+          unapprovedObjectives: unapprovedObjectives.map(function(o) { return { _id: o._id, title: o.title, status: o.status, owner: o.owner?.name || 'Unknown' }; })
+        });
+      }
+    }
+
+    if (req.user.role === 'ADMIN') {
+      // Admin override: allow any valid phase transition after Phase 2 readiness passes
+      if (cycle.status === 'draft' && currentPhase !== 'phase1') {
+        // Even admin must start a draft cycle at phase1
+        // (but can then jump freely once active)
+      }
+    } else {
+      // Non-admin: enforce forward-only sequential transitions
+      if (cycle.status === 'draft') {
+        if (currentPhase !== 'phase1') {
+          return res.status(400).json({ message: 'Draft cycles must start at Phase 1.' });
+        }
+      } else {
+        var oldIndex = phaseOrder.indexOf(oldPhase);
+        if (newIndex <= oldIndex) {
+          return res.status(400).json({ message: 'Cannot go backwards. Current phase: ' + oldPhase + '. Requested: ' + currentPhase });
+        }
+        if (newIndex !== oldIndex + 1) {
+          return res.status(400).json({ message: 'Cannot skip phases. Must advance from ' + oldPhase + ' to ' + phaseOrder[oldIndex + 1] });
+        }
+      }
+
+      // ===== WORKFLOW READINESS GUARDS (non-admin only) =====
+
+      // All objectives must have progress tracked before advancing to Phase 3
+      if (currentPhase === 'phase3') {
+        var objNoProgress = await Objective.countDocuments({
+          cycle: cycle._id,
+          status: { $in: ['approved', 'validated'] },
+          $or: [{ achievementPercent: null }, { achievementPercent: 0, 'kpis.0': { $exists: false } }]
+        });
+        if (objNoProgress > 0) {
+          return res.status(400).json({
+            message: 'Cannot advance to Phase 3: ' + objNoProgress + ' objective(s) have no progress recorded.'
+          });
+        }
+      }
+    }
+
     cycle.currentPhase = currentPhase;
 
     // Auto-update status based on phase
@@ -312,7 +361,7 @@ router.patch('/:id/phase', rateLimiter, auth, role('ADMIN', 'HR'), validate(sche
     // Broadcast phase change notification to all users
     var notifType = currentPhase === 'closed' ? 'PHASE_CLOSED' : 'PHASE_OPENED';
     var phaseLabel = currentPhase === 'closed' ? 'Cycle Closed' : currentPhase.replace('phase', 'Phase ');
-    notifyAllActiveUsers({ senderId: req.user.id, type: notifType, title: phaseLabel + ' — ' + cycle.name, message: 'Cycle "' + cycle.name + '" has moved to ' + phaseLabel + '.', link: '/annual-cycles' });
+    notifyAllActiveUsers({ senderId: req.user.id, type: notifType, title: phaseLabel + ' — ' + cycle.name, message: 'Cycle "' + cycle.name + '" has moved to ' + phaseLabel + '.', link: '/cycles' });
     createAuditLog({ entityType: 'cycle', entityId: cycle._id, action: 'phase_changed', performedBy: req.user.id, oldValue: { currentPhase: oldPhase }, newValue: { currentPhase: currentPhase }, description: 'Cycle "' + cycle.name + '" phase changed from ' + oldPhase + ' to ' + currentPhase, ipAddress: req.ip });
 
     res.json({
@@ -321,6 +370,111 @@ router.patch('/:id/phase', rateLimiter, auth, role('ADMIN', 'HR'), validate(sche
     });
   } catch (err) {
     console.error('Update phase error:', err);
+    res.status(500).json({ message: err.message || 'Server error' });
+  }
+});
+
+// ========== PHASE PRE-CHECK (before advancing) ==========
+router.get('/:id/phase-check', rateLimiter, auth, role('ADMIN', 'HR'), async function (req, res) {
+  try {
+    var cycle = await Cycle.findById(req.params.id);
+    if (!cycle) return res.status(404).json({ message: 'Cycle not found' });
+
+    var nextPhase = 'phase1';
+    if (cycle.status === 'draft') nextPhase = 'phase1';
+    else if (cycle.currentPhase === 'phase1') nextPhase = 'phase2';
+    else if (cycle.currentPhase === 'phase2') nextPhase = 'phase3';
+    else if (cycle.currentPhase === 'phase3') nextPhase = 'closed';
+
+    var issues = [];
+    var unapprovedObjectives = [];
+
+    if (nextPhase === 'phase2') {
+      var objBlockingStatuses = ['draft', 'pending', 'submitted', 'pending_approval', 'revision_requested', 'assigned', 'acknowledged', 'rejected'];
+      var blockedObjs = await Objective.find({
+        cycle: cycle._id,
+        status: { $in: objBlockingStatuses }
+      }).select('_id title status owner').populate('owner', 'name');
+
+      var totalObjectives = await Objective.countDocuments({ cycle: cycle._id });
+
+      if (totalObjectives === 0) {
+        issues.push('No objectives exist in this cycle.');
+      }
+      if (blockedObjs.length > 0) {
+        issues.push(blockedObjs.length + ' objectives are not yet approved. Resolve before advancing.');
+        unapprovedObjectives = blockedObjs.map(function(o) {
+          return { _id: o._id, title: o.title, status: o.status, owner: o.owner?.name || 'Unknown' };
+        });
+      }
+    }
+
+    if (nextPhase === 'phase3') {
+      var objNoProgress = await Objective.countDocuments({
+        cycle: cycle._id,
+        status: { $in: ['approved', 'validated'] },
+        $or: [{ achievementPercent: null }, { achievementPercent: 0, 'kpis.0': { $exists: false } }]
+      });
+      if (objNoProgress > 0) {
+        issues.push(objNoProgress + ' objective(s) have no progress recorded.');
+      }
+    }
+
+    res.json({
+      ready: issues.length === 0,
+      nextPhase: nextPhase,
+      currentPhase: cycle.currentPhase,
+      issues: issues,
+      unapprovedObjectives: unapprovedObjectives
+    });
+  } catch (err) {
+    console.error('Phase check error:', err);
+    res.status(500).json({ message: err.message || 'Server error' });
+  }
+});
+
+// ========== ROLLBACK PHASE (phase2 → phase1, ADMIN only) ==========
+router.post('/:id/rollback', rateLimiter, auth, role('ADMIN'), async function (req, res) {
+  try {
+    var cycle = await Cycle.findById(req.params.id);
+    if (!cycle) return res.status(404).json({ message: 'Cycle not found' });
+    if (cycle.currentPhase !== 'phase2') {
+      return res.status(400).json({ message: 'Rollback is only allowed from phase2 to phase1.' });
+    }
+
+    // Check for submitted assessments (mid-year reviews or self-assessments)
+    var assessmentCount = await Objective.countDocuments({
+      cycle: cycle._id,
+      $or: [
+        { selfAssessment: { $exists: true, $ne: '' } },
+        { managerComments: { $exists: true, $ne: '' } }
+      ]
+    });
+
+    if (assessmentCount > 0) {
+      return res.status(400).json({
+        message: 'Cannot roll back. ' + assessmentCount + ' assessments already submitted.'
+      });
+    }
+
+    var oldPhase = cycle.currentPhase;
+    cycle.currentPhase = 'phase1';
+    cycle.$ignoreSequentialValidation = true;
+    await cycle.save();
+
+    var populated = await Cycle.findById(cycle._id).populate('createdBy', 'name email');
+
+    createAuditLog({
+      entityType: 'cycle', entityId: cycle._id, action: 'phase_rollback',
+      performedBy: req.user.id,
+      oldValue: { currentPhase: oldPhase }, newValue: { currentPhase: 'phase1' },
+      description: 'Cycle "' + cycle.name + '" rolled back from ' + oldPhase + ' to phase1',
+      ipAddress: req.ip
+    });
+
+    res.json({ message: 'Phase rolled back from ' + oldPhase + ' to phase1', cycle: populated });
+  } catch (err) {
+    console.error('Rollback error:', err);
     res.status(500).json({ message: err.message || 'Server error' });
   }
 });

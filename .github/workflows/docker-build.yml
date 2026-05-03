@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - develop
+      - qa
+      - staging
 
 jobs:
   docker:
@@ -23,24 +25,58 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # -----------------------------------
+      # Determine Tag Based on Branch
+      # -----------------------------------
+      - name: Set image tag
+        id: vars
+        run: |
+          echo "Branch: $GITHUB_REF_NAME"
+
+          if [[ "$GITHUB_REF_NAME" == "main" ]]; then
+            echo "PRIMARY_TAG=latest" >> $GITHUB_OUTPUT
+            echo "SECONDARY_TAG=${GITHUB_SHA}" >> $GITHUB_OUTPUT
+
+          elif [[ "$GITHUB_REF_NAME" == "develop" ]]; then
+            echo "PRIMARY_TAG=dev-latest" >> $GITHUB_OUTPUT
+            echo "SECONDARY_TAG=dev-${GITHUB_SHA}" >> $GITHUB_OUTPUT
+
+          elif [[ "$GITHUB_REF_NAME" == "qa" ]]; then
+            echo "PRIMARY_TAG=qa-latest" >> $GITHUB_OUTPUT
+            echo "SECONDARY_TAG=qa-${GITHUB_SHA}" >> $GITHUB_OUTPUT
+
+          elif [[ "$GITHUB_REF_NAME" == "staging" ]]; then
+            echo "PRIMARY_TAG=staging-latest" >> $GITHUB_OUTPUT
+            echo "SECONDARY_TAG=staging-${GITHUB_SHA}" >> $GITHUB_OUTPUT
+          fi
+
+      # -----------------------------------
+      # Build Backend
+      # -----------------------------------
       - name: Build and push backend image
         uses: docker/build-push-action@v6
         with:
           context: ./backend
           push: true
           tags: |
-            moatazbench/pfe-backend:latest
-            moatazbench/pfe-backend:${{ github.sha }}
+            moatazbench/pfe-backend:${{ steps.vars.outputs.PRIMARY_TAG }}
+            moatazbench/pfe-backend:${{ steps.vars.outputs.SECONDARY_TAG }}
 
+      # -----------------------------------
+      # Build Frontend
+      # -----------------------------------
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
           push: true
           tags: |
-            moatazbench/pfe-frontend:latest
-            moatazbench/pfe-frontend:${{ github.sha }}
+            moatazbench/pfe-frontend:${{ steps.vars.outputs.PRIMARY_TAG }}
+            moatazbench/pfe-frontend:${{ steps.vars.outputs.SECONDARY_TAG }}
 
+      # -----------------------------------
+      # Jira Integration
+      # -----------------------------------
       - name: Jira comment (success)
         if: success()
         env:

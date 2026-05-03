@@ -405,14 +405,15 @@ button {
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .goal-modal {
   background: var(--bg-card); border-radius: var(--radius-xl); padding: 0;
-  width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto;
+  width: 100%; max-width: 850px; max-height: 90vh; overflow-y: auto;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  animation: slideUp 0.3s ease;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 .goal-modal__header {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 24px 28px 16px; border-bottom: 1px solid var(--border-color);
+  padding: 24px 36px 20px; border-bottom: 1px solid var(--border-color);
+  background: #f8fafc; border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 }
 .goal-modal__header h2 { margin: 0; font-size: 1.3rem; font-weight: 700; }
 .goal-modal__close {
@@ -426,16 +427,16 @@ button {
   border-radius: var(--radius-sm); font-size: 0.9rem; font-weight: 500;
   border: 1px solid #FECACA;
 }
-.goal-modal__form { padding: 20px 28px 28px; display: flex; flex-direction: column; gap: 16px; }
-.goal-modal__field { display: flex; flex-direction: column; gap: 6px; }
+.goal-modal__form { padding: 24px 36px 36px; display: flex; flex-direction: column; gap: 20px; }
+.goal-modal__field { display: flex; flex-direction: column; gap: 8px; }
 .goal-modal__field label { font-weight: 600; font-size: 0.85rem; color: var(--text-dark); }
-.goal-modal__row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.goal-modal__actions { display: flex; gap: 12px; margin-top: 8px; justify-content: flex-end; }
+.goal-modal__row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.goal-modal__actions { display: flex; gap: 16px; margin-top: 12px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid var(--border-color); }
 .goal-modal__cancel {
   background: #f1f5f9 !important; color: var(--text-muted) !important; border: none !important;
-  padding: 10px 20px !important; font-weight: 600 !important; cursor: pointer;
+  padding: 12px 28px !important; font-weight: 600 !important; cursor: pointer; border-radius: var(--radius-sm); font-size: 0.95rem;
 }
-.goal-modal__cancel:hover { background: #e2e8f0 !important; }
+.goal-modal__cancel:hover { background: #e2e8f0 !important; color: #1e293b !important; }
 .goal-modal__ai-btn {
   background: linear-gradient(135deg, #8b5cf6, #6d28d9) !important;
   color: #fff !important; border: none !important; padding: 8px 16px !important;

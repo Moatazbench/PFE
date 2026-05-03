@@ -20,6 +20,7 @@
     "multer": "^2.0.2",
     "node-cron": "^3.0.0",
     "nodemailer": "^8.0.1",
+    "openai": "^5.23.2",
     "pdfkit": "^0.13.0",
     "xss-clean": "^0.1.4"
   },

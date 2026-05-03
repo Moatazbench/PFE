@@ -71,11 +71,42 @@ router.get('/:id', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), async 
 router.post('/', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), async function (req, res) {
   try {
     var { name, description, leader, members } = req.body;
+
+    // === VALIDATION: Team name is required ===
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: 'Team name is required.' });
+    }
+
+    // === VALIDATION: Leader is required ===
+    if (!leader) {
+      return res.status(400).json({ message: 'A team leader is required. Please select a team leader.' });
+    }
+
+    // === VALIDATION: At least 1 member is required ===
+    if (!members || !Array.isArray(members) || members.length === 0) {
+      return res.status(400).json({ message: 'At least one team member (collaborator) is required.' });
+    }
+
+    // === VALIDATION: Leader must have valid role ===
+    var leaderUser = await User.findById(leader);
+    if (!leaderUser) {
+      return res.status(400).json({ message: 'Selected leader not found.' });
+    }
+    if (leaderUser.role !== 'TEAM_LEADER' && leaderUser.role !== 'ADMIN' && leaderUser.role !== 'HR') {
+      return res.status(400).json({ message: 'Selected leader must have TEAM_LEADER, ADMIN, or HR role.' });
+    }
+
+    // === VALIDATION: All members must be valid collaborators ===
+    var memberUsers = await User.find({ _id: { $in: members }, role: 'COLLABORATOR' });
+    if (memberUsers.length !== members.length) {
+      return res.status(400).json({ message: 'All members must be valid users with the COLLABORATOR role.' });
+    }
+
     var team = new Team({
-      name: name,
+      name: name.trim(),
       description: description || '',
-      leader: leader || null,
-      members: members || [],
+      leader: leader,
+      members: members,
       createdBy: req.user.id
     });
     await team.save();
@@ -132,6 +163,42 @@ router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), async 
       return res.status(404).json({ message: 'Team not found' });
     }
 
+    // === VALIDATION: Name cannot be empty if provided ===
+    if (name !== undefined && (!name || !name.trim())) {
+      return res.status(400).json({ message: 'Team name cannot be empty.' });
+    }
+
+    // === VALIDATION: Leader is required ===
+    var effectiveLeader = leader !== undefined ? leader : (team.leader ? team.leader.toString() : null);
+    if (!effectiveLeader) {
+      return res.status(400).json({ message: 'A team leader is required. Please select a team leader.' });
+    }
+
+    // === VALIDATION: At least 1 member is required ===
+    var effectiveMembers = members !== undefined ? members : team.members.map(m => m.toString());
+    if (!effectiveMembers || !Array.isArray(effectiveMembers) || effectiveMembers.length === 0) {
+      return res.status(400).json({ message: 'At least one team member (collaborator) is required.' });
+    }
+
+    // === VALIDATION: Leader must have valid role ===
+    if (leader !== undefined && leader) {
+      var leaderUser = await User.findById(leader);
+      if (!leaderUser) {
+        return res.status(400).json({ message: 'Selected leader not found.' });
+      }
+      if (leaderUser.role !== 'TEAM_LEADER' && leaderUser.role !== 'ADMIN' && leaderUser.role !== 'HR') {
+        return res.status(400).json({ message: 'Selected leader must have TEAM_LEADER, ADMIN, or HR role.' });
+      }
+    }
+
+    // === VALIDATION: All members must be valid collaborators ===
+    if (members !== undefined && members.length > 0) {
+      var memberUsers = await User.find({ _id: { $in: members }, role: 'COLLABORATOR' });
+      if (memberUsers.length !== members.length) {
+        return res.status(400).json({ message: 'All members must be valid users with the COLLABORATOR role.' });
+      }
+    }
+
     // Track previously assigned members to detect new ones
     const prevMembers = team.members.map(m => m.toString());
     const prevLeader = team.leader ? team.leader.toString() : null;
@@ -142,7 +209,7 @@ router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), async 
       { $unset: { team: 1 } }
     );
 
-    if (name) team.name = name;
+    if (name) team.name = name.trim();
     if (description !== undefined) team.description = description;
     if (leader !== undefined) team.leader = leader || null;
     if (members !== undefined) team.members = members || [];

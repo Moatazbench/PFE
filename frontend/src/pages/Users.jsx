@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
 import ExportPDF from '../components/ExportPDF';
 
@@ -9,12 +9,11 @@ function Users() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const API_BASE_URL = 'http://localhost:5000';
-
   async function fetchUsers() {
     try {
-      const res = await axios.get(API_BASE_URL + '/api/users');
-      setUsers(res.data);
+      const res = await api.get('/api/users');
+      const data = res.data;
+      setUsers(Array.isArray(data) ? data : data.users || []);
     } catch (err) {
       console.error('Fetch users error:', err);
       setError('Failed to load users');
@@ -29,7 +28,7 @@ function Users() {
 
   async function handleDeleteUser(id) {
     try {
-      await axios.delete(API_BASE_URL + '/api/users/' + id);
+      await api.delete('/api/users/' + id);
       fetchUsers();
     } catch (err) {
       console.error('Delete user error:', err);

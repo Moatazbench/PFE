@@ -15,14 +15,6 @@ const CycleSchema = new mongoose.Schema({
     enum: ['draft', 'open', 'active', 'in_progress', 'closed'],
     default: 'draft'
   },
-  evaluationStart: {
-    type: Date,
-    default: null
-  },
-  evaluationEnd: {
-    type: Date,
-    default: null
-  },
 
   // === ANNUAL CYCLE: 3-Phase Structure ===
   phase1Start: { type: Date, default: null },
@@ -55,18 +47,6 @@ CycleSchema.index({ currentPhase: 1 });
 CycleSchema.pre('save', function (next) {
   if (this.$ignoreSequentialValidation) {
     return next();
-  }
-
-  // Legacy evaluation date validation
-  if ((this.isModified('evaluationStart') || this.isModified('evaluationEnd')) && this.evaluationStart && this.evaluationEnd) {
-    var evalStart = new Date(this.evaluationStart);
-    var evalEnd = new Date(this.evaluationEnd);
-    evalStart.setHours(0, 0, 0, 0);
-    evalEnd.setHours(23, 59, 59, 999);
-
-    if (evalEnd < evalStart) {
-      return next(new Error('Evaluation end date cannot be before start date'));
-    }
   }
 
   // Phase date sequential validation

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
@@ -6,67 +6,53 @@ import { useToast, ToastContainer } from '../components/common/Toast';
 
 function EvaluationListPage() {
   const { user } = useAuth();
-  const toast = useToast();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [evaluations, setEvaluations] = useState([]);
   const [cycles, setCycles] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [filterCycle, setFilterCycle] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [viewMode, setViewMode] = useState('evaluator'); // 'evaluator' | 'employee' | 'all'
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [teamMembers, setTeamMembers] = useState([]);
-
+  const [viewMode, setViewMode] = useState('evaluator');
+  const [creating, setCreating] = useState(false);
   const [createForm, setCreateForm] = useState({
     employeeId: '',
     cycleId: '',
     period: '',
-    scoringMethod: 'weighted_average',
   });
-  const [creating, setCreating] = useState(false);
 
-  const isManager = ['TEAM_LEADER', 'MANAGER', 'ADMIN', 'HR'].includes(user?.role);
+  const isManager = ['TEAM_LEADER', 'ADMIN', 'HR'].includes(user?.role);
 
   useEffect(() => {
-    fetchData();
+    fetchInitialData();
   }, []);
 
   useEffect(() => {
-    if (filterCycle || filterStatus) fetchEvaluations();
-  }, [filterCycle, filterStatus, viewMode]);
+    if (cycles.length > 0) {
+      fetchEvaluations();
+    }
+  }, [filterCycle, filterStatus, viewMode, cycles.length]);
 
-  async function fetchData() {
+  async function fetchInitialData() {
+    setLoading(true);
     try {
-      const [cyclesRes] = await Promise.all([
-        api.get('/api/cycles'),
-      ]);
-      const allCycles = cyclesRes.data.filter(c => c.status !== 'draft');
-      setCycles(allCycles);
-      if (allCycles.length > 0) {
-        setFilterCycle(allCycles[0]._id);
+      const cyclesRes = await api.get('/api/cycles');
+      const availableCycles = (cyclesRes.data || []).filter((cycle) => cycle.status !== 'draft');
+      setCycles(availableCycles);
+      if (availableCycles.length > 0) {
+        setFilterCycle(availableCycles[0]._id);
       }
 
-      // Fetch team members for create modal
       if (isManager) {
-        try {
-          const teamRes = await api.get('/api/team-members');
-          setTeamMembers(teamRes.data.members || teamRes.data || []);
-        } catch (e) {
-          // Fallback: try teams endpoint
-          try {
-            const teamsRes = await api.get('/api/teams');
-            const myTeam = teamsRes.data.find(t => String(t.leader?._id || t.leader) === String(user?.id));
-            if (myTeam) {
-              setTeamMembers(myTeam.members || []);
-            }
-          } catch (e2) { /* ignore */ }
-        }
+        const teamRes = await api.get('/api/team-members');
+        setTeamMembers(Array.isArray(teamRes.data) ? teamRes.data : (teamRes.data.members || []));
       }
-
-      await fetchEvaluations();
     } catch (err) {
-      toast.error('Failed to load data');
+      toast.error('Failed to load evaluation data.');
+    } finally {
       setLoading(false);
     }
   }
@@ -88,131 +74,114 @@ function EvaluationListPage() {
       const res = await api.get(`${url}?${params.toString()}`);
       setEvaluations(res.data.evaluations || []);
     } catch (err) {
-      toast.error('Failed to load evaluations');
+      toast.error('Failed to load evaluations.');
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleCreateEvaluation(e) {
-    e.preventDefault();
+  async function handleCreateEvaluation(event) {
+    event.preventDefault();
     if (!createForm.employeeId || !createForm.cycleId) {
-      toast.error('Please select an employee and cycle');
+      toast.error('Please select an employee and cycle.');
       return;
     }
+
     setCreating(true);
     try {
       const res = await api.post('/api/evaluations', createForm);
-      toast.success('Evaluation created successfully!');
       setShowCreateModal(false);
-      setCreateForm({ employeeId: '', cycleId: '', period: '', scoringMethod: 'weighted_average' });
-      // Navigate to the scoring page
+      setCreateForm({ employeeId: '', cycleId: '', period: '' });
+      toast.success('Evaluation created.');
       navigate(`/evaluation-scoring?id=${res.data.evaluation._id}`);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create evaluation');
+      toast.error(err.response?.data?.message || 'Failed to create evaluation.');
     } finally {
       setCreating(false);
     }
   }
 
   function getStatusStyle(status) {
-    const m = {
+    const styles = {
       draft: { bg: '#64748b', text: '#fff', label: 'Draft' },
-      in_progress: { bg: '#3b82f6', text: '#fff', label: 'In Progress' },
-      submitted: { bg: '#f59e0b', text: '#fff', label: 'Submitted' },
-      approved: { bg: '#22c55e', text: '#fff', label: 'Approved' },
-      rejected: { bg: '#ef4444', text: '#fff', label: 'Rejected' },
-      completed: { bg: '#8b5cf6', text: '#fff', label: 'Completed' },
+      in_progress: { bg: '#2563eb', text: '#fff', label: 'In Progress' },
+      submitted: { bg: '#d97706', text: '#fff', label: 'Submitted' },
+      approved: { bg: '#16a34a', text: '#fff', label: 'Approved' },
+      rejected: { bg: '#dc2626', text: '#fff', label: 'Rejected' },
+      completed: { bg: '#7c3aed', text: '#fff', label: 'Completed' },
     };
-    return m[status] || m.draft;
+    return styles[status] || styles.draft;
   }
 
   function getScoreColor(score) {
     if (score == null) return '#94a3b8';
-    if (score >= 8) return '#8b5cf6';
-    if (score >= 6) return '#22c55e';
-    if (score >= 5) return '#eab308';
-    if (score >= 3) return '#f97316';
-    return '#ef4444';
+    if (score >= 90) return '#7c3aed';
+    if (score >= 75) return '#16a34a';
+    if (score >= 50) return '#ca8a04';
+    return '#dc2626';
   }
 
-  const activeEvals = evaluations;
-  const pendingReview = evaluations.filter(e => e.status === 'submitted' && ['ADMIN', 'HR'].includes(user?.role));
+  const pendingApprovals = evaluations.filter((evaluation) => evaluation.status === 'submitted' && ['ADMIN', 'HR'].includes(user?.role));
 
   return (
     <div className="eval-list-page">
       <ToastContainer toasts={toast.toasts} removeToast={toast.removeToast} />
 
-      {/* Page Header */}
       <div className="eval-list-header">
         <div>
-          <h1 className="eval-list-title">⭐ Employee Evaluations</h1>
-          <p className="eval-list-subtitle">Manage and track performance evaluations across your team.</p>
+          <h1 className="eval-list-title">Employee Evaluations</h1>
+          <p className="eval-list-subtitle">Final evaluation records now score directly from approved objectives.</p>
         </div>
-        <div className="eval-list-header-actions">
-          {isManager && (
-            <button className="btn eval-btn-create" onClick={() => setShowCreateModal(true)}>
-              ➕ Create Evaluation
-            </button>
-          )}
-        </div>
+        {isManager && (
+          <button className="btn eval-btn-create" onClick={() => setShowCreateModal(true)}>
+            Create Evaluation
+          </button>
+        )}
       </div>
 
-      {/* Stats cards */}
       <div className="eval-stats-row">
         <div className="eval-stat-card">
           <span className="eval-stat-number">{evaluations.length}</span>
           <span className="eval-stat-label">Total Evaluations</span>
         </div>
         <div className="eval-stat-card eval-stat-draft">
-          <span className="eval-stat-number">{evaluations.filter(e => ['draft', 'in_progress'].includes(e.status)).length}</span>
-          <span className="eval-stat-label">In Progress</span>
+          <span className="eval-stat-number">{evaluations.filter((evaluation) => ['draft', 'in_progress'].includes(evaluation.status)).length}</span>
+          <span className="eval-stat-label">Editable</span>
         </div>
         <div className="eval-stat-card eval-stat-submitted">
-          <span className="eval-stat-number">{evaluations.filter(e => e.status === 'submitted').length}</span>
+          <span className="eval-stat-number">{evaluations.filter((evaluation) => evaluation.status === 'submitted').length}</span>
           <span className="eval-stat-label">Submitted</span>
         </div>
         <div className="eval-stat-card eval-stat-completed">
-          <span className="eval-stat-number">{evaluations.filter(e => e.status === 'completed').length}</span>
+          <span className="eval-stat-number">{evaluations.filter((evaluation) => evaluation.status === 'completed').length}</span>
           <span className="eval-stat-label">Completed</span>
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="eval-tabs">
         {isManager && (
-          <button
-            className={`eval-tab ${viewMode === 'evaluator' ? 'active' : ''}`}
-            onClick={() => setViewMode('evaluator')}
-          >👔 My Evaluations (Evaluator)</button>
+          <button className={`eval-tab ${viewMode === 'evaluator' ? 'active' : ''}`} onClick={() => setViewMode('evaluator')}>
+            My Evaluations
+          </button>
         )}
-        <button
-          className={`eval-tab ${viewMode === 'employee' ? 'active' : ''}`}
-          onClick={() => setViewMode('employee')}
-        >👤 My Reviews (Employee)</button>
+        <button className={`eval-tab ${viewMode === 'employee' ? 'active' : ''}`} onClick={() => setViewMode('employee')}>
+          My Reviews
+        </button>
         {['ADMIN', 'HR'].includes(user?.role) && (
-          <button
-            className={`eval-tab ${viewMode === 'all' ? 'active' : ''}`}
-            onClick={() => setViewMode('all')}
-          >📋 All Evaluations</button>
+          <button className={`eval-tab ${viewMode === 'all' ? 'active' : ''}`} onClick={() => setViewMode('all')}>
+            All Evaluations
+          </button>
         )}
       </div>
 
-      {/* Filters */}
       <div className="eval-filters">
-        <select
-          value={filterCycle}
-          onChange={e => setFilterCycle(e.target.value)}
-          className="eval-filter-select"
-        >
+        <select value={filterCycle} onChange={(event) => setFilterCycle(event.target.value)} className="eval-filter-select">
           <option value="">All Cycles</option>
-          {cycles.map(c => <option key={c._id} value={c._id}>{c.name} ({c.year})</option>)}
+          {cycles.map((cycle) => (
+            <option key={cycle._id} value={cycle._id}>{cycle.name} ({cycle.year})</option>
+          ))}
         </select>
-        <select
-          value={filterStatus}
-          onChange={e => setFilterStatus(e.target.value)}
-          className="eval-filter-select"
-        >
+        <select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value)} className="eval-filter-select">
           <option value="">All Statuses</option>
           <option value="draft">Draft</option>
           <option value="in_progress">In Progress</option>
@@ -223,58 +192,41 @@ function EvaluationListPage() {
         </select>
       </div>
 
-      {/* Pending approval banner */}
-      {pendingReview.length > 0 && ['ADMIN', 'HR'].includes(user?.role) && (
+      {pendingApprovals.length > 0 && ['ADMIN', 'HR'].includes(user?.role) && (
         <div className="eval-pending-banner">
-          ⚠️ <strong>{pendingReview.length}</strong> evaluation(s) pending your approval
+          <strong>{pendingApprovals.length}</strong> evaluation(s) are waiting for HR approval.
         </div>
       )}
 
-      {/* Evaluations list */}
       {loading ? (
         <div className="eval-loading">
           <div className="spinner"></div>
           <p>Loading evaluations...</p>
         </div>
-      ) : activeEvals.length === 0 ? (
+      ) : evaluations.length === 0 ? (
         <div className="eval-empty-state">
-          <span style={{ fontSize: '3rem' }}>📋</span>
           <h3>No Evaluations Found</h3>
-          <p>
-            {viewMode === 'evaluator' ? 'You haven\'t created any evaluations yet.' :
-             viewMode === 'employee' ? 'No evaluations have been created for you.' :
-             'No evaluations match your filters.'}
-          </p>
-          {isManager && viewMode === 'evaluator' && (
-            <button className="btn eval-btn-create" onClick={() => setShowCreateModal(true)}>
-              Create Your First Evaluation
-            </button>
-          )}
+          <p>{viewMode === 'employee' ? 'No evaluations have been created for you yet.' : 'No evaluations match the current filters.'}</p>
         </div>
       ) : (
         <div className="eval-list-grid">
-          {activeEvals.map(ev => {
-            const statusStyle = getStatusStyle(ev.status);
-            const reviewed = ev.goalAssessments?.filter(a => a.reviewed).length || 0;
-            const total = ev.goalAssessments?.length || 0;
-            const score = ev.finalScore || ev.suggestedScore;
+          {evaluations.map((evaluation) => {
+            const statusStyle = getStatusStyle(evaluation.status);
+            const score = evaluation.finalScore ?? evaluation.suggestedScore;
+            const objectiveCount = evaluation.objectiveAssessments?.length || 0;
 
             return (
-              <div
-                key={ev._id}
-                className="eval-list-card"
-                onClick={() => navigate(`/evaluation-scoring?id=${ev._id}`)}
-              >
+              <div key={evaluation._id} className="eval-list-card" onClick={() => navigate(`/evaluation-scoring?id=${evaluation._id}`)}>
                 <div className="eval-card-top">
                   <div className="eval-card-avatar">
-                    {(viewMode === 'employee' ? ev.evaluatorId?.name : ev.employeeId?.name)?.charAt(0)?.toUpperCase() || '?'}
+                    {(viewMode === 'employee' ? evaluation.evaluatorId?.name : evaluation.employeeId?.name)?.charAt(0)?.toUpperCase() || '?'}
                   </div>
                   <div className="eval-card-info">
                     <h3 className="eval-card-name">
-                      {viewMode === 'employee' ? `Evaluated by ${ev.evaluatorId?.name}` : ev.employeeId?.name}
+                      {viewMode === 'employee' ? `Evaluated by ${evaluation.evaluatorId?.name}` : evaluation.employeeId?.name}
                     </h3>
-                    <span className="eval-card-period">{ev.period || ev.cycleId?.name}</span>
-                    <span className="eval-card-role">{ev.employeeId?.role}</span>
+                    <span className="eval-card-period">{evaluation.period || evaluation.cycleId?.name}</span>
+                    <span className="eval-card-role">{objectiveCount} objective(s)</span>
                   </div>
                   <span className="eval-card-status" style={{ backgroundColor: statusStyle.bg, color: statusStyle.text }}>
                     {statusStyle.label}
@@ -283,24 +235,24 @@ function EvaluationListPage() {
 
                 <div className="eval-card-bottom">
                   <div className="eval-card-progress">
-                    <span className="eval-card-progress-label">Goals Reviewed</span>
+                    <span className="eval-card-progress-label">Objective Score</span>
                     <div className="eval-card-progress-bar">
-                      <div className="eval-card-progress-fill" style={{ width: total > 0 ? `${(reviewed / total) * 100}%` : '0%' }}></div>
+                      <div className="eval-card-progress-fill" style={{ width: `${Math.min(score || 0, 100)}%` }}></div>
                     </div>
-                    <span className="eval-card-progress-text">{reviewed}/{total}</span>
+                    <span className="eval-card-progress-text">{objectiveCount} scoped</span>
                   </div>
 
                   {score != null && (
                     <div className="eval-card-score" style={{ color: getScoreColor(score) }}>
                       <span className="eval-card-score-value">{score}</span>
-                      <span className="eval-card-score-label">/10</span>
+                      <span className="eval-card-score-label">/100</span>
                     </div>
                   )}
                 </div>
 
                 <div className="eval-card-footer">
-                  <span>{new Date(ev.createdAt).toLocaleDateString()}</span>
-                  {ev.employeeAcknowledgment?.acknowledged && <span className="eval-ack-badge">✅ Acknowledged</span>}
+                  <span>{new Date(evaluation.createdAt).toLocaleDateString()}</span>
+                  {evaluation.employeeAcknowledgment?.acknowledged && <span className="eval-ack-badge">Acknowledged</span>}
                 </div>
               </div>
             );
@@ -308,43 +260,41 @@ function EvaluationListPage() {
         </div>
       )}
 
-      {/* Create Evaluation Modal */}
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="modal eval-create-modal" onClick={e => e.stopPropagation()}>
+          <div className="modal eval-create-modal" onClick={(event) => event.stopPropagation()}>
             <div className="modal-header">
-              <h3>➕ Create New Evaluation</h3>
-              <button onClick={() => setShowCreateModal(false)} className="close-btn" style={{ background: 'transparent', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+              <h3>Create New Evaluation</h3>
+              <button onClick={() => setShowCreateModal(false)} className="close-btn" style={{ background: 'transparent', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>x</button>
             </div>
 
             <form onSubmit={handleCreateEvaluation}>
               <div className="eval-create-form">
                 <div className="eval-create-field">
-                  <label className="eval-create-label">Employee <span style={{ color: 'red' }}>*</span></label>
+                  <label className="eval-create-label">Employee</label>
                   <select
                     value={createForm.employeeId}
-                    onChange={e => setCreateForm(f => ({ ...f, employeeId: e.target.value }))}
+                    onChange={(event) => setCreateForm((current) => ({ ...current, employeeId: event.target.value }))}
                     className="eval-create-select"
                     required
                   >
                     <option value="">Select Employee...</option>
-                    {teamMembers.map(m => {
-                      const memberId = m._id || m.id;
-                      const memberName = m.name || m.email;
-                      return <option key={memberId} value={memberId}>{memberName}</option>;
+                    {teamMembers.map((member) => {
+                      const memberId = member._id || member.id;
+                      return <option key={memberId} value={memberId}>{member.name || member.email}</option>;
                     })}
                   </select>
                 </div>
 
                 <div className="eval-create-field">
-                  <label className="eval-create-label">Cycle <span style={{ color: 'red' }}>*</span></label>
+                  <label className="eval-create-label">Cycle</label>
                   <select
                     value={createForm.cycleId}
-                    onChange={e => {
-                      const cycle = cycles.find(c => c._id === e.target.value);
-                      setCreateForm(f => ({
-                        ...f,
-                        cycleId: e.target.value,
+                    onChange={(event) => {
+                      const cycle = cycles.find((item) => item._id === event.target.value);
+                      setCreateForm((current) => ({
+                        ...current,
+                        cycleId: event.target.value,
                         period: cycle ? `${cycle.name} ${cycle.year}` : '',
                       }));
                     }}
@@ -352,7 +302,9 @@ function EvaluationListPage() {
                     required
                   >
                     <option value="">Select Cycle...</option>
-                    {cycles.map(c => <option key={c._id} value={c._id}>{c.name} ({c.year})</option>)}
+                    {cycles.map((cycle) => (
+                      <option key={cycle._id} value={cycle._id}>{cycle.name} ({cycle.year})</option>
+                    ))}
                   </select>
                 </div>
 
@@ -361,29 +313,17 @@ function EvaluationListPage() {
                   <input
                     type="text"
                     value={createForm.period}
-                    onChange={e => setCreateForm(f => ({ ...f, period: e.target.value }))}
+                    onChange={(event) => setCreateForm((current) => ({ ...current, period: event.target.value }))}
                     className="eval-create-input"
-                    placeholder="e.g., End-Year 2025"
+                    placeholder="End-Year 2026"
                   />
-                </div>
-
-                <div className="eval-create-field">
-                  <label className="eval-create-label">Scoring Method</label>
-                  <select
-                    value={createForm.scoringMethod}
-                    onChange={e => setCreateForm(f => ({ ...f, scoringMethod: e.target.value }))}
-                    className="eval-create-select"
-                  >
-                    <option value="weighted_average">Weighted Average</option>
-                    <option value="simple_average">Simple Average</option>
-                  </select>
                 </div>
               </div>
 
               <div className="eval-create-actions">
                 <button type="button" className="btn btn--secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
                 <button type="submit" className="btn eval-btn-create" disabled={creating}>
-                  {creating ? 'Creating...' : 'Create & Start Evaluation'}
+                  {creating ? 'Creating...' : 'Create Evaluation'}
                 </button>
               </div>
             </form>

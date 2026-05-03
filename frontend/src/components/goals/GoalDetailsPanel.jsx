@@ -5,7 +5,7 @@ import GoalProgressBar from './GoalProgressBar';
 import GoalStatusBadge from './GoalStatusBadge';
 import CheckInModal from './CheckInModal';
 import GoalAlignmentTree from './GoalAlignmentTree';
-import ChangeRequestModal from './ChangeRequestModal';
+
 import EvaluateGoalModal from './EvaluateGoalModal';
 import ManagerReviewModal from './ManagerReviewModal';
 import { useAuth } from '../AuthContext';
@@ -19,14 +19,14 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
     var [showKpiForm, setShowKpiForm] = useState(false);
     var [children, setChildren] = useState([]);
     var [showCheckInModal, setShowCheckInModal] = useState(false);
-    var [showChangeRequestModal, setShowChangeRequestModal] = useState(false);
+
     var [showEvaluateModal, setShowEvaluateModal] = useState(false);
     var [showReviewModal, setShowReviewModal] = useState(false);
     var [kpiLocalValues, setKpiLocalValues] = useState({});
     var debounceTimers = useRef({});
     var [showSubGoalForm, setShowSubGoalForm] = useState(false);
     var [allGoals, setAllGoals] = useState([]);
-    var [subGoalForm, setSubGoalForm] = useState({ title: '', weight: 10, deadline: '' });
+    var [subGoalForm, setSubGoalForm] = useState({ title: '', weight: 10 });
 
     var isAdmin = user.role === 'ADMIN';
     var isOwner = (detail.owner && (String(detail.owner._id || detail.owner) === String(user._id || user.id))) || isAdmin;
@@ -43,6 +43,10 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
 
     var isAssigned = detail.status === 'assigned';
     var isCompleted = detail.achievementPercent >= 100;
+    var currentPhase = detail.cycle?.currentPhase || 'phase1';
+    var isPhaseThreeLocked = currentPhase === 'phase3' && !isAdmin;
+    var isPhaseTwoStructuralLock = currentPhase === 'phase2' && !isAdmin;
+    var structuralLockLabel = isPhaseThreeLocked ? 'Read-only in Phase 3' : isPhaseTwoStructuralLock ? 'Structural edits locked — Mid-Year Execution' : 'Editable in Phase 1';
 
     useEffect(function () { fetchDetail(); fetchChildren(); }, [goal._id]);
     useEffect(function () {
@@ -63,8 +67,8 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
     // === WORKFLOW ACTIONS ===
     async function handleSubmitForApproval() {
         try {
-            await api.post('/api/objectives/' + goal._id + '/submit-for-approval');
-            toast.success('Goal submitted for approval!');
+            await api.post('/api/objectives/submit/' + goal._id);
+            toast.success('Objective submitted for approval!');
             fetchDetail(); if (onRefresh) onRefresh();
         } catch (err) { toast.error(err.response?.data?.message || 'Failed to submit'); }
     }
@@ -72,7 +76,7 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
     async function handleAcknowledge(accepted, message) {
         try {
             await api.post('/api/objectives/' + goal._id + '/acknowledge', { accepted, clarificationMessage: message });
-            toast.success(accepted ? 'Goal accepted!' : 'Clarification requested.');
+            toast.success(accepted ? 'Objective accepted!' : 'Clarification requested.');
             fetchDetail(); if (onRefresh) onRefresh();
         } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
     }
@@ -80,7 +84,7 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
     async function handleMarkCompleted() {
         try {
             await api.post('/api/objectives/' + goal._id + '/mark-completed', { selfAssessment: '' });
-            toast.success('Goal marked as completed!');
+            toast.success('Objective marked as completed!');
             fetchDetail(); if (onRefresh) onRefresh();
         } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
     }
@@ -124,8 +128,8 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
     async function handleCreateSubGoal(e) {
         e.preventDefault();
         try {
-            await api.post('/api/objectives', { title: subGoalForm.title, weight: parseInt(subGoalForm.weight) || 10, deadline: subGoalForm.deadline || undefined, cycle: detail.cycle?._id || detail.cycle, category: detail.category || 'individual', successIndicator: subGoalForm.title, parentObjective: goal._id });
-            setSubGoalForm({ title: '', weight: 10, deadline: '' }); setShowSubGoalForm(false); toast.success('Sub-goal created!'); fetchChildren(); if (onRefresh) onRefresh();
+            await api.post('/api/objectives', { title: subGoalForm.title, weight: parseInt(subGoalForm.weight) || 10, cycle: detail.cycle?._id || detail.cycle, category: detail.category || 'individual', successIndicator: subGoalForm.title, parentObjective: goal._id });
+            setSubGoalForm({ title: '', weight: 10 }); setShowSubGoalForm(false); toast.success('Sub-objective created!'); fetchChildren(); if (onRefresh) onRefresh();
         } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
     }
 
@@ -146,7 +150,6 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
     function formatDateTime(d) { return d ? new Date(d).toLocaleString() : '—'; }
 
     var tabs = ['details', 'kpis', 'alignment', 'updates', 'comments', 'activity'];
-    if (detail.changeRequests && detail.changeRequests.length > 0) tabs.splice(5, 0, 'changes');
 
     var ratingLabels = { exceeded: '🌟 Exceeded Expectations', met: '✅ Met Expectations', partially_met: '⚡ Partially Met', not_met: '❌ Did Not Meet' };
 
@@ -176,12 +179,20 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
                         <button className="goal-panel__close" onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#64748b' }}>✕</button>
                     </div>
                     <p style={{ color: '#64748b', margin: '0 0 1rem 0' }}>{detail.description || 'No description'}</p>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                        <span style={{ padding: '4px 10px', borderRadius: '999px', background: '#e2e8f0', color: '#334155', fontSize: '0.75rem', fontWeight: 700 }}>
+                            {currentPhase === 'phase1' ? 'Phase 1' : currentPhase === 'phase2' ? 'Phase 2' : currentPhase === 'phase3' ? 'Phase 3' : 'Closed'}
+                        </span>
+                        <span style={{ padding: '4px 10px', borderRadius: '999px', background: isPhaseThreeLocked || isPhaseTwoStructuralLock ? '#fee2e2' : '#dcfce7', color: isPhaseThreeLocked || isPhaseTwoStructuralLock ? '#b91c1c' : '#166534', fontSize: '0.75rem', fontWeight: 700 }}>
+                            {structuralLockLabel}
+                        </span>
+                    </div>
 
                     {/* Workflow action buttons */}
                     <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
                         {/* Employee: Submit draft to team leader */}
                         {isOwner && detail.status === 'draft' && (
-                            <button onClick={async function() { try { await api.post('/api/objectives/submit/' + goal._id); toast.success('Goal submitted to Team Leader!'); fetchDetail(); if (onRefresh) onRefresh(); } catch (err) { toast.error(err.response?.data?.message || 'Failed to submit'); } }} style={{ background: 'linear-gradient(135deg,#3b82f6,#60a5fa)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>📤 Submit to Team Leader</button>
+                            <button onClick={async function() { try { await api.post('/api/objectives/submit/' + goal._id); toast.success('Objective submitted to Team Leader!'); fetchDetail(); if (onRefresh) onRefresh(); } catch (err) { toast.error(err.response?.data?.message || 'Failed to submit'); } }} style={{ background: 'linear-gradient(135deg,#3b82f6,#60a5fa)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>📤 Submit to Team Leader</button>
                         )}
                         {/* Employee: Resubmit after revision/rejection */}
                         {isOwner && ['revision_requested', 'rejected'].includes(detail.status) && (
@@ -190,7 +201,7 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
                         {/* Employee: Acknowledge assigned goal */}
                         {isOwner && isAssigned && (
                             <>
-                                <button onClick={function () { handleAcknowledge(true); }} style={{ background: 'linear-gradient(135deg,#27ae60,#2ecc71)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>✅ Accept Goal</button>
+                                <button onClick={function () { handleAcknowledge(true); }} style={{ background: 'linear-gradient(135deg,#27ae60,#2ecc71)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>✅ Accept Objective</button>
                                 <button onClick={function () { var msg = prompt('What clarification do you need?'); if (msg) handleAcknowledge(false, msg); }} style={{ background: 'linear-gradient(135deg,#f59e0b,#fbbf24)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>❓ Request Clarification</button>
                             </>
                         )}
@@ -202,16 +213,13 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
                         {isOwner && isActive && !isCompleted && (
                             <button onClick={handleMarkCompleted} style={{ background: 'linear-gradient(135deg,#7c3aed,#a78bfa)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>🏆 Mark Completed</button>
                         )}
-                        {/* Employee: Change request */}
-                        {isOwner && isActive && (
-                            <button onClick={function () { setShowChangeRequestModal(true); }} style={{ background: 'linear-gradient(135deg,#6366f1,#818cf8)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>📝 Change Request</button>
-                        )}
+
                         {/* Manager: Evaluate completed */}
                         {isManager && isActive && isCompleted && !detail.evaluationRating && (!isOwner || isAdmin) && (
                             <button onClick={function () { setShowEvaluateModal(true); }} style={{ background: 'linear-gradient(135deg,#7c3aed,#a78bfa)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>📊 Evaluate</button>
                         )}
                         {/* Sub-goal + Check-in */}
-                        {isActive && <button onClick={function () { setShowSubGoalForm(!showSubGoalForm); }} style={{ background: 'linear-gradient(135deg,#0ea5e9,#38bdf8)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>🔗 Add Sub-goal</button>}
+                        {isActive && <button onClick={function () { setShowSubGoalForm(!showSubGoalForm); }} style={{ background: 'linear-gradient(135deg,#0ea5e9,#38bdf8)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>🔗 Add Sub-objective</button>}
                         {isActive && <button className="btn btn--primary" onClick={function () { setShowCheckInModal(true); }} style={{ marginLeft: 'auto' }}>Check-in</button>}
                     </div>
 
@@ -237,10 +245,9 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
                     {showSubGoalForm && (
                         <form onSubmit={handleCreateSubGoal} style={{ background: 'var(--bg-main,#f8fafc)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '1.25rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             <strong>🔗 Create Sub-goal</strong>
-                            <input type="text" placeholder="Sub-goal title *" value={subGoalForm.title} onChange={function(e) { setSubGoalForm(function(p) { return {...p, title: e.target.value}; }); }} required style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.9rem' }} />
+                            <input type="text" placeholder="Sub-objective title *" value={subGoalForm.title} onChange={function(e) { setSubGoalForm(function(p) { return {...p, title: e.target.value}; }); }} required style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.9rem' }} />
                             <div style={{ display: 'flex', gap: '0.75rem' }}>
                                 <input type="number" placeholder="Weight %" value={subGoalForm.weight} min={1} max={100} onChange={function(e) { setSubGoalForm(function(p) { return {...p, weight: e.target.value}; }); }} style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)' }} />
-                                <input type="date" value={subGoalForm.deadline} onChange={function(e) { setSubGoalForm(function(p) { return {...p, deadline: e.target.value}; }); }} style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)' }} />
                             </div>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <button type="submit" style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: '6px', padding: '8px 18px', cursor: 'pointer', fontWeight: 600 }}>Create</button>
@@ -257,6 +264,7 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
                             <GoalStatusBadge status={detail.status} type="workflow" />
+                            <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Updated {formatDate(detail.updatedAt || detail.createdAt)}</span>
                         </div>
                     </div>
                 </div>
@@ -279,8 +287,6 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
                             {detail.assignedBy && <div className="goal-panel__detail-row"><span>Assigned By:</span><span>{detail.assignedBy?.name || detail.assignedBy}</span></div>}
                             <div className="goal-panel__detail-row"><span>Category:</span><span>{detail.category || 'individual'}</span></div>
                             <div className="goal-panel__detail-row"><span>Weight:</span><span>{detail.weight}%</span></div>
-                            <div className="goal-panel__detail-row"><span>Start:</span><span>{formatDate(detail.startDate)}</span></div>
-                            <div className="goal-panel__detail-row"><span>Deadline:</span><span>{formatDate(detail.deadline)}</span></div>
                             <div className="goal-panel__detail-row"><span>Visibility:</span><span>{detail.visibility || 'public'}</span></div>
                             <div className="goal-panel__detail-row"><span>Labels:</span><span>{(detail.labels || []).join(', ') || 'None'}</span></div>
                             {detail.successIndicator && <div className="goal-panel__detail-row"><span>Success Indicator:</span><span>{detail.successIndicator}</span></div>}
@@ -290,7 +296,7 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
 
                     {activeTab === 'kpis' && (
                         <div className="goal-panel__kpis">
-                            <div className="goal-panel__kpi-header"><h3>Key Results / KPIs ({(detail.kpis || []).length})</h3><button className="goal-panel__add-btn" onClick={function () { setShowKpiForm(!showKpiForm); }}>+ Add KPI</button></div>
+                            <div className="goal-panel__kpi-header"><h3>Key Results / KPIs ({(detail.kpis || []).length})</h3>{(isOwner || isAdmin) && <button className="goal-panel__add-btn" onClick={function () { setShowKpiForm(!showKpiForm); }} disabled={isPhaseThreeLocked} style={isPhaseThreeLocked ? { opacity: 0.55, cursor: 'not-allowed' } : {}}>+ Add KPI</button>}</div>
                             {showKpiForm && (<form className="goal-panel__kpi-form" onSubmit={handleAddKpi}><input type="text" placeholder="KPI Title" value={kpiForm.title} onChange={function (e) { setKpiForm(Object.assign({}, kpiForm, { title: e.target.value })); }} required /><select value={kpiForm.metricType} onChange={function (e) { setKpiForm(Object.assign({}, kpiForm, { metricType: e.target.value })); }}><option value="percent">Percent</option><option value="number">Number</option><option value="currency">Currency</option><option value="boolean">Boolean</option><option value="milestone">Milestone</option></select><div className="goal-panel__kpi-form-row"><input type="number" placeholder="Initial" value={kpiForm.initialValue} onChange={function (e) { setKpiForm(Object.assign({}, kpiForm, { initialValue: parseFloat(e.target.value) })); }} /><input type="number" placeholder="Target" value={kpiForm.targetValue} onChange={function (e) { setKpiForm(Object.assign({}, kpiForm, { targetValue: parseFloat(e.target.value) })); }} /><input type="text" placeholder="Unit" value={kpiForm.unit} onChange={function (e) { setKpiForm(Object.assign({}, kpiForm, { unit: e.target.value })); }} /></div><div className="goal-panel__kpi-form-actions"><button type="submit">Add</button><button type="button" onClick={function () { setShowKpiForm(false); }}>Cancel</button></div></form>)}
                             <div className="goal-panel__kpi-list">
                                 {(detail.kpis || []).length === 0 ? <p className="goal-panel__empty">No KPIs defined.</p> :
@@ -303,7 +309,7 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
                         </div>
                     )}
 
-                    {activeTab === 'alignment' && (<div className="goal-panel__alignment"><h3>Goal Alignment</h3><GoalAlignmentTree rootGoal={detail} /></div>)}
+                    {activeTab === 'alignment' && (<div className="goal-panel__alignment"><h3>Objective Alignment</h3><GoalAlignmentTree rootGoal={detail} /></div>)}
 
                     {activeTab === 'updates' && (
                         <div className="goal-panel__updates">
@@ -329,7 +335,6 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
                                                 <strong>{typeLabels[cr.requestType] || cr.requestType}</strong>
                                             </div>
                                             <p style={{ margin: '4px 0', fontSize: '0.9rem' }}>{cr.reason}</p>
-                                            {cr.newDeadline && <p style={{ margin: '2px 0', fontSize: '0.85rem', color: '#64748b' }}>New deadline: {formatDate(cr.newDeadline)}</p>}
                                             {cr.resolutionNote && <p style={{ margin: '4px 0', fontSize: '0.85rem', color: '#64748b' }}>Resolution: {cr.resolutionNote}</p>}
                                             <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>By {cr.requestedBy?.name || 'Unknown'} • {formatDateTime(cr.createdAt)}</div>
                                             {isManager && cr.status === 'pending' && (
@@ -367,7 +372,7 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
             </div>
 
             {showCheckInModal && <CheckInModal goal={detail} onClose={function() { setShowCheckInModal(false); }} onCheckInComplete={function() { setShowCheckInModal(false); fetchDetail(); if (onRefresh) onRefresh(); }} />}
-            {showChangeRequestModal && <ChangeRequestModal goal={detail} onClose={function() { setShowChangeRequestModal(false); }} onRequested={function() { fetchDetail(); if (onRefresh) onRefresh(); }} />}
+
             {showEvaluateModal && <EvaluateGoalModal goal={detail} onClose={function() { setShowEvaluateModal(false); }} onEvaluated={function() { fetchDetail(); if (onRefresh) onRefresh(); }} />}
             {showReviewModal && <ManagerReviewModal goal={detail} onClose={function() { setShowReviewModal(false); }} onReviewed={function() { fetchDetail(); if (onRefresh) onRefresh(); }} />}
         </div>

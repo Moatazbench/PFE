@@ -1,0 +1,127 @@
+================================================================================
+          COMPREHENSIVE TESTING SCENARIO - COMPETENCE MANAGEMENT SYSTEM
+================================================================================
+
+This document outlines a complete end-to-end testing scenario for the 
+Application de Gestion des Compétences.
+
+It is recommended to test the application using three different accounts representing
+the primary roles:
+1. ADMIN / HR
+2. MANAGER
+3. EMPLOYEE
+
+--------------------------------------------------------------------------------
+PHASE 1: AUTHENTICATION & ACCESS CONTROL
+--------------------------------------------------------------------------------
+[ ] Test 1.1: Login as Admin. Verify successful login and redirection to Admin Dashboard.
+[ ] Test 1.2: Login as Manager. Verify successful login and redirection to Manager Dashboard.
+[ ] Test 1.3: Login as Employee. Verify successful login and redirection to Employee Dashboard.
+[ ] Test 1.4: Invalid Login. Attempt login with incorrect credentials. Verify error message.
+[ ] Test 1.5: Logout. Ensure session is cleared and user is redirected to Login page.
+
+--------------------------------------------------------------------------------
+PHASE 2: SETUP & CONFIGURATION (ADMIN ROLE)
+--------------------------------------------------------------------------------
+[ ] Test 2.1: User Management (Admin -> Users)
+    - Create a new Manager user.
+    - Create a new Employee user.
+    - Edit an existing user's details.
+    - Deactivate/Delete a user.
+[ ] Test 2.2: Team Management (Admin -> Teams)
+    - Create a new team.
+    - Assign the new Manager to the team.
+    - Assign the new Employee to the team under the Manager.
+[ ] Test 2.3: Evaluation Cycles (Admin -> Cycles)
+    - Create a new Evaluation Cycle (e.g., "Annual Review 2026").
+    - Set start and end dates.
+    - Activate the cycle.
+[ ] Test 2.4: System Settings (Admin -> Settings)
+    - Verify and update global application settings if applicable.
+
+--------------------------------------------------------------------------------
+PHASE 3: GOAL SETTING & VALIDATION
+--------------------------------------------------------------------------------
+[ ] Test 3.1: Employee Goal Creation (Employee -> My Goals)
+    - Employee creates a new goal for the active cycle.
+    - Fills in title, description, metrics, and deadline.
+    - Submits the goal for validation.
+[ ] Test 3.2: Manager Goal Review (Manager -> Validation / My Team)
+    - Manager logs in and views pending goals from the employee.
+    - Manager edits/comments on the goal.
+    - Manager APPROVES the goal.
+    - Manager REJECTS a test goal to verify the rejection flow.
+[ ] Test 3.3: Goal Tracking (Employee -> My Goals)
+    - Employee updates the progress (%) of an approved goal.
+    - Employee adds a comment or status update to the goal.
+
+--------------------------------------------------------------------------------
+PHASE 4: CONTINUOUS FEEDBACK & INTERACTION
+--------------------------------------------------------------------------------
+[ ] Test 4.1: Task Management (Employee/Manager -> Tasks)
+    - Create tasks related to specific goals.
+    - Mark tasks as 'In Progress', 'Completed'.
+[ ] Test 4.2: Feedback (Manager/Employee -> Feedback)
+    - Manager requests feedback for an employee from a peer.
+    - Peer provides feedback.
+    - Manager views the received feedback.
+[ ] Test 4.3: 1-on-1 Meetings (Manager/Employee -> Meetings)
+    - Manager schedules a 1-on-1 meeting with the employee.
+    - Both users add talking points to the meeting agenda.
+    - Manager adds meeting notes and action items post-meeting.
+[ ] Test 4.4: Team Feed / Social (All -> Team Feed)
+    - Post an update or shoutout in the team feed.
+    - Like or comment on a post.
+
+--------------------------------------------------------------------------------
+PHASE 5: EVALUATION PROCESS
+--------------------------------------------------------------------------------
+[ ] Test 5.1: Mid-Year Evaluation (Employee -> Mid-Year)
+    - Employee initiates or completes self-assessment for Mid-Year.
+    - Employee submits self-assessment.
+[ ] Test 5.2: Mid-Year Review (Manager -> Evaluations / Manager Reviews)
+    - Manager reviews the employee's Mid-Year self-assessment.
+    - Manager provides their assessment and rating.
+    - Manager submits the Mid-Year review.
+[ ] Test 5.3: Final Evaluation (Employee -> Final Evaluation)
+    - Employee completes the end-of-year self-assessment.
+[ ] Test 5.4: Final Evaluation Scoring (Manager -> Evaluation Scoring)
+    - Manager evaluates all goals and competencies for the employee.
+    - System calculates the weighted/simple average score (1-10 or custom scale).
+    - Manager submits the final evaluation.
+[ ] Test 5.5: PDF Generation (Manager/Employee -> Evaluations)
+    - Export the completed evaluation as a PDF report.
+    - Verify formatting and data accuracy in the PDF.
+
+--------------------------------------------------------------------------------
+PHASE 6: HR DECISIONS, CAREER & ANALYTICS
+--------------------------------------------------------------------------------
+[ ] Test 6.1: Career Progression (Employee -> Career)
+    - Employee views career path and required competencies.
+[ ] Test 6.2: HR Decisions (Admin/HR -> HR Decisions)
+    - View the aggregated scores and evaluations for all employees.
+    - Simulate making decisions based on performance (e.g., promotions, bonuses).
+[ ] Test 6.3: Analytics & Reporting (Admin/Manager -> Analytics)
+    - View charts and statistics on goal completion rates.
+    - View performance distribution across the team/company.
+    - Verify data updates based on the completed evaluations.
+
+--------------------------------------------------------------------------------
+PHASE 7: SYSTEM & ADVANCED FEATURES
+--------------------------------------------------------------------------------
+[ ] Test 7.1: AI Assistant (All -> AI Assistant)
+    - Ask the AI Assistant for help formulating a goal.
+    - Ask the AI Assistant for feedback suggestions.
+[ ] Test 7.2: Notifications (All)
+    - Verify notifications are received for:
+        - Goal approval/rejection.
+        - Meeting schedules.
+        - Evaluation deadlines.
+        - New feedback received.
+[ ] Test 7.3: Audit Logs (Admin -> Audit Logs)
+    - Verify that critical actions (logging in, creating goals, submitting evaluations) 
+      are recorded in the audit logs with correct timestamps and user IDs.
+
+================================================================================
+END OF TESTING SCENARIO
+================================================================================

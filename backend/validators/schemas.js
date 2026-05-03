@@ -42,31 +42,43 @@ const schemas = {
                 'string.min': 'Success Indicator must be descriptive (at least 10 characters).'
             }),
             weight: Joi.number().integer().min(1).max(100).required(),
-            deadline: Joi.date().iso().allow(null, ''),
             cycle: objectId.required(),
             category: Joi.string().valid('individual', 'team').default('individual'),
             labels: Joi.array().items(Joi.string().trim()).default([]),
             visibility: Joi.string().valid('private', 'team', 'department', 'public').default('public'),
-            startDate: Joi.date().iso().allow(null, ''),
             parentObjective: objectId.allow(null, ''),
             targetUser: objectId.allow(null, ''),
             targetTeam: objectId.allow(null, ''),
-        }),
+        }).required(),
         update: Joi.object({
             title: Joi.string().trim().min(5).max(100),
             description: Joi.string().max(500).allow(''),
             successIndicator: Joi.string().trim().min(10).max(250),
             weight: Joi.number().integer().min(1).max(100),
-            deadline: Joi.date().iso().allow(null, ''),
             labels: Joi.array().items(Joi.string().trim()),
             visibility: Joi.string().valid('private', 'team', 'department', 'public'),
-            startDate: Joi.date().iso().allow(null, ''),
             parentObjective: objectId.allow(null, ''),
+        }).min(1).required().messages({
+            'object.min': 'At least one field must be provided for update.'
         }),
+        submitAll: Joi.object({
+            cycle: objectId.required().messages({
+                'any.required': 'Cycle is required.'
+            })
+        }).required(),
         submitProgress: Joi.object({
             achievementPercent: Joi.number().integer().min(0).max(100).required(),
             selfAssessment: Joi.string().allow('')
         }),
+        correctionRequest: Joi.object({
+            field: Joi.string().valid('description', 'successIndicator').required(),
+            newValue: Joi.string().trim().required(),
+            correctionReason: Joi.string().trim().min(5).required()
+        }).required(),
+        reviewCorrectionRequest: Joi.object({
+            status: Joi.string().valid('APPROVED', 'REJECTED').required(),
+            resolutionNote: Joi.string().allow('')
+        }).required(),
         validate: Joi.object({
             status: Joi.string().valid('validated', 'approved', 'rejected', 'revision_requested').required(),
             managerAdjustedPercent: Joi.number().integer().min(0).max(100).allow(null),
@@ -79,8 +91,6 @@ const schemas = {
         create: Joi.object({
             name: Joi.string().required(),
             year: Joi.number().integer().min(2020).max(2100).required(),
-            evaluationStart: Joi.date().iso().allow(null, ''),
-            evaluationEnd: Joi.date().iso().allow(null, ''),
             status: Joi.string().valid('draft', 'open', 'active', 'in_progress', 'closed').default('draft'),
             phase1Start: Joi.date().iso().allow(null, ''),
             phase1End: Joi.date().iso().allow(null, ''),
@@ -93,8 +103,6 @@ const schemas = {
         update: Joi.object({
             name: Joi.string(),
             year: Joi.number().integer().min(2020).max(2100),
-            evaluationStart: Joi.date().iso().allow(null, ''),
-            evaluationEnd: Joi.date().iso().allow(null, ''),
             status: Joi.string().valid('draft', 'open', 'active', 'in_progress', 'closed'),
             phase1Start: Joi.date().iso().allow(null, ''),
             phase1End: Joi.date().iso().allow(null, ''),

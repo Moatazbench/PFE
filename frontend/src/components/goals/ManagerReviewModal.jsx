@@ -26,7 +26,7 @@ function ManagerReviewModal({ goal, onClose, onReviewed }) {
                 revisionReason: action === 'revision_requested' ? managerComments : undefined,
             });
             var labels = { approved: 'approved', rejected: 'rejected', revision_requested: 'sent back for revision' };
-            toast.success('Goal ' + (labels[action] || action) + ' successfully!');
+            toast.success('Objective ' + (labels[action] || action) + ' successfully!');
             if (onReviewed) onReviewed();
             onClose();
         } catch (err) {
@@ -38,7 +38,7 @@ function ManagerReviewModal({ goal, onClose, onReviewed }) {
         <div className="goal-modal-overlay" onClick={onClose}>
             <div className="goal-modal" onClick={function (e) { e.stopPropagation(); }} style={{ maxWidth: '600px' }}>
                 <div className="goal-modal__header">
-                    <h2>📋 Review Goal</h2>
+                    <h2>📋 Review Objective</h2>
                     <button className="goal-modal__close" onClick={onClose}>✕</button>
                 </div>
 

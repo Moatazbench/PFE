@@ -22,16 +22,13 @@ import CareerPage from './pages/CareerPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import TeamFeed from './pages/TeamFeed';
 import MyTeamPage from './pages/MyTeamPage';
-import AIAssistant from './pages/AIAssistant';
 // New Annual Cycle Pages
-import MyGoalsPage from './pages/MyGoalsPage';
-import ManagerReviewsPage from './pages/ManagerReviewsPage';
+// MyGoalsPage and ManagerReviewsPage removed — consolidated into GoalsPage (objectives)
 import MidYearPage from './pages/MidYearPage';
 import FinalEvaluationPage from './pages/FinalEvaluationPage';
 import PerformancePage from './pages/PerformancePage';
 import EvaluationScoringPage from './pages/EvaluationScoringPage';
-import EvaluationListPage from './pages/EvaluationListPage';
-import AdminDashboardPage from './pages/AdminDashboardPage';
+// EvaluationListPage removed from UI
 import AuditLogsPage from './pages/AuditLogsPage';
 // AI Assistant intentionally removed from the application
 
@@ -39,6 +36,8 @@ import './App.css';
 import './premium.css';
 import './apple-design.css';
 import './evaluation.css';
+import './design-system.css';
+import './enterprise-shell.css';
 
 // Role-gated route: redirects to /dashboard if user lacks required role
 function RoleRoute({ allowedRoles, children }) {
@@ -56,20 +55,15 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
           <Route path="/feed" element={<ProtectedRoute><DashboardLayout><TeamFeed /></DashboardLayout></ProtectedRoute>} />
-          <Route path="/ai-assistant" element={<ProtectedRoute><DashboardLayout><AIAssistant /></DashboardLayout></ProtectedRoute>} />
           <Route path="/my-team" element={<ProtectedRoute><DashboardLayout><MyTeamPage /></DashboardLayout></ProtectedRoute>} />
           <Route path="/cycles" element={<ProtectedRoute><DashboardLayout><Cycles /></DashboardLayout></ProtectedRoute>} />
-          <Route path="/annual-goals" element={<ProtectedRoute><DashboardLayout><MyGoalsPage /></DashboardLayout></ProtectedRoute>} />
-          <Route path="/goal-approvals" element={<ProtectedRoute><DashboardLayout><ManagerReviewsPage /></DashboardLayout></ProtectedRoute>} />
           <Route path="/midyear-assessments" element={<ProtectedRoute><DashboardLayout><MidYearPage /></DashboardLayout></ProtectedRoute>} />
           <Route path="/final-evaluations" element={<ProtectedRoute><DashboardLayout><FinalEvaluationPage /></DashboardLayout></ProtectedRoute>} />
           <Route path="/performance" element={<ProtectedRoute><DashboardLayout><PerformancePage /></DashboardLayout></ProtectedRoute>} />
-          <Route path="/evaluation-list" element={<ProtectedRoute><DashboardLayout><EvaluationListPage /></DashboardLayout></ProtectedRoute>} />
+
           <Route path="/evaluation-scoring" element={<ProtectedRoute><DashboardLayout><EvaluationScoringPage /></DashboardLayout></ProtectedRoute>} />
-          <Route path="/admin-dashboard" element={<ProtectedRoute><DashboardLayout><RoleRoute allowedRoles={['ADMIN', 'HR']}><AdminDashboardPage /></RoleRoute></DashboardLayout></ProtectedRoute>} />
+
           <Route path="/audit-logs" element={<ProtectedRoute><DashboardLayout><RoleRoute allowedRoles={['ADMIN', 'HR']}><AuditLogsPage /></RoleRoute></DashboardLayout></ProtectedRoute>} />
-          
-          <Route path="/objectives" element={<Navigate to="/goals" replace />} />
           <Route path="/goals" element={<ProtectedRoute><DashboardLayout><GoalsPage /></DashboardLayout></ProtectedRoute>} />
           <Route path="/evaluations" element={<ProtectedRoute><DashboardLayout><Evaluations /></DashboardLayout></ProtectedRoute>} />
           <Route path="/validation" element={<ProtectedRoute><DashboardLayout><Validation /></DashboardLayout></ProtectedRoute>} />

@@ -1,13 +1,11 @@
 import React from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 function ExportPDF({ type, id, label }) {
-  const API_BASE_URL = 'http://localhost:5000';
-
   async function handleExport() {
     try {
-      const res = await axios.get(
-        API_BASE_URL + '/api/pdf/' + type + '/' + id,
+      const res = await api.get(
+        '/api/pdf/' + type + '/' + id,
         { responseType: 'blob' }
       );
 

@@ -1,67 +1,48 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useAuth } from '../components/AuthContext';
 import ConfirmDialog from '../components/common/ConfirmDialog';
-import { useToast } from '../components/common/Toast';
+import { useToast, ToastContainer } from '../components/common/Toast';
 import api from '../services/api';
 
 function Cycles() {
-  const { user } = useAuth();
-  const toast = useToast();
-  const [cycles, setCycles] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [editingCycle, setEditingCycle] = useState(null);
-  const [confirmPhaseStart, setConfirmPhaseStart] = useState(null);
+  var { user } = useAuth();
+  var toast = useToast();
+  var [cycles, setCycles] = useState([]);
+  var [loading, setLoading] = useState(true);
+  var [showModal, setShowModal] = useState(false);
+  var [editingCycle, setEditingCycle] = useState(null);
+  var [confirmPhaseStart, setConfirmPhaseStart] = useState(null);
+  var [phaseCheckResult, setPhaseCheckResult] = useState(null);
+  var [showBlockedModal, setShowBlockedModal] = useState(false);
+  var [checkingPhase, setCheckingPhase] = useState(null);
 
-
-  const [formData, setFormData] = useState({
-    name: '',
-    year: new Date().getFullYear(),
-    status: 'draft',
-    phase1Start: '', phase1End: '',
-    phase2Start: '', phase2End: '',
-    phase3Start: '', phase3End: ''
+  var [formData, setFormData] = useState({
+    name: '', year: new Date().getFullYear(), status: 'draft',
+    phase1Start: '', phase1End: '', phase2Start: '', phase2End: '', phase3Start: '', phase3End: ''
   });
-
-  const [error, setError] = useState('');
+  var [error, setError] = useState('');
 
   async function fetchCycles() {
     try {
-      const res = await api.get('/api/cycles');
+      var res = await api.get('/api/cycles');
       setCycles(res.data);
     } catch (err) {
-      console.error('Fetch cycles error:', err);
       toast.error('Failed to fetch cycles.');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }
 
-  useEffect(() => {
-    fetchCycles();
-  }, []);
+  useEffect(function() { fetchCycles(); }, []);
 
   function openCreateModal() {
     setEditingCycle(null);
-    setFormData({
-      name: '',
-      year: new Date().getFullYear(),
-      status: 'draft',
-      phase1Start: '', phase1End: '',
-      phase2Start: '', phase2End: '',
-      phase3Start: '', phase3End: ''
-    });
-    setShowModal(true);
-    setError('');
+    setFormData({ name: '', year: new Date().getFullYear(), status: 'draft', phase1Start: '', phase1End: '', phase2Start: '', phase2End: '', phase3Start: '', phase3End: '' });
+    setShowModal(true); setError('');
   }
 
   function openEditModal(cycle) {
     setEditingCycle(cycle);
     setFormData({
-      name: cycle.name || '',
-      year: cycle.year || new Date().getFullYear(),
-      status: cycle.status || 'draft',
+      name: cycle.name || '', year: cycle.year || new Date().getFullYear(), status: cycle.status || 'draft',
       phase1Start: cycle.phase1Start ? cycle.phase1Start.substring(0, 10) : '',
       phase1End: cycle.phase1End ? cycle.phase1End.substring(0, 10) : '',
       phase2Start: cycle.phase2Start ? cycle.phase2Start.substring(0, 10) : '',
@@ -69,262 +50,330 @@ function Cycles() {
       phase3Start: cycle.phase3Start ? cycle.phase3Start.substring(0, 10) : '',
       phase3End: cycle.phase3End ? cycle.phase3End.substring(0, 10) : ''
     });
-    setShowModal(true);
-    setError('');
+    setShowModal(true); setError('');
   }
 
   async function handleSubmit(e) {
-    e.preventDefault();
-    setError('');
-    
+    e.preventDefault(); setError('');
     try {
       if (editingCycle) {
-        await api.put(`/api/cycles/${editingCycle._id}`, formData);
+        await api.put('/api/cycles/' + editingCycle._id, formData);
         toast.success('Cycle updated successfully!');
       } else {
         await api.post('/api/cycles', formData);
         toast.success('Cycle created successfully!');
       }
-      setShowModal(false);
-      fetchCycles();
+      setShowModal(false); fetchCycles();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save cycle. Please try again.');
+      setError(err.response?.data?.message || 'Failed to save cycle.');
     }
   }
 
   async function handleDelete(cycle) {
     try {
-      await api.delete(`/api/cycles/${cycle._id}`);
-      toast.success('Cycle deleted successfully!');
-      fetchCycles();
+      await api.delete('/api/cycles/' + cycle._id);
+      toast.success('Cycle deleted.'); fetchCycles();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to delete cycle');
+      toast.error(err.response?.data?.message || 'Failed to delete cycle.');
     }
   }
+
+async function handlePhasePreCheck(cycle) {
+  // Admins bypass all checks — advance freely
+  if (user.role === 'ADMIN') {
+    setConfirmPhaseStart(cycle);
+    return;
+  }
+
+  if (cycle.status === 'draft') {
+    setConfirmPhaseStart(cycle);
+    return;
+  }
+
+  setCheckingPhase(cycle._id);
+  try {
+    var res = await api.get('/api/cycles/' + cycle._id + '/phase-check');
+    if (res.data.ready) {
+      setConfirmPhaseStart(cycle);
+    } else {
+      setPhaseCheckResult(res.data);
+      setShowBlockedModal(true);
+    }
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Failed to check phase readiness.');
+  } finally {
+    setCheckingPhase(null);
+  }
+}
 
   async function handlePhaseAdvanceConfirm() {
-    const cycle = confirmPhaseStart;
-    let nextPhase = 'phase1';
-    
-    if (cycle.currentPhase === 'phase1') nextPhase = 'phase2';
+    var cycle = confirmPhaseStart;
+    var nextPhase = 'phase1';
+    if (cycle.status === 'draft') nextPhase = 'phase1';
+    else if (cycle.currentPhase === 'phase1') nextPhase = 'phase2';
     else if (cycle.currentPhase === 'phase2') nextPhase = 'phase3';
     else if (cycle.currentPhase === 'phase3') nextPhase = 'closed';
-
     try {
-      await api.patch(`/api/cycles/${cycle._id}/phase`, { currentPhase: nextPhase });
-      toast.success(`Successfully advanced to ${nextPhase === 'closed' ? 'Closed' : 'Phase ' + nextPhase.replace('phase','')}`);
-      setConfirmPhaseStart(null);
-      fetchCycles();
+      await api.patch('/api/cycles/' + cycle._id + '/phase', { currentPhase: nextPhase });
+      toast.success('Advanced to ' + (nextPhase === 'closed' ? 'Closed' : 'Phase ' + nextPhase.replace('phase', '')));
+      setConfirmPhaseStart(null); fetchCycles();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to change phase');
+      toast.error(err.response?.data?.message || 'Failed to change phase.');
       setConfirmPhaseStart(null);
     }
   }
 
-  function getStatusBadge(status, phase) {
-    if (status === 'draft') return <span className="badge" style={{background:'#64748b', color:'#fff'}}>Draft</span>;
-    if (status === 'closed') return <span className="badge" style={{background:'#0f172a', color:'#fff'}}>Closed</span>;
-    
-    // Active / in_progress
-    const phaseLabels = {
-      'phase1': 'Phase 1: Goal Setting',
-      'phase2': 'Phase 2: Mid-Year',
-      'phase3': 'Phase 3: End-Year'
-    };
-    return <span className="badge" style={{background:'#10b981', color:'#fff'}}>{phaseLabels[phase] || 'Active'}</span>;
+  async function handleRollback(cycle) {
+    try {
+      await api.post('/api/cycles/' + cycle._id + '/rollback');
+      toast.success('Phase rolled back to Phase 1 (Goal Setting).');
+      setShowModal(false);
+      setEditingCycle(null);
+      fetchCycles();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to roll back phase.');
+    }
   }
 
   function formatDate(d) {
-    if (!d) return '--';
-    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
-  if (loading) return <div className="page-loading"><div className="spinner"></div><p>Loading Cycles...</p></div>;
+  function getPhaseLabel(phase) {
+    if (phase === 'phase1') return 'Phase 1 · Goal Setting';
+    if (phase === 'phase2') return 'Phase 2 · Mid-Year Execution';
+    if (phase === 'phase3') return 'Phase 3 · End-Year';
+    return 'Closed';
+  }
+
+  if (loading) return (
+    <div className="ent-loading">
+      <div className="ent-spinner"></div>
+      <p style={{ color: 'var(--shell-text-secondary)', fontSize: '14px' }}>Loading cycles...</p>
+    </div>
+  );
 
   return (
-    <div className="page" style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+    <div>
+      {/* Page Header */}
+      <div className="ent-page-header">
         <div>
-          <h1 style={{ margin: 0, fontSize: '2rem', color: 'var(--text-dark)' }}>🔄 Annual Cycles</h1>
-          <p className="text-muted" style={{ margin: '0.5rem 0 0 0' }}>Manage the 3-phase performance lifecycle.</p>
+          <h1 className="ent-page-header__title">Annual Cycles</h1>
+          <p className="ent-page-header__subtitle">Configure and manage the 3-phase performance lifecycle</p>
         </div>
         {(user.role === 'ADMIN' || user.role === 'HR') && (
-          <button onClick={openCreateModal} className="btn btn--primary" style={{ padding: '0.75rem 1.5rem', fontWeight:'bold' }}>+ Create Cycle</button>
+          <div className="ent-page-header__actions">
+            <button onClick={openCreateModal} className="ent-btn ent-btn--primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Create Cycle
+            </button>
+          </div>
         )}
       </div>
 
+      {/* Cycles Grid */}
       {cycles.length === 0 ? (
-        <div style={{ textAlign:'center', padding:'4rem', background:'var(--bg-main)', borderRadius:'12px', border:'1px dashed var(--border-color)' }}>
-          <span style={{ fontSize:'3rem' }}>📅</span>
-          <h3>No Cycles Found</h3>
-          <p className="text-muted">Create your first annual evaluation cycle to begin the performance process.</p>
+        <div className="ent-empty">
+          <div className="ent-empty__icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <p className="ent-empty__title">No cycles yet</p>
+          <p className="ent-empty__text">Create your first annual evaluation cycle to begin the performance process.</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))' }}>
-          {cycles.map(cycle => (
-            <div key={cycle._id} className="card shadow-sm hover-lift" style={{ borderTop: cycle.status === 'in_progress' ? '4px solid #10b981' : 'none' }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'1.5rem' }}>
-                <div>
-                  <h3 style={{ margin: '0 0 0.5rem 0', color:'var(--primary-dark)' }}>{cycle.name}</h3>
-                  <div style={{ fontSize:'0.9rem', color:'var(--text-muted)' }}>Year: <strong>{cycle.year}</strong></div>
-                </div>
-                {getStatusBadge(cycle.status, cycle.currentPhase)}
-              </div>
+        <div className="ent-grid ent-grid--2">
+          {cycles.map(function(cycle) {
+            var isActive = cycle.status === 'in_progress';
+            var isClosed = cycle.status === 'closed';
+            var isDraft = cycle.status === 'draft';
 
-              <div style={{ background:'var(--bg-light)', padding:'1rem', borderRadius:'8px', marginBottom:'1.5rem' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'0.5rem', fontSize:'0.9rem' }}>
-                  <span style={{ fontWeight: cycle.currentPhase==='phase1'?'bold':'normal', color:cycle.currentPhase==='phase1'?'var(--primary)':'var(--text-muted)' }}>
-                    🎯 Phase 1 (Goals)
-                  </span>
-                  <span>{formatDate(cycle.phase1Start)} - {formatDate(cycle.phase1End)}</span>
-                </div>
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'0.5rem', fontSize:'0.9rem' }}>
-                  <span style={{ fontWeight: cycle.currentPhase==='phase2'?'bold':'normal', color:cycle.currentPhase==='phase2'?'#3b82f6':'var(--text-muted)' }}>
-                    ⚖️ Phase 2 (Mid-Year)
-                  </span>
-                  <span>{formatDate(cycle.phase2Start)} - {formatDate(cycle.phase2End)}</span>
-                </div>
-                <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.9rem' }}>
-                  <span style={{ fontWeight: cycle.currentPhase==='phase3'?'bold':'normal', color:cycle.currentPhase==='phase3'?'#8b5cf6':'var(--text-muted)' }}>
-                    📝 Phase 3 (End-Year)
-                  </span>
-                  <span>{formatDate(cycle.phase3Start)} - {formatDate(cycle.phase3End)}</span>
-                </div>
-              </div>
+            var phases = [
+              { key: 'phase1', label: 'Goal Setting', start: cycle.phase1Start, end: cycle.phase1End, color: '#4F46E5' },
+              { key: 'phase2', label: 'Mid-Year Execution', start: cycle.phase2Start, end: cycle.phase2End, color: '#2563EB' },
+              { key: 'phase3', label: 'End-Year Review', start: cycle.phase3Start, end: cycle.phase3End, color: '#7C3AED' },
+            ];
 
-              {(user.role === 'ADMIN' || user.role === 'HR') && (
-                <div style={{ display:'flex', gap:'0.5rem', borderTop:'1px solid var(--border-color)', paddingTop:'1rem' }}>
-                  <button className="btn btn--outline btn--sm" style={{ flex: 1 }} onClick={() => openEditModal(cycle)}>✏️ Edit</button>
-                  {user.role === 'ADMIN' && (
-                    <button className="btn btn--outline btn--sm" style={{ color:'var(--danger)', borderColor:'var(--danger)' }} onClick={() => handleDelete(cycle)}>🗑️ Delete</button>
-                  )}
-                  {cycle.status !== 'closed' && (
-                    <button className="btn btn--primary btn--sm" style={{ flex: 2 }} onClick={() => setConfirmPhaseStart(cycle)}>
-                      {cycle.status === 'draft' ? 'Start Cycle' : 'Advance Phase ⏭️'}
-                    </button>
-                  )}
+            return (
+              <div key={cycle._id} className={'ent-card' + (isActive ? ' ent-card--active' : '')}>
+                {/* Card Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                  <div>
+                    <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700, letterSpacing: '-0.3px' }}>{cycle.name}</h3>
+                    <span style={{ fontSize: '13px', color: 'var(--shell-text-secondary)' }}>Fiscal Year {cycle.year}</span>
+                  </div>
+                  <span className={'ent-badge ent-badge--dot' + (isDraft ? ' ent-badge--draft' : isClosed ? ' ent-badge--closed' : ' ent-badge--active')}>
+                    {isDraft ? 'Draft' : isClosed ? 'Closed' : getPhaseLabel(cycle.currentPhase)}
+                  </span>
                 </div>
-              )}
-            </div>
-          ))}
+
+                {/* Phase Timeline */}
+                <div style={{ background: 'var(--shell-bg-inset)', borderRadius: 'var(--shell-radius-md)', padding: '14px 16px', marginBottom: '20px' }}>
+                  {phases.map(function(p) {
+                    var isCurrent = isActive && cycle.currentPhase === p.key;
+                    return (
+                      <div key={p.key} className={'ent-phase-row' + (isCurrent ? ' ent-phase-row--active' : '')}>
+                        <div className="ent-phase-row__label">
+                          <span className="ent-phase-row__dot" style={isCurrent ? { background: p.color } : {}}></span>
+                          {p.label}
+                        </div>
+                        <span className="ent-phase-row__dates">{formatDate(p.start)} — {formatDate(p.end)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Actions */}
+                {(user.role === 'ADMIN' || user.role === 'HR') && (
+                  <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--shell-border)', paddingTop: '16px' }}>
+                    <button className="ent-btn ent-btn--secondary ent-btn--sm" onClick={function(){openEditModal(cycle);}}>Edit</button>
+                    {user.role === 'ADMIN' && (
+                      <button className="ent-btn ent-btn--danger ent-btn--sm" onClick={function(){handleDelete(cycle);}}>Delete</button>
+                    )}
+                    {!isClosed && (
+                      <button className="ent-btn ent-btn--primary ent-btn--sm" style={{ marginLeft: 'auto' }} onClick={function(){handlePhasePreCheck(cycle);}} disabled={checkingPhase === cycle._id}>
+                        {checkingPhase === cycle._id ? 'Checking...' : (isDraft ? 'Start Cycle' : 'Advance Phase')}
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
       {/* CREATE / EDIT MODAL */}
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal" style={{ maxWidth: '600px', width: '90%' }}>
-            <div className="modal-header">
-              <h3>{editingCycle ? '✏️ Edit Annual Cycle' : '📅 Create Annual Cycle'}</h3>
-              <button onClick={() => setShowModal(false)} className="close-btn" style={{ background:'transparent', border:'none', fontSize:'1.5rem', cursor:'pointer' }}>×</button>
+        <div className="ent-modal-overlay">
+          <div className="ent-modal">
+            {/* Modal Header */}
+            <div className="ent-modal__header">
+              <h3 className="ent-modal__title">{editingCycle ? 'Edit Cycle' : 'Create Cycle'}</h3>
+              <button className="ent-modal__close" onClick={function(){setShowModal(false);}}>×</button>
             </div>
-            <div className="modal-body" style={{ padding: '1.5rem' }}>
-              {error && <div className="alert alert--danger highlight-warning" style={{ marginBottom:'1rem', padding:'1rem', background:'#fef2f2', color:'#b91c1c', border:'1px solid #fecaca', borderRadius:'6px' }}>{error}</div>}
-              
+
+            {/* Modal Body */}
+            <div className="ent-modal__body">
+              {error && <div className="ent-alert ent-alert--danger" style={{marginBottom:'16px'}}>{error}</div>}
+
               <form id="cycleForm" onSubmit={handleSubmit}>
-                <div className="form-group" style={{ marginBottom: '1rem' }}>
-                  <label style={{ display:'block', marginBottom:'0.5rem', fontWeight:'600' }}>Cycle Name <span style={{color:'red'}}>*</span></label>
-                  <input type="text" className="form-control hover-lift" style={{ width:'100%', padding:'0.75rem', border:'1px solid var(--border-color)', borderRadius:'6px' }} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g., Annual Performance 2026" required />
+                <div style={{ marginBottom:'20px' }}>
+                  <label className="ent-label">Cycle Name <span style={{color:'var(--shell-danger)'}}>*</span></label>
+                  <input className="ent-input" type="text" value={formData.name} onChange={function(e){setFormData({...formData, name: e.target.value});}} placeholder="e.g., Annual Performance 2026" required />
                 </div>
-                
-                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-                  <div className="form-group" style={{ flex: 1 }}>
-                    <label style={{ display:'block', marginBottom:'0.5rem', fontWeight:'600' }}>Year <span style={{color:'red'}}>*</span></label>
-                    <input type="number" className="form-control" style={{ width:'100%', padding:'0.75rem', border:'1px solid var(--border-color)', borderRadius:'6px' }} value={formData.year} onChange={e => setFormData({...formData, year: e.target.value})} min="2020" max="2050" required />
+
+                <div style={{ display:'flex', gap:'16px', marginBottom:'24px' }}>
+                  <div style={{ flex:1 }}>
+                    <label className="ent-label">Year <span style={{color:'var(--shell-danger)'}}>*</span></label>
+                    <input className="ent-input" type="number" value={formData.year} onChange={function(e){setFormData({...formData, year: e.target.value});}} min="2020" max="2050" required />
                   </div>
-                  <div className="form-group" style={{ flex: 1 }}>
-                    <label style={{ display:'block', marginBottom:'0.5rem', fontWeight:'600' }}>Status</label>
-                    <select className="form-control" style={{ width:'100%', padding:'0.75rem', border:'1px solid var(--border-color)', borderRadius:'6px', background:'#f8fafc' }} value={formData.status} disabled>
-                      <option value="draft">Draft</option>
-                      <option value="in_progress">In Progress</option>
-                      <option value="closed">Closed</option>
-                    </select>
+                  <div style={{ flex:1 }}>
+                    <label className="ent-label">Status</label>
+                    <select className="ent-select" value={formData.status} disabled><option value="draft">Draft</option><option value="in_progress">In Progress</option><option value="closed">Closed</option></select>
                   </div>
                 </div>
 
-                <div style={{ background:'var(--bg-light)', padding:'1rem', borderRadius:'8px', marginBottom:'1.5rem' }}>
-                  <h4 style={{ margin:'0 0 1rem 0' }}>🎯 Phase 1: Goal Setting Dates</h4>
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <div className="form-group" style={{ flex: 1 }}>
-                      <label style={{ display:'block', fontSize:'0.85rem', marginBottom:'0.25rem' }}>Start Date</label>
-                      <input type="date" className="form-control" style={{ width:'100%', padding:'0.5rem', border:'1px solid var(--border-color)', borderRadius:'4px' }} value={formData.phase1Start} onChange={e => setFormData({...formData, phase1Start: e.target.value})} required />
+                {[
+                  { label: 'Phase 1: Goal Setting', startKey: 'phase1Start', endKey: 'phase1End', color: '#4F46E5' },
+                  { label: 'Phase 2: Mid-Year Execution', startKey: 'phase2Start', endKey: 'phase2End', color: '#2563EB' },
+                  { label: 'Phase 3: End-Year Review', startKey: 'phase3Start', endKey: 'phase3End', color: '#7C3AED' }
+                ].map(function(phase) {
+                  return (
+                    <div key={phase.label} style={{ background:'var(--shell-bg-inset)', borderRadius:'var(--shell-radius-md)', padding:'16px', marginBottom:'12px', borderLeft:'3px solid ' + phase.color }}>
+                      <h4 style={{ margin:'0 0 12px', fontSize:'13px', fontWeight:600, color: phase.color }}>{phase.label}</h4>
+                      <div style={{ display:'flex', gap:'12px' }}>
+                        <div style={{ flex:1 }}>
+                          <label className="ent-label" style={{ fontSize:'12px', color:'var(--shell-text-secondary)' }}>Start</label>
+                          <input className="ent-input" type="date" value={formData[phase.startKey]} onChange={function(e){var upd = {}; upd[phase.startKey] = e.target.value; setFormData({...formData, ...upd});}} required />
+                        </div>
+                        <div style={{ flex:1 }}>
+                          <label className="ent-label" style={{ fontSize:'12px', color:'var(--shell-text-secondary)' }}>End</label>
+                          <input className="ent-input" type="date" value={formData[phase.endKey]} onChange={function(e){var upd = {}; upd[phase.endKey] = e.target.value; setFormData({...formData, ...upd});}} required />
+                        </div>
+                      </div>
                     </div>
-                    <div className="form-group" style={{ flex: 1 }}>
-                      <label style={{ display:'block', fontSize:'0.85rem', marginBottom:'0.25rem' }}>End Date</label>
-                      <input type="date" className="form-control" style={{ width:'100%', padding:'0.5rem', border:'1px solid var(--border-color)', borderRadius:'4px' }} value={formData.phase1End} onChange={e => setFormData({...formData, phase1End: e.target.value})} required />
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ background:'var(--bg-light)', padding:'1rem', borderRadius:'8px', marginBottom:'1.5rem', borderLeft:'4px solid #3b82f6' }}>
-                  <h4 style={{ margin:'0 0 1rem 0' }}>⚖️ Phase 2: Mid-Year Assessment Dates</h4>
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <div className="form-group" style={{ flex: 1 }}>
-                      <label style={{ display:'block', fontSize:'0.85rem', marginBottom:'0.25rem' }}>Start Date</label>
-                      <input type="date" className="form-control" style={{ width:'100%', padding:'0.5rem', border:'1px solid var(--border-color)', borderRadius:'4px' }} value={formData.phase2Start} onChange={e => setFormData({...formData, phase2Start: e.target.value})} required />
-                    </div>
-                    <div className="form-group" style={{ flex: 1 }}>
-                      <label style={{ display:'block', fontSize:'0.85rem', marginBottom:'0.25rem' }}>End Date</label>
-                      <input type="date" className="form-control" style={{ width:'100%', padding:'0.5rem', border:'1px solid var(--border-color)', borderRadius:'4px' }} value={formData.phase2End} onChange={e => setFormData({...formData, phase2End: e.target.value})} required />
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ background:'var(--bg-light)', padding:'1rem', borderRadius:'8px', marginBottom:'1.5rem', borderLeft:'4px solid #8b5cf6' }}>
-                  <h4 style={{ margin:'0 0 1rem 0' }}>📝 Phase 3: Final Evaluation Dates</h4>
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <div className="form-group" style={{ flex: 1 }}>
-                      <label style={{ display:'block', fontSize:'0.85rem', marginBottom:'0.25rem' }}>Start Date</label>
-                      <input type="date" className="form-control" style={{ width:'100%', padding:'0.5rem', border:'1px solid var(--border-color)', borderRadius:'4px' }} value={formData.phase3Start} onChange={e => setFormData({...formData, phase3Start: e.target.value})} required />
-                    </div>
-                    <div className="form-group" style={{ flex: 1 }}>
-                      <label style={{ display:'block', fontSize:'0.85rem', marginBottom:'0.25rem' }}>End Date</label>
-                      <input type="date" className="form-control" style={{ width:'100%', padding:'0.5rem', border:'1px solid var(--border-color)', borderRadius:'4px' }} value={formData.phase3End} onChange={e => setFormData({...formData, phase3End: e.target.value})} required />
-                    </div>
-                  </div>
-                </div>
-
+                  );
+                })}
               </form>
             </div>
-            <div className="modal-footer" style={{ padding:'1rem 1.5rem', borderTop:'1px solid var(--border-color)', display:'flex', justifyContent:'flex-end', gap:'1rem' }}>
-              <button type="button" className="btn btn--secondary" onClick={() => setShowModal(false)}>Cancel</button>
-              <button type="submit" form="cycleForm" className="btn btn--primary" style={{ padding:'0.75rem 2rem', fontWeight:'bold' }}>{editingCycle ? '💾 Update Cycle' : '💾 Create Cycle'}</button>
+
+            {/* Modal Footer */}
+            <div className="ent-modal__footer">
+              {user.role === 'ADMIN' && editingCycle && editingCycle.currentPhase === 'phase2' && (
+                <button type="button" className="ent-btn ent-btn--secondary" onClick={function(){handleRollback(editingCycle);}}>
+                  Roll Back to Phase 1
+                </button>
+              )}
+              <button type="button" className="ent-btn ent-btn--secondary" onClick={function(){setShowModal(false);}}>Cancel</button>
+              <button type="submit" form="cycleForm" className="ent-btn ent-btn--primary">{editingCycle ? 'Update Cycle' : 'Create Cycle'}</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* CONFIRMATION DIALOGS */}
-
-
-      {confirmPhaseStart && (() => {
-        const cycle = confirmPhaseStart;
-        let nextPhase = 'phase1';
-        let msg = 'Start Phase 1: Goal Setting? This will officially open the cycle and allow employees to create goals.';
-        
-        if (cycle.currentPhase === 'phase1') {
-          nextPhase = 'phase2';
-          msg = 'Advance to Phase 2: Mid-Year? This will lock Phase 1 goal creation/editing and enable mid-year assessments.';
-        } else if (cycle.currentPhase === 'phase2') {
-          nextPhase = 'phase3';
-          msg = 'Advance to Phase 3: End-Year? This will lock mid-year metrics and open final evaluations.';
-        } else if (cycle.currentPhase === 'phase3') {
-          nextPhase = 'closed';
-          msg = 'Close Cycle? This will lock all goals and metrics permanently for this performance year.';
-        }
-
+      {/* Phase Advance Confirmation */}
+      {confirmPhaseStart && (function() {
+        var cycle = confirmPhaseStart;
+        var nextPhase = 'phase1';
+        var msg = 'Start Phase 1: Goal Setting? This will officially open the cycle.';
+        if (cycle.status === 'draft') nextPhase = 'phase1';
+        else if (cycle.currentPhase === 'phase1') { nextPhase = 'phase2'; msg = 'Advance to Mid-Year Execution? Goal structure will be locked. Progress tracking and assessments will open.'; }
+        else if (cycle.currentPhase === 'phase2') { nextPhase = 'phase3'; msg = 'Advance to Phase 3: End-Year? Mid-year metrics will be locked.'; }
+        else if (cycle.currentPhase === 'phase3') { nextPhase = 'closed'; msg = 'Close this cycle? All data will be locked permanently.'; }
         return (
-          <ConfirmDialog 
-            open={!!confirmPhaseStart} 
-            title="Advance Phase" 
-            message={msg} 
-            confirmLabel={nextPhase === 'closed' ? 'Close Cycle' : `Proceed to ${nextPhase.replace('phase', 'Phase ')}`} 
+          <ConfirmDialog
+            open={!!confirmPhaseStart} title="Advance Phase" message={msg}
+            confirmLabel={nextPhase === 'closed' ? 'Close Cycle' : 'Proceed to ' + nextPhase.replace('phase', 'Phase ')}
             danger={nextPhase === 'closed'}
-            onConfirm={handlePhaseAdvanceConfirm} 
-            onCancel={() => setConfirmPhaseStart(null)} 
+            onConfirm={handlePhaseAdvanceConfirm}
+            onCancel={function(){setConfirmPhaseStart(null);}}
           />
         );
       })()}
+
+      {showBlockedModal && phaseCheckResult && (
+        <div className="ent-modal-overlay">
+          <div className="ent-modal" style={{ maxWidth: '720px' }}>
+            <div className="ent-modal__header">
+              <h3 className="ent-modal__title">Phase Advance Blocked</h3>
+              <button className="ent-modal__close" onClick={function(){setShowBlockedModal(false); setPhaseCheckResult(null);}}>Ã—</button>
+            </div>
+            <div className="ent-modal__body">
+              <div className="ent-alert ent-alert--danger" style={{ marginBottom: '16px' }}>
+                {(phaseCheckResult.issues || []).join(' ')}
+              </div>
+              {(phaseCheckResult.unapprovedObjectives || []).length > 0 && (
+                <div>
+                  <h4 style={{ margin: '0 0 12px', fontSize: '14px' }}>Unapproved Objectives</h4>
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {(phaseCheckResult.unapprovedObjectives || []).map(function(objective) {
+                      return (
+                        <div key={objective._id} style={{ border: '1px solid var(--shell-border)', borderRadius: '10px', padding: '12px 14px', background: 'var(--shell-bg-inset)' }}>
+                          <div style={{ fontWeight: 700, marginBottom: '4px' }}>{objective.title}</div>
+                          <div style={{ fontSize: '13px', color: 'var(--shell-text-secondary)' }}>
+                            Owner: {objective.owner} | Status: {objective.status}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="ent-modal__footer">
+              <button type="button" className="ent-btn ent-btn--primary" onClick={function(){setShowBlockedModal(false); setPhaseCheckResult(null);}}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ToastContainer toasts={toast.toasts} removeToast={toast.removeToast} />
     </div>
   );
 }

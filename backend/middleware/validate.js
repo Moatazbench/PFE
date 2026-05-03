@@ -5,8 +5,12 @@ const validate = (schema) => {
         const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
 
         if (error) {
-            const messages = error.details.map((x) => x.message).join(', ');
-            return res.status(400).json({ success: false, message: `Validation Error: ${messages}` });
+            const details = error.details.map((x) => ({
+                field: x.path.join('.'),
+                message: x.message
+            }));
+            const messages = details.map((x) => x.message).join(', ');
+            return res.status(400).json({ success: false, message: `Validation Error: ${messages}`, details });
         }
 
         req.body = value;

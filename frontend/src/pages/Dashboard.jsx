@@ -16,8 +16,10 @@ function Dashboard() {
   const [recentActivity, setRecentActivity] = useState({ objectives: [], decisions: [] });
   const [performance, setPerformance] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [userTeams, setUserTeams] = useState([]); // Teams the user belongs to
-  const [goalsList, setGoalsList] = useState([]); // Goals from new /api/goals system
+  const [userTeams, setUserTeams] = useState([]);
+  const [activeCycle, setActiveCycle] = useState(null);
+  const [staleSummary, setStaleSummary] = useState({ critical: 0, warning: 0, total: 0 });
+  const [staleObjectives, setStaleObjectives] = useState([]);
   const hasFetchedRef = useRef(false);
 
   // Map tab keys to API scope values
@@ -35,7 +37,7 @@ function Dashboard() {
 
       const promises = [
         api.get('/api/stats/dashboard', { params }),
-        api.get('/api/stats/recent-activity', { params }),
+        api.get('/api/stats/recent-activity', { params }).catch(function() { return { data: { objectives: [], decisions: [] } }; }),
       ];
 
       if (tab === 'me') {
@@ -50,8 +52,13 @@ function Dashboard() {
         promises.push(api.get('/api/stats/performance'));
       }
 
-      // Also fetch goals from the new /api/goals system
-      promises.push(api.get('/api/goals'));
+      // Fetch active cycle info
+      promises.push(api.get('/api/cycles').catch(function() { return { data: [] }; }));
+      if (user.role === 'TEAM_LEADER' || user.role === 'ADMIN') {
+        promises.push(api.get('/api/objectives/stale').catch(function() {
+          return { data: { summary: { critical: 0, warning: 0, total: 0 }, staleObjectives: [] } };
+        }));
+      }
 
       const results = await Promise.all(promises);
       setStats(results[0].data);
@@ -62,14 +69,23 @@ function Dashboard() {
       setObjectives(objArr);
       
       const performanceIdx = (user.role === 'ADMIN' || user.role === 'HR') ? 3 : null;
-      const goalsIdx = performanceIdx !== null ? 4 : 3;
+      const cyclesIdx = performanceIdx !== null ? 4 : 3;
+      const staleIdx = (user.role === 'TEAM_LEADER' || user.role === 'ADMIN') ? cyclesIdx + 1 : null;
       
       if (performanceIdx !== null && results[performanceIdx]) setPerformance(results[performanceIdx].data);
       
-      // Extract goals from new system
-      if (results[goalsIdx]) {
-        const goalsData = results[goalsIdx].data;
-        setGoalsList(goalsData.goals || []);
+      // Extract active cycle
+      if (results[cyclesIdx]) {
+        const cyclesData = Array.isArray(results[cyclesIdx].data) ? results[cyclesIdx].data : [];
+        const active = cyclesData.find(function(c) { return c.status === 'in_progress' || c.status === 'active'; });
+        if (active) setActiveCycle(active);
+      }
+      if (staleIdx !== null && results[staleIdx]) {
+        setStaleSummary(results[staleIdx].data.summary || { critical: 0, warning: 0, total: 0 });
+        setStaleObjectives(results[staleIdx].data.staleObjectives || []);
+      } else {
+        setStaleSummary({ critical: 0, warning: 0, total: 0 });
+        setStaleObjectives([]);
       }
       
       hasFetchedRef.current = true;
@@ -140,19 +156,18 @@ function Dashboard() {
 
   var labels = getStatsLabels();
 
-  var staleGoals = getNeedsAttentionGoals();
+  var staleGoals = (user.role === 'TEAM_LEADER' || user.role === 'ADMIN') ? staleObjectives : getNeedsAttentionGoals();
 
   if (loading) {
     return (
-      <div className="dash-loading">
-        <div className="dash-loading__spinner"></div>
-        <p>Loading your dashboard...</p>
+      <div className="ds-main__inner">
+        <div className="page-loading"><div className="spinner"></div><p>Loading your dashboard...</p></div>
       </div>
     );
   }
 
   return (
-    <div className="dash">
+    <div className="ds-main__inner">
       <DashboardHeader activeTab={activeTab} onTabChange={handleTabChange} />
 
       {/* Scope context banner — changes per tab */}
@@ -190,33 +205,33 @@ function Dashboard() {
       )}
 
       {/* Quick Stats Row */}
-      <div className="dash-stats-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-        <div className="dash-stat dash-card shadow-sm" style={{ borderLeft: '4px solid var(--primary)' }}>
-          <div className="dash-stat__icon" style={{ background: 'var(--primary-light)', color: 'var(--primary)', fontSize: '1.5rem', width: '48px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎯</div>
+      <div className="dash-stats-row">
+        <div className="dash-stat dash-card shadow-sm" style={{ borderLeft: '3px solid var(--primary)' }}>
+          <div className="dash-stat__icon dash-stat__icon--purple">🎯</div>
           <div className="dash-stat__info">
-            <span className="dash-stat__value" style={{ fontSize: '1.8rem', fontWeight: '800', display: 'block' }}>{stats.objectives}</span>
-            <span className="dash-stat__label" style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{labels.goals}</span>
+            <span className="dash-stat__value">{stats.objectives}</span>
+            <span className="dash-stat__label">{labels.goals}</span>
           </div>
         </div>
-        <div className="dash-stat dash-card shadow-sm" style={{ borderLeft: '4px solid #3B82F6' }}>
-          <div className="dash-stat__icon" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6', fontSize: '1.5rem', width: '48px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>👥</div>
+        <div className="dash-stat dash-card shadow-sm" style={{ borderLeft: '3px solid #3B82F6' }}>
+          <div className="dash-stat__icon dash-stat__icon--blue">👥</div>
           <div className="dash-stat__info">
-            <span className="dash-stat__value" style={{ fontSize: '1.8rem', fontWeight: '800', display: 'block' }}>{stats.teams}</span>
-            <span className="dash-stat__label" style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{labels.teams}</span>
+            <span className="dash-stat__value">{stats.teams}</span>
+            <span className="dash-stat__label">{labels.teams}</span>
           </div>
         </div>
-        <div className="dash-stat dash-card shadow-sm" style={{ borderLeft: '4px solid #10B981' }}>
-          <div className="dash-stat__icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', fontSize: '1.5rem', width: '48px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>👤</div>
+        <div className="dash-stat dash-card shadow-sm" style={{ borderLeft: '3px solid #10B981' }}>
+          <div className="dash-stat__icon dash-stat__icon--green">👤</div>
           <div className="dash-stat__info">
-            <span className="dash-stat__value" style={{ fontSize: '1.8rem', fontWeight: '800', display: 'block' }}>{stats.users}</span>
-            <span className="dash-stat__label" style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{labels.users}</span>
+            <span className="dash-stat__value">{stats.users}</span>
+            <span className="dash-stat__label">{labels.users}</span>
           </div>
         </div>
-        <div className="dash-stat dash-card shadow-sm" style={{ borderLeft: '4px solid #F59E0B' }}>
-          <div className="dash-stat__icon" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B', fontSize: '1.5rem', width: '48px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📅</div>
+        <div className="dash-stat dash-card shadow-sm" style={{ borderLeft: '3px solid #F59E0B' }}>
+          <div className="dash-stat__icon dash-stat__icon--orange">📅</div>
           <div className="dash-stat__info">
-            <span className="dash-stat__value" style={{ fontSize: '1.8rem', fontWeight: '800', display: 'block' }}>{stats.cycles}</span>
-            <span className="dash-stat__label" style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{labels.cycles}</span>
+            <span className="dash-stat__value">{stats.cycles}</span>
+            <span className="dash-stat__label">{labels.cycles}</span>
           </div>
         </div>
       </div>
@@ -289,19 +304,39 @@ function Dashboard() {
 
       {/* AI Risk Alerts removed — AI feature removed */}
 
+      {(user.role === 'TEAM_LEADER' || user.role === 'ADMIN') && staleSummary.total > 0 && (
+        <div className="alert alert--warning" style={{ marginBottom: '1rem', padding: '1rem 1.25rem' }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', color: '#92400E' }}>Stale Objective Summary</h3>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+            <span style={{ padding: '4px 10px', borderRadius: '999px', background: '#fee2e2', color: '#b91c1c', fontSize: '0.78rem', fontWeight: 700 }}>Critical: {staleSummary.critical || 0}</span>
+            <span style={{ padding: '4px 10px', borderRadius: '999px', background: '#fef3c7', color: '#b45309', fontSize: '0.78rem', fontWeight: 700 }}>Warning: {staleSummary.warning || 0}</span>
+            <span style={{ padding: '4px 10px', borderRadius: '999px', background: '#fff7ed', color: '#9a3412', fontSize: '0.78rem', fontWeight: 700 }}>Total: {staleSummary.total || 0}</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {staleObjectives.slice(0, 3).map(function (g, i) {
+              var lastTouched = g.staleness?.lastActivityDate || g.updatedAt || g.createdAt;
+              return (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', padding: '8px 12px', background: g.staleness?.isHighRiskStale ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)', borderRadius: '8px', fontSize: '0.85rem' }}>
+                  <span style={{ color: '#92400E' }}>{g.title} <span style={{ opacity: 0.75 }}>· {g.owner?.name || 'Unknown'} · {new Date(lastTouched).toLocaleDateString()}</span></span>
+                  <a href="/goals" style={{ color: '#D97706', fontWeight: 600, textDecoration: 'none', fontSize: '0.8rem' }}>View →</a>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Action Center - Needs Attention */}
       {staleGoals.length > 0 && (
-        <div className="dash-risk-alerts" style={{ background: '#FFFBEB', borderColor: '#FDE68A' }}>
-          <h3 className="dash-risk-alerts__title" style={{ color: '#92400E' }}>⚠️ Action Center: Needs Attention ({staleGoals.length})</h3>
-          <p style={{ fontSize: '0.85rem', color: '#B45309', margin: '0 0 12px 0' }}>These goals haven't had a check-in for over 14 days.</p>
-          <div className="dash-risk-alerts__list">
-            {staleGoals.slice(0, 5).map(function (g, i) {
+        <div className="alert alert--warning" style={{ marginBottom: '1.5rem', padding: '1rem 1.25rem' }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', color: '#92400E' }}>⚠️ Needs Attention ({staleGoals.length})</h3>
+          <p style={{ fontSize: '0.85rem', color: '#B45309', margin: '0 0 0.75rem 0' }}>These objectives haven't been updated in over 14 days.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {staleGoals.slice(0, 3).map(function (g, i) {
               return (
-                <div key={i} className="dash-risk-item" style={{ background: '#FEF3C7', color: '#92400E', borderLeft: '4px solid #F59E0B', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>🎯 {g.title} <span style={{fontSize: '0.8rem', opacity: 0.8}}>(Last updated: {new Date(g.updatedAt||g.createdAt).toLocaleDateString()})</span></span>
-                  <button className="submit-btn" style={{ padding: '4px 10px', fontSize: '0.75rem', background: '#D97706' }} onClick={function() { window.location.href='/goals'; }}>
-                    {activeTab === 'me' ? 'Check-in Now' : 'View Goal'}
-                  </button>
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(245,158,11,0.08)', borderRadius: '8px', fontSize: '0.85rem' }}>
+                  <span style={{ color: '#92400E' }}>🎯 {g.title} <span style={{ opacity: 0.7 }}>· {new Date(g.updatedAt||g.createdAt).toLocaleDateString()}</span></span>
+                  <a href="/goals" style={{ color: '#D97706', fontWeight: 600, textDecoration: 'none', fontSize: '0.8rem' }}>{activeTab === 'me' ? 'Update →' : 'View →'}</a>
                 </div>
               );
             })}
@@ -311,13 +346,26 @@ function Dashboard() {
 
 
 
+      {/* Active Cycle Phase Banner */}
+      {activeCycle && (
+        <div style={{ background: 'linear-gradient(135deg, #1e293b, #334155)', borderRadius: '14px', padding: '1.25rem 1.75rem', marginBottom: '1.75rem', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Active Cycle</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+              {activeCycle.name} — {activeCycle.currentPhase === 'phase1' ? '📝 Phase 1: Goal Setting' : activeCycle.currentPhase === 'phase2' ? '⚖️ Phase 2: Mid-Year Execution' : activeCycle.currentPhase === 'phase3' ? '📊 Phase 3: End-Year' : '🔒 Closed'}
+            </div>
+          </div>
+          <a href="/goals" style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', padding: '8px 16px', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, fontSize: '0.85rem' }}>View Objectives →</a>
+        </div>
+      )}
+
       {/* Main Cards Grid */}
       <div className="dash-grid">
         <div className="dash-grid__col dash-grid__col--left">
           <MeetingCard />
         </div>
         <div className="dash-grid__col dash-grid__col--right">
-          <GoalCard objectives={objectives} goalsList={goalsList} loading={false} />
+          <GoalCard objectives={objectives} loading={false} />
           <TaskCard />
         </div>
       </div>

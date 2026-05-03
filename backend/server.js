@@ -60,12 +60,10 @@ const routes = {
   '/api/feedback': './routes/feedback',
   '/api/tasks': './routes/tasks',
   '/api/career': './routes/career',
-  '/api/goals': './routes/goals',
-  '/api/goal-reviews': './routes/goalReviews',
   '/api/performance': './routes/performance',
-  '/api/dashboard': './routes/dashboard',
   '/api/reports': './routes/reports',
-  '/api/evaluations': './routes/evaluations'
+  '/api/evaluations': './routes/evaluations',
+  '/api/pdf': './routes/pdf'
 };
 
 Object.entries(routes).forEach(([routePath, modulePath]) => {
@@ -118,13 +116,6 @@ mongoose.connect(mongoUri, {
       startReminderCron();
     } catch (err) {
       console.error('Failed to start reminder cron:', err.message);
-    }
-
-    try {
-      const { startGoalDeadlineCron } = require('./cron/goalDeadlineCron');
-      startGoalDeadlineCron();
-    } catch (err) {
-      console.error('Failed to start goal deadline cron:', err.message);
     }
 
     app.listen(PORT, () => {

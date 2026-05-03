@@ -11,20 +11,16 @@ router.get('/', auth, async function (req, res) {
     var query = {};
 
     // Collaborator can only see their own
-    if (req.user.role === 'collaborator') {
+    if (req.user.role === 'COLLABORATOR') {
       query.user = req.user.id;
     }
 
     // Manager can see their team's decisions
-    if (req.user.role === 'manager') {
-      var manager = await User.findById(req.user.id).populate('team');
-      if (manager && manager.team) {
-        var teamMembers = await User.find({ team: manager.team._id }).select('_id');
-        var memberIds = teamMembers.map(function (m) { return m._id; });
-        memberIds.push(req.user.id);
-        query.user = { $in: memberIds };
-      } else {
-        query.user = req.user.id;
+    if (req.user.role === 'TEAM_LEADER') {
+      const Team = require('../models/Team');
+      var team = await Team.findOne({ leader: req.user.id }).select('members');
+      if (team && team.members && team.members.length > 0) {
+        query.user = { $in: team.members };
       }
     }
 
@@ -32,7 +28,7 @@ router.get('/', auth, async function (req, res) {
 
     var decisions = await HRDecision.find(query)
       .populate('user', 'name email role')
-      .populate('cycle', 'name year type')
+      .populate('cycle', 'name year currentPhase')
       .populate('decidedBy', 'name')
       .sort({ createdAt: -1 });
 
@@ -48,7 +44,7 @@ router.get('/:id', auth, async function (req, res) {
   try {
     var decision = await HRDecision.findById(req.params.id)
       .populate('user', 'name email role')
-      .populate('cycle', 'name year type')
+      .populate('cycle', 'name year currentPhase')
       .populate('decidedBy', 'name');
 
     if (!decision) {
@@ -56,7 +52,7 @@ router.get('/:id', auth, async function (req, res) {
     }
 
     // Check access
-    if (req.user.role === 'collaborator' && decision.user._id.toString() !== req.user.id) {
+    if (req.user.role === 'COLLABORATOR' && decision.user._id.toString() !== req.user.id) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -87,7 +83,7 @@ router.post('/', auth, role('ADMIN', 'HR'), async function (req, res) {
 
     var populated = await HRDecision.findById(decision._id)
       .populate('user', 'name email role')
-      .populate('cycle', 'name year type')
+      .populate('cycle', 'name year currentPhase')
       .populate('decidedBy', 'name');
 
     res.status(201).json(populated);
@@ -117,7 +113,7 @@ router.put('/:id', auth, role('ADMIN', 'HR'), async function (req, res) {
 
     var populated = await HRDecision.findById(decision._id)
       .populate('user', 'name email role')
-      .populate('cycle', 'name year type')
+      .populate('cycle', 'name year currentPhase')
       .populate('decidedBy', 'name');
 
     res.json(populated);

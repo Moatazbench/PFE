@@ -1,172 +1,162 @@
 const Evaluation = require('../models/Evaluation');
-const Goal = require('../models/Goal');
-const GoalReview = require('../models/GoalReview');
+const Objective = require('../models/Objective');
 const Cycle = require('../models/Cycle');
 const User = require('../models/User');
 const Team = require('../models/Team');
 const { createNotification } = require('../utils/notificationHelper');
 const { createAuditLog } = require('../utils/auditHelper');
 
-// ============================================================
-//  SCORING ALGORITHM
-// ============================================================
+const ACTIVE_OBJECTIVE_STATUSES = ['approved', 'validated', 'evaluated', 'locked'];
+const EDITABLE_EVALUATION_STATUSES = ['draft', 'in_progress', 'rejected'];
 
-/**
- * Map achievement percentage (0-100) to rubric score (1-10)
- * Bands:
- *   0-30%  → 1.0 - 3.0  (Unsatisfactory)
- *   30-50% → 3.0 - 5.0  (Needs Improvement)
- *   50-75% → 5.0 - 6.0  (Meets Expectations)
- *   75-90% → 6.0 - 8.0  (Good/Exceeds)
- *   90-100%→ 8.0 - 10.0 (Exceptional)
- */
-function mapPercentToScore(percent) {
-  if (percent <= 0) return 1.0;
-  if (percent >= 100) return 10.0;
-
-  if (percent <= 30) {
-    return 1.0 + (percent / 30) * 2.0;
-  } else if (percent <= 50) {
-    return 3.0 + ((percent - 30) / 20) * 2.0;
-  } else if (percent <= 75) {
-    return 5.0 + ((percent - 50) / 25) * 1.0;
-  } else if (percent <= 90) {
-    return 6.0 + ((percent - 75) / 15) * 2.0;
-  } else {
-    return 8.0 + ((percent - 90) / 10) * 2.0;
-  }
+function roundScore(value) {
+  return Number(Number(value || 0).toFixed(2));
 }
 
-/**
- * Calculate suggested score from goal assessments
- */
-function calculateSuggestedScore(goalAssessments, goals, method) {
-  if (!goalAssessments || goalAssessments.length === 0) return null;
-
-  const reviewedAssessments = goalAssessments.filter(a => a.reviewed);
-  if (reviewedAssessments.length === 0) return null;
-
-  // Build a map of goal weights
-  const goalMap = {};
-  goals.forEach(g => {
-    goalMap[String(g._id)] = g;
-  });
-
-  if (method === 'weighted_average') {
-    let weightedSum = 0;
-    let totalWeight = 0;
-
-    reviewedAssessments.forEach(a => {
-      const goal = goalMap[String(a.goalId)];
-      const weight = goal ? (goal.weight || 0) : 0;
-      weightedSum += a.achievementPercent * weight;
-      totalWeight += weight;
-    });
-
-    if (totalWeight === 0) {
-      // Fall back to simple average
-      const sum = reviewedAssessments.reduce((s, a) => s + a.achievementPercent, 0);
-      const avg = sum / reviewedAssessments.length;
-      return Number(mapPercentToScore(avg).toFixed(1));
-    }
-
-    const weightedAvg = weightedSum / totalWeight;
-    return Number(mapPercentToScore(weightedAvg).toFixed(1));
-  }
-
-  // Simple average
-  const sum = reviewedAssessments.reduce((s, a) => s + a.achievementPercent, 0);
-  const avg = sum / reviewedAssessments.length;
-  return Number(mapPercentToScore(avg).toFixed(1));
+function clampPercent(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return Math.max(0, Math.min(100, numeric));
 }
 
-/**
- * Get the rubric band label for a score
- */
+function calculateObjectiveScore(objective) {
+  return roundScore((Number(objective.weight || 0) * clampPercent(objective.achievementPercent)) / 100);
+}
+
+function calculateEvaluationScore(objectives) {
+  return roundScore((objectives || []).reduce((sum, objective) => sum + calculateObjectiveScore(objective), 0));
+}
+
+function getObjectiveProgressState(objective) {
+  const achievement = clampPercent(objective.achievementPercent);
+  if (achievement >= 100) return 'completed';
+  if (achievement > 0) return 'in_progress';
+  return 'not_started';
+}
+
 function getRubricBand(score) {
   if (score == null) return null;
-  if (score < 3) return { label: 'Unsatisfactory', range: '0-30%', color: '#ef4444' };
-  if (score < 5) return { label: 'Needs Improvement', range: '30-50%', color: '#f97316' };
-  if (score < 6) return { label: 'Meets Expectations', range: '50-75%', color: '#eab308' };
-  if (score < 8) return { label: 'Good / Exceeds Expectations', range: '75-90%', color: '#22c55e' };
-  return { label: 'Exceptional', range: '90-100%', color: '#8b5cf6' };
+  if (score >= 90) return { label: 'Exceeded Expectations', range: '90-100', color: '#7c3aed' };
+  if (score >= 75) return { label: 'Achieved', range: '75-89', color: '#16a34a' };
+  if (score >= 50) return { label: 'Partially Achieved', range: '50-74', color: '#ca8a04' };
+  return { label: 'Below Expectations', range: '0-49', color: '#dc2626' };
 }
 
-// ============================================================
-//  RBAC HELPERS
-// ============================================================
+function getFullRubric() {
+  return [
+    { min: 0, max: 49, label: 'Below Expectations', range: '0-49', color: '#dc2626', description: 'Results remain below target and need corrective action.' },
+    { min: 50, max: 74, label: 'Partially Achieved', range: '50-74', color: '#ca8a04', description: 'Core objectives progressed, but gaps remain.' },
+    { min: 75, max: 89, label: 'Achieved', range: '75-89', color: '#16a34a', description: 'Objectives were delivered consistently and on target.' },
+    { min: 90, max: 100, label: 'Exceeded Expectations', range: '90-100', color: '#7c3aed', description: 'Performance exceeded the expected objective outcomes.' },
+  ];
+}
 
 async function isManagerOf(managerId, employeeId) {
-  // Check direct manager relationship
   const employee = await User.findById(employeeId);
   if (!employee) return false;
   if (employee.manager && String(employee.manager) === String(managerId)) return true;
 
-  // Check team leadership
   const team = await Team.findOne({ leader: managerId, members: employeeId });
-  if (team) return true;
-
-  return false;
+  return Boolean(team);
 }
 
-// ============================================================
-//  EXPORTED HANDLERS
-// ============================================================
+async function fetchObjectiveScope({ employeeId, cycleId, objectiveIds = null, useLiveCycleScope = false }) {
+  const normalizedEmployeeId = employeeId && employeeId._id ? employeeId._id : employeeId;
+  const normalizedCycleId = cycleId && cycleId._id ? cycleId._id : cycleId;
+  const filter = {};
 
-/**
- * POST /api/evaluations — Create a new evaluation
- */
+  if (useLiveCycleScope || !Array.isArray(objectiveIds) || objectiveIds.length === 0) {
+    filter.owner = normalizedEmployeeId;
+    filter.cycle = normalizedCycleId;
+    filter.status = { $in: ACTIVE_OBJECTIVE_STATUSES };
+  } else {
+    filter._id = { $in: objectiveIds };
+  }
+
+  const objectives = await Objective.find(filter)
+    .populate('owner', 'name email role')
+    .populate('cycle', 'name year currentPhase status')
+    .sort({ createdAt: 1 });
+
+  return objectives;
+}
+
+function buildObjectiveAssessment(objective) {
+  const achievementPercent = clampPercent(objective.achievementPercent);
+  const weightedScore = calculateObjectiveScore(objective);
+
+  return {
+    objectiveId: objective._id,
+    achievementPercent,
+    weightedScore,
+    objectiveStatus: getObjectiveProgressState(objective),
+    workflowStatus: objective.status,
+    reviewed: ['evaluated', 'locked'].includes(objective.status) || Boolean(objective.evaluationRating),
+    comments: objective.evaluationComment || objective.managerComments || '',
+    objective,
+  };
+}
+
+function setEvaluationScope(evaluation, objectives) {
+  evaluation.objectiveAssessments = (objectives || []).map((objective) => ({
+    objectiveId: objective._id,
+  }));
+  evaluation.scoringMethod = 'objective_weighted_sum';
+  evaluation.suggestedScore = calculateEvaluationScore(objectives);
+}
+
+async function hydrateEvaluation(evaluation) {
+  const isEditable = EDITABLE_EVALUATION_STATUSES.includes(evaluation.status);
+  const storedObjectiveIds = (evaluation.objectiveAssessments || []).map((item) => item.objectiveId);
+  const objectives = await fetchObjectiveScope({
+    employeeId: evaluation.employeeId,
+    cycleId: evaluation.cycleId,
+    objectiveIds: storedObjectiveIds,
+    useLiveCycleScope: isEditable,
+  });
+
+  const evaluationObject = evaluation.toObject();
+  evaluationObject.objectiveAssessments = objectives.map(buildObjectiveAssessment);
+  evaluationObject.suggestedScore = calculateEvaluationScore(objectives);
+  evaluationObject.totalWeight = roundScore(objectives.reduce((sum, objective) => sum + Number(objective.weight || 0), 0));
+
+  return evaluationObject;
+}
+
 exports.createEvaluation = async (req, res) => {
   try {
-    const { employeeId, cycleId, period, scoringMethod } = req.body;
+    const { employeeId, cycleId, period } = req.body;
     const evaluatorId = req.user.id;
 
-    // RBAC: must be manager of the employee, or ADMIN/HR
     if (!['ADMIN', 'HR'].includes(req.user.role)) {
-      const isManager = await isManagerOf(evaluatorId, employeeId);
-      if (!isManager) {
-        return res.status(403).json({ success: false, message: 'You can only evaluate your direct reports' });
+      const managerAccess = await isManagerOf(evaluatorId, employeeId);
+      if (!managerAccess) {
+        return res.status(403).json({ success: false, message: 'You can only evaluate your direct reports.' });
       }
     }
 
-    // Check if evaluation already exists for this employee+cycle
     const existing = await Evaluation.findOne({ employeeId, cycleId });
     if (existing) {
-      return res.status(400).json({ success: false, message: 'An evaluation already exists for this employee in this cycle' });
+      return res.status(400).json({ success: false, message: 'An evaluation already exists for this employee in this cycle.' });
     }
 
-    // Verify cycle exists
     const cycle = await Cycle.findById(cycleId);
     if (!cycle) {
-      return res.status(404).json({ success: false, message: 'Cycle not found' });
+      return res.status(404).json({ success: false, message: 'Cycle not found.' });
     }
 
-    // Get employee goals for this cycle
-    const goals = await Goal.find({
-      employeeId,
-      cycleId,
-      status: { $in: ['approved', 'midyear_assessed', 'final_evaluated', 'locked'] },
-    });
+    if (cycle.currentPhase !== 'phase3' && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ success: false, message: 'Evaluations can only be created during Phase 3.' });
+    }
 
-    // Build goal assessments - pre-populate with existing data
-    const goalAssessments = [];
-    for (const goal of goals) {
-      // Try to get existing end-year review data
-      const endyearReview = await GoalReview.findOne({
-        goalId: goal._id,
-        phase: 'endyear',
-        reviewType: 'manager_assessment',
-      });
+    const objectives = await fetchObjectiveScope({ employeeId, cycleId, useLiveCycleScope: true });
+    if (objectives.length === 0) {
+      return res.status(400).json({ success: false, message: 'No approved objectives were found for this employee in the selected cycle.' });
+    }
 
-      goalAssessments.push({
-        goalId: goal._id,
-        achievementPercent: goal.finalCompletion || goal.currentProgress || 0,
-        goalStatus: goal.finalCompletion >= 100 ? 'exceeded' :
-                    goal.finalCompletion >= 75 ? 'completed' :
-                    goal.finalCompletion > 0 ? 'in_progress' : 'not_started',
-        comments: endyearReview ? endyearReview.comment : '',
-        reviewed: false,
-      });
+    const totalWeight = objectives.reduce((sum, objective) => sum + Number(objective.weight || 0), 0);
+    if (totalWeight > 100) {
+      return res.status(400).json({ success: false, message: `Objective weights are invalid for this employee. Total detected: ${totalWeight}%.` });
     }
 
     const evaluation = new Evaluation({
@@ -175,79 +165,67 @@ exports.createEvaluation = async (req, res) => {
       cycleId,
       period: period || `${cycle.name} ${cycle.year}`,
       status: 'draft',
-      scoringMethod: scoringMethod || 'weighted_average',
-      goalAssessments,
     });
 
-    // Calculate initial suggested score
-    evaluation.suggestedScore = calculateSuggestedScore(goalAssessments, goals, evaluation.scoringMethod);
-
+    setEvaluationScope(evaluation, objectives);
     await evaluation.save();
 
-    // Send notification to employee
-    createNotification({
+    await createNotification({
       recipientId: employeeId,
       senderId: evaluatorId,
       type: 'EVALUATION_CREATED',
       title: 'Evaluation Started',
-      message: `Your manager has started your performance evaluation for ${evaluation.period}.`,
+      message: `Your manager started your performance evaluation for ${evaluation.period}.`,
       link: '/evaluation-list',
     });
 
-    createAuditLog({
+    await createAuditLog({
       entityType: 'evaluation',
       entityId: evaluation._id,
       action: 'create',
       performedBy: evaluatorId,
-      description: `Evaluation created for employee`,
+      description: 'Evaluation created from approved objectives.',
     });
 
     const populated = await Evaluation.findById(evaluation._id)
       .populate('employeeId', 'name email role')
       .populate('evaluatorId', 'name email role')
-      .populate('cycleId', 'name year currentPhase')
-      .populate('goalAssessments.goalId', 'title description category weight metric targetValue currentProgress finalCompletion status');
+      .populate('cycleId', 'name year currentPhase');
 
-    res.status(201).json({ success: true, evaluation: populated });
+    const hydratedEvaluation = await hydrateEvaluation(populated);
+    res.status(201).json({ success: true, evaluation: hydratedEvaluation, rubricBand: getRubricBand(hydratedEvaluation.suggestedScore) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * GET /api/evaluations/:id — Get a single evaluation
- */
 exports.getEvaluation = async (req, res) => {
   try {
     const evaluation = await Evaluation.findById(req.params.id)
       .populate('employeeId', 'name email role team')
       .populate('evaluatorId', 'name email role')
       .populate('cycleId', 'name year currentPhase status')
-      .populate('goalAssessments.goalId', 'title description category weight metric targetValue currentProgress finalCompletion status dueDate priority')
       .populate('approvals.approverId', 'name email role')
       .populate('scoreHistory.changedBy', 'name email');
 
     if (!evaluation) {
-      return res.status(404).json({ success: false, message: 'Evaluation not found' });
+      return res.status(404).json({ success: false, message: 'Evaluation not found.' });
     }
 
-    // RBAC: employee can see their own, evaluator can see theirs, HR/ADMIN can see all
     const userId = String(req.user.id);
     const isEmployee = String(evaluation.employeeId._id) === userId;
     const isEvaluator = String(evaluation.evaluatorId._id) === userId;
     const isPrivileged = ['ADMIN', 'HR'].includes(req.user.role);
 
     if (!isEmployee && !isEvaluator && !isPrivileged) {
-      return res.status(403).json({ success: false, message: 'Access denied' });
+      return res.status(403).json({ success: false, message: 'Access denied.' });
     }
 
-    // Include rubric band info
-    const rubricBand = getRubricBand(evaluation.finalScore || evaluation.suggestedScore);
-
+    const hydratedEvaluation = await hydrateEvaluation(evaluation);
     res.json({
       success: true,
-      evaluation,
-      rubricBand,
+      evaluation: hydratedEvaluation,
+      rubricBand: getRubricBand(hydratedEvaluation.finalScore ?? hydratedEvaluation.suggestedScore),
       rubric: getFullRubric(),
     });
   } catch (err) {
@@ -255,19 +233,14 @@ exports.getEvaluation = async (req, res) => {
   }
 };
 
-/**
- * GET /api/evaluations/employee/:employeeId — Get evaluations for an employee
- */
 exports.getMyEvaluations = async (req, res) => {
   try {
     const { employeeId } = req.params;
 
-    // RBAC: can only view own evaluations unless ADMIN/HR
     if (String(req.user.id) !== employeeId && !['ADMIN', 'HR'].includes(req.user.role)) {
-      // Check if they're the manager
-      const isManager = await isManagerOf(req.user.id, employeeId);
-      if (!isManager) {
-        return res.status(403).json({ success: false, message: 'Access denied' });
+      const managerAccess = await isManagerOf(req.user.id, employeeId);
+      if (!managerAccess) {
+        return res.status(403).json({ success: false, message: 'Access denied.' });
       }
     }
 
@@ -277,21 +250,19 @@ exports.getMyEvaluations = async (req, res) => {
       .populate('cycleId', 'name year currentPhase')
       .sort({ createdAt: -1 });
 
-    res.json({ success: true, evaluations });
+    const hydrated = await Promise.all(evaluations.map(hydrateEvaluation));
+    res.json({ success: true, evaluations: hydrated });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * GET /api/evaluations/evaluator/:evaluatorId — Get evaluations created by a manager
- */
 exports.getEvaluatorEvaluations = async (req, res) => {
   try {
     const { evaluatorId } = req.params;
 
     if (String(req.user.id) !== evaluatorId && !['ADMIN', 'HR'].includes(req.user.role)) {
-      return res.status(403).json({ success: false, message: 'Access denied' });
+      return res.status(403).json({ success: false, message: 'Access denied.' });
     }
 
     const filter = { evaluatorId };
@@ -304,15 +275,13 @@ exports.getEvaluatorEvaluations = async (req, res) => {
       .populate('cycleId', 'name year currentPhase')
       .sort({ createdAt: -1 });
 
-    res.json({ success: true, evaluations });
+    const hydrated = await Promise.all(evaluations.map(hydrateEvaluation));
+    res.json({ success: true, evaluations: hydrated });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * GET /api/evaluations — Get all evaluations (with filters)
- */
 exports.getAllEvaluations = async (req, res) => {
   try {
     const filter = {};
@@ -321,7 +290,6 @@ exports.getAllEvaluations = async (req, res) => {
     if (req.query.employeeId) filter.employeeId = req.query.employeeId;
     if (req.query.evaluatorId) filter.evaluatorId = req.query.evaluatorId;
 
-    // RBAC scoping
     if (req.user.role === 'COLLABORATOR') {
       filter.employeeId = req.user.id;
     } else if (req.user.role === 'TEAM_LEADER') {
@@ -333,7 +301,6 @@ exports.getAllEvaluations = async (req, res) => {
         ];
       }
     }
-    // ADMIN and HR see all
 
     const evaluations = await Evaluation.find(filter)
       .populate('employeeId', 'name email role')
@@ -341,65 +308,66 @@ exports.getAllEvaluations = async (req, res) => {
       .populate('cycleId', 'name year currentPhase')
       .sort({ createdAt: -1 });
 
-    res.json({ success: true, evaluations });
+    const hydrated = await Promise.all(evaluations.map(hydrateEvaluation));
+    res.json({ success: true, evaluations: hydrated });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * PUT /api/evaluations/:id — Update evaluation (comments, feedback, score)
- */
 exports.updateEvaluation = async (req, res) => {
   try {
     const evaluation = await Evaluation.findById(req.params.id);
-    if (!evaluation) return res.status(404).json({ success: false, message: 'Evaluation not found' });
-
-    // Only evaluator or ADMIN can update
-    if (String(evaluation.evaluatorId) !== String(req.user.id) && req.user.role !== 'ADMIN') {
-      return res.status(403).json({ success: false, message: 'Only the evaluator can update this evaluation' });
+    if (!evaluation) {
+      return res.status(404).json({ success: false, message: 'Evaluation not found.' });
     }
 
-    // Only updatable in draft or in_progress or rejected status
-    if (!['draft', 'in_progress', 'rejected'].includes(evaluation.status)) {
-      return res.status(400).json({ success: false, message: 'Evaluation cannot be modified in its current status' });
+    if (String(evaluation.evaluatorId) !== String(req.user.id) && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ success: false, message: 'Only the evaluator can update this evaluation.' });
+    }
+
+    if (!EDITABLE_EVALUATION_STATUSES.includes(evaluation.status)) {
+      return res.status(400).json({ success: false, message: 'Evaluation cannot be modified in its current status.' });
+    }
+
+    const objectives = await fetchObjectiveScope({
+      employeeId: evaluation.employeeId,
+      cycleId: evaluation.cycleId,
+      useLiveCycleScope: true,
+    });
+
+    if (objectives.length === 0) {
+      return res.status(400).json({ success: false, message: 'This evaluation no longer has any approved objectives to score.' });
     }
 
     const allowedFields = [
-      'overallComments', 'strengths', 'areasForImprovement',
-      'developmentRecommendations', 'nextSteps', 'scoringMethod', 'period',
+      'overallComments',
+      'strengths',
+      'areasForImprovement',
+      'developmentRecommendations',
+      'nextSteps',
+      'period',
     ];
 
-    allowedFields.forEach(field => {
-      if (req.body[field] !== undefined) evaluation[field] = req.body[field];
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        evaluation[field] = req.body[field];
+      }
     });
 
-    // Handle final score update with history tracking
-    if (req.body.finalScore !== undefined) {
-      const newScore = parseFloat(req.body.finalScore);
-      if (isNaN(newScore) || newScore < 1 || newScore > 10) {
-        return res.status(400).json({ success: false, message: 'Final score must be between 1 and 10' });
-      }
+    setEvaluationScope(evaluation, objectives);
 
+    if (req.body.finalScore !== undefined) {
+      const newScore = clampPercent(req.body.finalScore);
       evaluation.scoreHistory.push({
         previousScore: evaluation.finalScore,
-        newScore: newScore,
+        newScore,
         changedBy: req.user.id,
-        reason: req.body.scoreChangeReason || 'Manual update',
+        reason: req.body.scoreChangeReason || 'Manual override',
       });
-
       evaluation.finalScore = newScore;
     }
 
-    // Recalculate if scoring method changed
-    if (req.body.scoringMethod) {
-      const goals = await Goal.find({
-        _id: { $in: evaluation.goalAssessments.map(a => a.goalId) },
-      });
-      evaluation.suggestedScore = calculateSuggestedScore(evaluation.goalAssessments, goals, evaluation.scoringMethod);
-    }
-
-    // Move to in_progress if was draft
     if (evaluation.status === 'draft') {
       evaluation.status = 'in_progress';
     }
@@ -410,113 +378,56 @@ exports.updateEvaluation = async (req, res) => {
       .populate('employeeId', 'name email role')
       .populate('evaluatorId', 'name email role')
       .populate('cycleId', 'name year currentPhase')
-      .populate('goalAssessments.goalId', 'title description category weight metric targetValue currentProgress finalCompletion status');
+      .populate('scoreHistory.changedBy', 'name email');
 
-    res.json({ success: true, evaluation: populated, rubricBand: getRubricBand(evaluation.finalScore || evaluation.suggestedScore) });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-/**
- * PATCH /api/evaluations/:id/goal/:goalId — Update a single goal assessment
- */
-exports.updateGoalAssessment = async (req, res) => {
-  try {
-    const evaluation = await Evaluation.findById(req.params.id);
-    if (!evaluation) return res.status(404).json({ success: false, message: 'Evaluation not found' });
-
-    if (String(evaluation.evaluatorId) !== String(req.user.id) && req.user.role !== 'ADMIN') {
-      return res.status(403).json({ success: false, message: 'Forbidden' });
-    }
-
-    if (!['draft', 'in_progress', 'rejected'].includes(evaluation.status)) {
-      return res.status(400).json({ success: false, message: 'Evaluation cannot be modified in its current status' });
-    }
-
-    const assessment = evaluation.goalAssessments.find(
-      a => String(a.goalId) === req.params.goalId
-    );
-
-    if (!assessment) {
-      return res.status(404).json({ success: false, message: 'Goal assessment not found in this evaluation' });
-    }
-
-    // Update fields
-    if (req.body.achievementPercent !== undefined) {
-      const pct = parseFloat(req.body.achievementPercent);
-      if (isNaN(pct) || pct < 0 || pct > 100) {
-        return res.status(400).json({ success: false, message: 'Achievement must be between 0 and 100' });
-      }
-      assessment.achievementPercent = pct;
-    }
-    if (req.body.goalStatus !== undefined) assessment.goalStatus = req.body.goalStatus;
-    if (req.body.comments !== undefined) assessment.comments = req.body.comments;
-
-    assessment.reviewed = true;
-
-    // Move to in_progress if draft
-    if (evaluation.status === 'draft') {
-      evaluation.status = 'in_progress';
-    }
-
-    // Recalculate suggested score
-    const goals = await Goal.find({
-      _id: { $in: evaluation.goalAssessments.map(a => a.goalId) },
-    });
-    evaluation.suggestedScore = calculateSuggestedScore(evaluation.goalAssessments, goals, evaluation.scoringMethod);
-
-    await evaluation.save();
-
-    const populated = await Evaluation.findById(evaluation._id)
-      .populate('employeeId', 'name email role')
-      .populate('evaluatorId', 'name email role')
-      .populate('cycleId', 'name year currentPhase')
-      .populate('goalAssessments.goalId', 'title description category weight metric targetValue currentProgress finalCompletion status');
-
+    const hydratedEvaluation = await hydrateEvaluation(populated);
     res.json({
       success: true,
-      evaluation: populated,
-      suggestedScore: evaluation.suggestedScore,
-      rubricBand: getRubricBand(evaluation.finalScore || evaluation.suggestedScore),
+      evaluation: hydratedEvaluation,
+      rubricBand: getRubricBand(hydratedEvaluation.finalScore ?? hydratedEvaluation.suggestedScore),
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * POST /api/evaluations/:id/submit — Submit the evaluation
- */
 exports.submitEvaluation = async (req, res) => {
   try {
     const evaluation = await Evaluation.findById(req.params.id);
-    if (!evaluation) return res.status(404).json({ success: false, message: 'Evaluation not found' });
+    if (!evaluation) {
+      return res.status(404).json({ success: false, message: 'Evaluation not found.' });
+    }
 
     if (String(evaluation.evaluatorId) !== String(req.user.id) && req.user.role !== 'ADMIN') {
-      return res.status(403).json({ success: false, message: 'Only the evaluator can submit' });
+      return res.status(403).json({ success: false, message: 'Only the evaluator can submit this evaluation.' });
     }
 
-    if (!['draft', 'in_progress', 'rejected'].includes(evaluation.status)) {
-      return res.status(400).json({ success: false, message: 'Evaluation cannot be submitted in its current status' });
+    if (!EDITABLE_EVALUATION_STATUSES.includes(evaluation.status)) {
+      return res.status(400).json({ success: false, message: 'Evaluation cannot be submitted in its current status.' });
     }
 
-    // Validate: all goals must be reviewed
-    const unreviewedCount = evaluation.goalAssessments.filter(a => !a.reviewed).length;
-    if (unreviewedCount > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `${unreviewedCount} goal(s) have not been reviewed yet`,
-      });
+    const objectives = await fetchObjectiveScope({
+      employeeId: evaluation.employeeId,
+      cycleId: evaluation.cycleId,
+      useLiveCycleScope: true,
+    });
+
+    if (objectives.length === 0) {
+      return res.status(400).json({ success: false, message: 'No approved objectives are available for submission.' });
     }
 
-    // Validate: final score must be set
-    if (!evaluation.finalScore && !evaluation.suggestedScore) {
-      return res.status(400).json({ success: false, message: 'A final score must be assigned before submitting' });
+    const totalWeight = objectives.reduce((sum, objective) => sum + Number(objective.weight || 0), 0);
+    if (totalWeight > 100) {
+      return res.status(400).json({ success: false, message: `Objective weights exceed 100% (${totalWeight}%).` });
     }
 
-    // If no manual score set, use suggested
-    if (!evaluation.finalScore) {
+    setEvaluationScope(evaluation, objectives);
+
+    if (evaluation.suggestedScore == null) {
+      return res.status(400).json({ success: false, message: 'A score could not be calculated from the current objectives.' });
+    }
+
+    if (evaluation.finalScore == null) {
       evaluation.finalScore = evaluation.suggestedScore;
     }
 
@@ -524,8 +435,12 @@ exports.submitEvaluation = async (req, res) => {
     evaluation.submittedAt = new Date();
     await evaluation.save();
 
-    // Notify employee
-    createNotification({
+    await Objective.updateMany(
+      { _id: { $in: objectives.map((objective) => objective._id) }, status: { $ne: 'locked' } },
+      { $set: { status: 'locked' } }
+    );
+
+    await createNotification({
       recipientId: evaluation.employeeId,
       senderId: req.user.id,
       type: 'EVALUATION_SUBMITTED',
@@ -534,12 +449,12 @@ exports.submitEvaluation = async (req, res) => {
       link: '/evaluation-list',
     });
 
-    createAuditLog({
+    await createAuditLog({
       entityType: 'evaluation',
       entityId: evaluation._id,
       action: 'submit',
       performedBy: req.user.id,
-      description: `Evaluation submitted with score ${evaluation.finalScore}`,
+      description: `Evaluation submitted with final score ${evaluation.finalScore}.`,
     });
 
     res.json({ success: true, evaluation });
@@ -548,16 +463,15 @@ exports.submitEvaluation = async (req, res) => {
   }
 };
 
-/**
- * POST /api/evaluations/:id/approve — Approve (HR/Admin)
- */
 exports.approveEvaluation = async (req, res) => {
   try {
     const evaluation = await Evaluation.findById(req.params.id);
-    if (!evaluation) return res.status(404).json({ success: false, message: 'Evaluation not found' });
+    if (!evaluation) {
+      return res.status(404).json({ success: false, message: 'Evaluation not found.' });
+    }
 
     if (evaluation.status !== 'submitted') {
-      return res.status(400).json({ success: false, message: 'Only submitted evaluations can be approved' });
+      return res.status(400).json({ success: false, message: 'Only submitted evaluations can be approved.' });
     }
 
     evaluation.status = 'approved';
@@ -567,19 +481,17 @@ exports.approveEvaluation = async (req, res) => {
       comments: req.body.comments || '',
       date: new Date(),
     });
-
     await evaluation.save();
 
-    // Notify evaluator and employee
-    createNotification({
+    await createNotification({
       recipientId: evaluation.evaluatorId,
       senderId: req.user.id,
       type: 'EVALUATION_APPROVED',
       title: 'Evaluation Approved',
-      message: `The evaluation you submitted has been approved.`,
+      message: 'The evaluation you submitted has been approved.',
       link: '/evaluation-list',
     });
-    createNotification({
+    await createNotification({
       recipientId: evaluation.employeeId,
       senderId: req.user.id,
       type: 'EVALUATION_APPROVED',
@@ -588,12 +500,12 @@ exports.approveEvaluation = async (req, res) => {
       link: '/evaluation-list',
     });
 
-    createAuditLog({
+    await createAuditLog({
       entityType: 'evaluation',
       entityId: evaluation._id,
       action: 'approve',
       performedBy: req.user.id,
-      description: 'Evaluation approved',
+      description: 'Evaluation approved.',
     });
 
     res.json({ success: true, evaluation });
@@ -602,16 +514,15 @@ exports.approveEvaluation = async (req, res) => {
   }
 };
 
-/**
- * POST /api/evaluations/:id/reject — Reject (HR/Admin)
- */
 exports.rejectEvaluation = async (req, res) => {
   try {
     const evaluation = await Evaluation.findById(req.params.id);
-    if (!evaluation) return res.status(404).json({ success: false, message: 'Evaluation not found' });
+    if (!evaluation) {
+      return res.status(404).json({ success: false, message: 'Evaluation not found.' });
+    }
 
     if (evaluation.status !== 'submitted') {
-      return res.status(400).json({ success: false, message: 'Only submitted evaluations can be rejected' });
+      return res.status(400).json({ success: false, message: 'Only submitted evaluations can be rejected.' });
     }
 
     evaluation.status = 'rejected';
@@ -621,10 +532,9 @@ exports.rejectEvaluation = async (req, res) => {
       comments: req.body.comments || 'Needs revision',
       date: new Date(),
     });
-
     await evaluation.save();
 
-    createNotification({
+    await createNotification({
       recipientId: evaluation.evaluatorId,
       senderId: req.user.id,
       type: 'EVALUATION_REJECTED',
@@ -633,7 +543,7 @@ exports.rejectEvaluation = async (req, res) => {
       link: '/evaluation-list',
     });
 
-    createAuditLog({
+    await createAuditLog({
       entityType: 'evaluation',
       entityId: evaluation._id,
       action: 'reject',
@@ -647,37 +557,36 @@ exports.rejectEvaluation = async (req, res) => {
   }
 };
 
-/**
- * POST /api/evaluations/:id/complete — Complete after approval
- */
 exports.completeEvaluation = async (req, res) => {
   try {
     const evaluation = await Evaluation.findById(req.params.id);
-    if (!evaluation) return res.status(404).json({ success: false, message: 'Evaluation not found' });
+    if (!evaluation) {
+      return res.status(404).json({ success: false, message: 'Evaluation not found.' });
+    }
 
     if (evaluation.status !== 'approved') {
-      return res.status(400).json({ success: false, message: 'Only approved evaluations can be completed' });
+      return res.status(400).json({ success: false, message: 'Only approved evaluations can be completed.' });
     }
 
     evaluation.status = 'completed';
     evaluation.completedAt = new Date();
     await evaluation.save();
 
-    createNotification({
+    await createNotification({
       recipientId: evaluation.employeeId,
       senderId: req.user.id,
       type: 'EVALUATION_COMPLETED',
       title: 'Evaluation Completed',
-      message: `Your performance evaluation for ${evaluation.period} is now complete. Your score: ${evaluation.finalScore}/10.`,
+      message: `Your performance evaluation for ${evaluation.period} is complete. Final score: ${evaluation.finalScore}/100.`,
       link: '/evaluation-list',
     });
 
-    createAuditLog({
+    await createAuditLog({
       entityType: 'evaluation',
       entityId: evaluation._id,
       action: 'complete',
       performedBy: req.user.id,
-      description: `Evaluation completed with final score ${evaluation.finalScore}`,
+      description: `Evaluation completed with final score ${evaluation.finalScore}.`,
     });
 
     res.json({ success: true, evaluation });
@@ -686,47 +595,33 @@ exports.completeEvaluation = async (req, res) => {
   }
 };
 
-/**
- * POST /api/evaluations/:id/acknowledge — Employee acknowledges evaluation
- */
 exports.acknowledgeEvaluation = async (req, res) => {
   try {
     const evaluation = await Evaluation.findById(req.params.id);
-    if (!evaluation) return res.status(404).json({ success: false, message: 'Evaluation not found' });
+    if (!evaluation) {
+      return res.status(404).json({ success: false, message: 'Evaluation not found.' });
+    }
 
     if (String(evaluation.employeeId) !== String(req.user.id)) {
-      return res.status(403).json({ success: false, message: 'Only the evaluated employee can acknowledge' });
+      return res.status(403).json({ success: false, message: 'Only the evaluated employee can acknowledge this evaluation.' });
     }
 
     if (!['submitted', 'approved', 'completed'].includes(evaluation.status)) {
-      return res.status(400).json({ success: false, message: 'Evaluation has not been submitted yet' });
+      return res.status(400).json({ success: false, message: 'Evaluation has not been submitted yet.' });
     }
 
     evaluation.employeeAcknowledgment = {
       acknowledged: true,
       date: new Date(),
     };
-
     await evaluation.save();
+
     res.json({ success: true, evaluation });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * GET /api/evaluations/rubric — Return the scoring rubric
- */
 exports.getRubric = async (req, res) => {
   res.json({ success: true, rubric: getFullRubric() });
 };
-
-function getFullRubric() {
-  return [
-    { min: 1, max: 3, label: 'Unsatisfactory', range: '0-30%', color: '#ef4444', description: 'Performance is significantly below expectations. Goals were largely unmet.' },
-    { min: 3, max: 5, label: 'Needs Improvement', range: '30-50%', color: '#f97316', description: 'Performance is below expectations. Some goals met but significant gaps remain.' },
-    { min: 5, max: 6, label: 'Meets Expectations', range: '50-75%', color: '#eab308', description: 'Performance meets the basic requirements. Core goals are achieved.' },
-    { min: 6, max: 8, label: 'Good / Exceeds Expectations', range: '75-90%', color: '#22c55e', description: 'Performance exceeds expectations. Most goals achieved with high quality.' },
-    { min: 8, max: 10, label: 'Exceptional', range: '90-100%', color: '#8b5cf6', description: 'Outstanding performance. All goals exceeded. Contributes beyond role.' },
-  ];
-}
