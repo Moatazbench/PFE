@@ -13,9 +13,7 @@ function getRequesterId(req) {
     return String(req.user?.id || req.user?._id || '');
 }
 
-function pickRandom(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
-}
+
 
 function pickMultiple(arr, count) {
     var shuffled = arr.slice().sort(function () { return Math.random() - 0.5; });
