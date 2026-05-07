@@ -118,7 +118,7 @@ jobs:
       # 4️⃣ Trivy Security Scan (Enterprise)
       # =========================
       - name: Scan Backend Image
-        uses: aquasecurity/trivy-action@0.20.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: moatazbench/pfe-backend:${{ steps.vars.outputs.TAG }}
           format: table
@@ -128,7 +128,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Scan Frontend Image
-        uses: aquasecurity/trivy-action@0.20.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: moatazbench/pfe-frontend:${{ steps.vars.outputs.TAG }}
           format: table
