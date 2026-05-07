@@ -63,7 +63,7 @@ jobs:
 
 
   # =========================
-  # 3️⃣ Docker Build + Scan + Push
+  # 3️⃣ Docker Build + GitOps
   # =========================
   docker:
     runs-on: ubuntu-latest
@@ -71,6 +71,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -115,12 +117,29 @@ jobs:
           docker tag moatazbench/pfe-frontend:${{ steps.vars.outputs.TAG }} moatazbench/pfe-frontend:${{ github.sha }}
 
       # =========================
-      # 4️⃣ Trivy Security Scan (Enterprise)
+      # ✅ GitOps Auto Update (DEV)
+      # =========================
+      - name: Update Kustomize image tag (DEV)
+        if: github.ref_name == 'develop'
+        run: |
+          sed -i "s/newTag: .*/newTag: ${{ github.sha }}/" k8s/overlays/dev/kustomization.yaml
+
+      - name: Commit and Push Kustomize Update (DEV)
+        if: github.ref_name == 'develop'
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add k8s/overlays/dev/kustomization.yaml
+          git commit -m "Update dev image to ${{ github.sha }}" || echo "No changes to commit"
+          git push origin develop
+
+      # =========================
+      # 4️⃣ Trivy Security Scan
       # =========================
       - name: Scan Backend Image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: moatazbench/pfe-backend:${{ steps.vars.outputs.TAG }}
+          image-ref: moatazbench/pfe-backend:${{ github.sha }}
           format: table
           exit-code: 0
           ignore-unfixed: true
@@ -130,7 +149,7 @@ jobs:
       - name: Scan Frontend Image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: moatazbench/pfe-frontend:${{ steps.vars.outputs.TAG }}
+          image-ref: moatazbench/pfe-frontend:${{ github.sha }}
           format: table
           exit-code: 0
           ignore-unfixed: true
@@ -147,5 +166,4 @@ jobs:
           docker push moatazbench/pfe-backend:${{ github.sha }}
 
           docker push moatazbench/pfe-frontend:${{ steps.vars.outputs.TAG }}
-          docker push moatazbench/pfe-frontend:${{ github.sha }} 
-          
+          docker push moatazbench/pfe-frontend:${{ github.sha }}
