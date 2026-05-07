@@ -3,13 +3,14 @@ const Objective = require('../models/Objective');
 const Notification = require('../models/Notification');
 
 function startReminderCron() {
-  // Run every day at 8:00 AM
+  // Run every day at 8:00 AMmmmm
   cron.schedule('0 8 * * *', async function() {
     console.log('⏰ Running deadline reminder check...');
     
     try {
       var now = new Date();
-      var oneDayLater = new Date();
+      var oneDayLater = new Date(); 
+
       oneDayLater.setDate(now.getDate() + 1);
       var threeDaysLater = new Date();
       threeDaysLater.setDate(now.getDate() + 3);
@@ -17,6 +18,8 @@ function startReminderCron() {
       var notificationsSent = 0;
       
       // 3-day reminders
+            // 3-day reminders
+
       var threeDayObjectives = await Objective.find({
         deadline: { $gte: now, $lte: threeDaysLater },
         status: { $nin: ['completed', 'validated'] },

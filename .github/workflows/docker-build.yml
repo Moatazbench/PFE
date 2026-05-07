@@ -147,4 +147,5 @@ jobs:
           docker push moatazbench/pfe-backend:${{ github.sha }}
 
           docker push moatazbench/pfe-frontend:${{ steps.vars.outputs.TAG }}
-          docker push moatazbench/pfe-frontend:${{ github.sha }}
+          docker push moatazbench/pfe-frontend:${{ github.sha }} 
+          
