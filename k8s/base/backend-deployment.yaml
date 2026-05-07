@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: moatazbench/pfe-backend:latest
+          image: moatazbench/pfe-backend
           ports:
             - containerPort: 5000
           envFrom:
