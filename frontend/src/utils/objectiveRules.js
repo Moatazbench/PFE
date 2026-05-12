@@ -9,6 +9,44 @@ export function isWeightBearingObjective(objective) {
     return ['rejected', 'cancelled', 'archived'].indexOf(status) === -1;
 }
 
+export function getTeamObjectiveGroupKey(objective) {
+    if (!objective) return '';
+    var teamId = objective.team?._id || objective.team || '';
+    var cycleId = objective.cycle?._id || objective.cycle || '';
+    var title = String(objective.title || '').trim().toLowerCase();
+    if (!teamId || !cycleId || !title) return '';
+    return [String(teamId), String(cycleId), title].join('::');
+}
+
+export function getUniqueTeamObjectives(objectives, options) {
+    var items = Array.isArray(objectives) ? objectives : [];
+    var excludeId = options && options.excludeId ? String(options.excludeId) : null;
+    var excludedGroupKey = '';
+    var seen = new Set();
+
+    if (excludeId) {
+        var excludedObjective = items.find(function (objective) {
+            return String(objective?._id || '') === excludeId;
+        });
+        excludedGroupKey = getTeamObjectiveGroupKey(excludedObjective);
+    }
+
+    return items.filter(function (objective) {
+        if (!objective || !isWeightBearingObjective(objective)) return false;
+
+        var objectiveId = objective._id != null ? String(objective._id) : null;
+        if (excludeId && objectiveId === excludeId && !excludedGroupKey) return false;
+
+        var groupKey = getTeamObjectiveGroupKey(objective);
+        if (!groupKey) return !excludeId || objectiveId !== excludeId;
+        if (excludedGroupKey && groupKey === excludedGroupKey) return false;
+        if (seen.has(groupKey)) return false;
+
+        seen.add(groupKey);
+        return true;
+    });
+}
+
 export function sumObjectiveWeights(objectives, options) {
     var excludeId = options && options.excludeId ? String(options.excludeId) : null;
 
@@ -22,6 +60,12 @@ export function sumObjectiveWeights(objectives, options) {
             return sum;
         }
 
+        return sum + normalizeWeight(objective.weight);
+    }, 0);
+}
+
+export function sumTeamObjectiveWeights(objectives, options) {
+    return getUniqueTeamObjectives(objectives, options).reduce(function (sum, objective) {
         return sum + normalizeWeight(objective.weight);
     }, 0);
 }

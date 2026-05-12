@@ -69,11 +69,13 @@ const ActivityLogSchema = new mongoose.Schema({
 
 const ObjectiveSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true },
+  dueDate: { type: Date, default: null },
   description: { type: String, default: '' },
   successIndicator: { type: String, required: true, trim: true },
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   cycle: { type: mongoose.Schema.Types.ObjectId, ref: 'Cycle', required: true, index: true },
   category: { type: String, enum: ['individual', 'team'], default: 'individual' },
+  team: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', default: null, index: true },
   assignedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   weight: { type: Number, required: true, min: 1, max: 100 },
   achievementPercent: { type: Number, min: 0, max: 100, default: null },
@@ -158,6 +160,10 @@ const ObjectiveSchema = new mongoose.Schema({
   attachments: [AttachmentSchema],
   changeRequests: [ChangeRequestSchema],
   activityLog: [ActivityLogSchema],
+  manager_notes: [{
+    text: { type: String, required: true },
+    created_at: { type: Date, default: Date.now },
+  }],
 }, { timestamps: true });
 
 ObjectiveSchema.index({ owner: 1, cycle: 1, title: 1 }, { unique: true });
@@ -166,6 +172,7 @@ ObjectiveSchema.index({ owner: 1, status: 1 });
 ObjectiveSchema.index({ owner: 1, cycle: 1 });
 ObjectiveSchema.index({ status: 1 });
 ObjectiveSchema.index({ category: 1 });
+ObjectiveSchema.index({ team: 1, cycle: 1, category: 1 });
 ObjectiveSchema.index({ source: 1 });
 
 ObjectiveSchema.pre('save', function syncWeightedScore(next) {

@@ -568,17 +568,73 @@ button {
 /* ========== Goals Table ========== */
 .goals-table {
   background: var(--bg-card); border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md); border: 1px solid var(--border-color); overflow: hidden;
+  box-shadow: var(--shadow-md); border: 1px solid var(--border-color); overflow: visible;
 }
 .goals-table__header {
   background-color: #F9FAFB !important; border-bottom: 1px solid var(--border-color);
   font-weight: 600; color: var(--text-muted); text-transform: uppercase;
   font-size: 0.75rem; letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+}
+.goals-table__row {
+  display: flex;
+  align-items: center;
 }
 .goals-table__row-wrapper {
   border-bottom: 1px solid var(--border-color); transition: background-color 0.2s;
 }
 .goals-table__row-wrapper:hover { background-color: #F9FAFB; }
+
+.goals-table__col {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  overflow: hidden;
+}
+
+.goals-table__col--title {
+  flex: 1;
+  min-width: 0; /* allows text truncation */
+}
+
+.goals-table__col--title span,
+.goals-table__col--title p,
+.goals-table__title-text,
+.goals-table__goal-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.goals-table__col--progress {
+  width: 140px;
+  flex-shrink: 0;
+}
+
+.goals-table__col--weight {
+  width: 80px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.goals-table__col--status {
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.goals-table__col--deadline {
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.goals-table__col--actions {
+  width: 48px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: visible !important; /* CRITICAL: allows dropdown to show */
+  justify-content: flex-end;
+}
 
 /* ========== Inputs & Forms ========== */
 input, select, textarea {

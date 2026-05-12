@@ -1,0 +1,380 @@
+2026-05-11T12:45:14.315Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: 'Testing_.pdf',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778503505122-96693109.pdf',\n" +
+  "    type: 'file',\n" +
+  '    size: 300892,\n' +
+  "    mimetype: 'application/pdf'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01ce5f65868f3cf68f8da3","cycle_id":"6a01cdef65868f3cf68f8cc1","progress_percent":8,"notes":"llllllllllllllll","priority":"low","attachments":[{"name":"Testing_.pdf","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778503505122-96693109.pdf","type":"file","size":300892,"mimetype":"application/pdf"}]}
+2026-05-11T12:45:15.068Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: 'Testing_.pdf',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778503505122-96693109.pdf',\n" +
+  "    type: 'file',\n" +
+  '    size: 300892,\n' +
+  "    mimetype: 'application/pdf'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01ce5f65868f3cf68f8da3","cycle_id":"6a01cdef65868f3cf68f8cc1","progress_percent":8,"notes":"llllllllllllllll","priority":"low","attachments":[{"name":"Testing_.pdf","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778503505122-96693109.pdf","type":"file","size":300892,"mimetype":"application/pdf"}]}
+2026-05-11T12:45:15.239Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: 'Testing_.pdf',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778503505122-96693109.pdf',\n" +
+  "    type: 'file',\n" +
+  '    size: 300892,\n' +
+  "    mimetype: 'application/pdf'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01ce5f65868f3cf68f8da3","cycle_id":"6a01cdef65868f3cf68f8cc1","progress_percent":8,"notes":"llllllllllllllll","priority":"low","attachments":[{"name":"Testing_.pdf","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778503505122-96693109.pdf","type":"file","size":300892,"mimetype":"application/pdf"}]}
+2026-05-11T12:45:15.365Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: 'Testing_.pdf',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778503505122-96693109.pdf',\n" +
+  "    type: 'file',\n" +
+  '    size: 300892,\n' +
+  "    mimetype: 'application/pdf'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01ce5f65868f3cf68f8da3","cycle_id":"6a01cdef65868f3cf68f8cc1","progress_percent":8,"notes":"llllllllllllllll","priority":"low","attachments":[{"name":"Testing_.pdf","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778503505122-96693109.pdf","type":"file","size":300892,"mimetype":"application/pdf"}]}
+2026-05-11T12:45:15.487Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: 'Testing_.pdf',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778503505122-96693109.pdf',\n" +
+  "    type: 'file',\n" +
+  '    size: 300892,\n' +
+  "    mimetype: 'application/pdf'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01ce5f65868f3cf68f8da3","cycle_id":"6a01cdef65868f3cf68f8cc1","progress_percent":8,"notes":"llllllllllllllll","priority":"low","attachments":[{"name":"Testing_.pdf","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778503505122-96693109.pdf","type":"file","size":300892,"mimetype":"application/pdf"}]}
+2026-05-11T13:31:40.227Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: 'ce7dd39c-989e-4dec-a5e1-dbd2c491375c.jpg',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778506298879-914809043.jpg',\n" +
+  "    type: 'file',\n" +
+  '    size: 109692,\n' +
+  "    mimetype: 'image/jpeg'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01d98c384e1bdfc2cafa58","cycle_id":"6a01d969384e1bdfc2caf997","progress_percent":11,"notes":"ffffff","priority":"medium","attachments":[{"name":"ce7dd39c-989e-4dec-a5e1-dbd2c491375c.jpg","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778506298879-914809043.jpg","type":"file","size":109692,"mimetype":"image/jpeg"}]}
+2026-05-11T13:31:40.750Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: 'ce7dd39c-989e-4dec-a5e1-dbd2c491375c.jpg',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778506298879-914809043.jpg',\n" +
+  "    type: 'file',\n" +
+  '    size: 109692,\n' +
+  "    mimetype: 'image/jpeg'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01d98c384e1bdfc2cafa58","cycle_id":"6a01d969384e1bdfc2caf997","progress_percent":11,"notes":"ffffff","priority":"medium","attachments":[{"name":"ce7dd39c-989e-4dec-a5e1-dbd2c491375c.jpg","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778506298879-914809043.jpg","type":"file","size":109692,"mimetype":"image/jpeg"}]}
+2026-05-11T13:31:40.936Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: 'ce7dd39c-989e-4dec-a5e1-dbd2c491375c.jpg',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778506298879-914809043.jpg',\n" +
+  "    type: 'file',\n" +
+  '    size: 109692,\n' +
+  "    mimetype: 'image/jpeg'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01d98c384e1bdfc2cafa58","cycle_id":"6a01d969384e1bdfc2caf997","progress_percent":11,"notes":"ffffff","priority":"medium","attachments":[{"name":"ce7dd39c-989e-4dec-a5e1-dbd2c491375c.jpg","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778506298879-914809043.jpg","type":"file","size":109692,"mimetype":"image/jpeg"}]}
+2026-05-11T13:31:41.088Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: 'ce7dd39c-989e-4dec-a5e1-dbd2c491375c.jpg',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778506298879-914809043.jpg',\n" +
+  "    type: 'file',\n" +
+  '    size: 109692,\n' +
+  "    mimetype: 'image/jpeg'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01d98c384e1bdfc2cafa58","cycle_id":"6a01d969384e1bdfc2caf997","progress_percent":11,"notes":"ffffff","priority":"medium","attachments":[{"name":"ce7dd39c-989e-4dec-a5e1-dbd2c491375c.jpg","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778506298879-914809043.jpg","type":"file","size":109692,"mimetype":"image/jpeg"}]}
+2026-05-11T13:32:05.550Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: '1720444653899.jpg',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg',\n" +
+  "    type: 'file',\n" +
+  '    size: 11967,\n' +
+  "    mimetype: 'image/jpeg'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01d98c384e1bdfc2cafa58","cycle_id":"6a01d969384e1bdfc2caf997","progress_percent":11,"notes":"ffffff","priority":"medium","attachments":[{"name":"1720444653899.jpg","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg","type":"file","size":11967,"mimetype":"image/jpeg"}]}
+2026-05-11T13:32:05.960Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: '1720444653899.jpg',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg',\n" +
+  "    type: 'file',\n" +
+  '    size: 11967,\n' +
+  "    mimetype: 'image/jpeg'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01d98c384e1bdfc2cafa58","cycle_id":"6a01d969384e1bdfc2caf997","progress_percent":11,"notes":"ffffff","priority":"medium","attachments":[{"name":"1720444653899.jpg","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg","type":"file","size":11967,"mimetype":"image/jpeg"}]}
+2026-05-11T13:32:06.189Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: '1720444653899.jpg',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg',\n" +
+  "    type: 'file',\n" +
+  '    size: 11967,\n' +
+  "    mimetype: 'image/jpeg'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01d98c384e1bdfc2cafa58","cycle_id":"6a01d969384e1bdfc2caf997","progress_percent":11,"notes":"ffffff","priority":"medium","attachments":[{"name":"1720444653899.jpg","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg","type":"file","size":11967,"mimetype":"image/jpeg"}]}
+2026-05-11T13:32:06.311Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: '1720444653899.jpg',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg',\n" +
+  "    type: 'file',\n" +
+  '    size: 11967,\n' +
+  "    mimetype: 'image/jpeg'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01d98c384e1bdfc2cafa58","cycle_id":"6a01d969384e1bdfc2caf997","progress_percent":11,"notes":"ffffff","priority":"medium","attachments":[{"name":"1720444653899.jpg","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg","type":"file","size":11967,"mimetype":"image/jpeg"}]}
+2026-05-11T13:32:06.427Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: '1720444653899.jpg',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg',\n" +
+  "    type: 'file',\n" +
+  '    size: 11967,\n' +
+  "    mimetype: 'image/jpeg'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01d98c384e1bdfc2cafa58","cycle_id":"6a01d969384e1bdfc2caf997","progress_percent":11,"notes":"ffffff","priority":"medium","attachments":[{"name":"1720444653899.jpg","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg","type":"file","size":11967,"mimetype":"image/jpeg"}]}
+2026-05-11T13:32:06.616Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: '1720444653899.jpg',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg',\n" +
+  "    type: 'file',\n" +
+  '    size: 11967,\n' +
+  "    mimetype: 'image/jpeg'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01d98c384e1bdfc2cafa58","cycle_id":"6a01d969384e1bdfc2caf997","progress_percent":11,"notes":"ffffff","priority":"medium","attachments":[{"name":"1720444653899.jpg","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg","type":"file","size":11967,"mimetype":"image/jpeg"}]}
+2026-05-11T13:32:06.776Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: '1720444653899.jpg',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg',\n" +
+  "    type: 'file',\n" +
+  '    size: 11967,\n' +
+  "    mimetype: 'image/jpeg'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01d98c384e1bdfc2cafa58","cycle_id":"6a01d969384e1bdfc2caf997","progress_percent":11,"notes":"ffffff","priority":"medium","attachments":[{"name":"1720444653899.jpg","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg","type":"file","size":11967,"mimetype":"image/jpeg"}]}
+2026-05-11T13:32:06.940Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: '1720444653899.jpg',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg',\n" +
+  "    type: 'file',\n" +
+  '    size: 11967,\n' +
+  "    mimetype: 'image/jpeg'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01d98c384e1bdfc2cafa58","cycle_id":"6a01d969384e1bdfc2caf997","progress_percent":11,"notes":"ffffff","priority":"medium","attachments":[{"name":"1720444653899.jpg","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg","type":"file","size":11967,"mimetype":"image/jpeg"}]}
+2026-05-11T13:32:07.122Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: '1720444653899.jpg',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg',\n" +
+  "    type: 'file',\n" +
+  '    size: 11967,\n' +
+  "    mimetype: 'image/jpeg'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01d98c384e1bdfc2cafa58","cycle_id":"6a01d969384e1bdfc2caf997","progress_percent":11,"notes":"ffffff","priority":"medium","attachments":[{"name":"1720444653899.jpg","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg","type":"file","size":11967,"mimetype":"image/jpeg"}]}
+2026-05-11T13:32:07.282Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: '1720444653899.jpg',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg',\n" +
+  "    type: 'file',\n" +
+  '    size: 11967,\n' +
+  "    mimetype: 'image/jpeg'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01d98c384e1bdfc2cafa58","cycle_id":"6a01d969384e1bdfc2caf997","progress_percent":11,"notes":"ffffff","priority":"medium","attachments":[{"name":"1720444653899.jpg","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg","type":"file","size":11967,"mimetype":"image/jpeg"}]}
+2026-05-11T13:32:07.410Z
+ValidationError: CheckIn validation failed: attachments.0: Cast to [string] failed for value "[\n' +
+  '  {\n' +
+  "    name: '1720444653899.jpg',\n" +
+  "    url: '/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg',\n" +
+  "    type: 'file',\n" +
+  '    size: 11967,\n' +
+  "    mimetype: 'image/jpeg'\n" +
+  '  }\n' +
+  ']" (type string) at path "attachments.0" because of "CastError"
+    at Document.invalidate (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:3221:32)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1466:12)
+    at model.$set (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:1121:16)
+    at model.Document (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\document.js:167:12)
+    at model.Model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:123:12)
+    at new model (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\node_modules\mongoose\lib\model.js:4755:15)
+    at exports.submitCheckIn (C:\Users\moata\OneDrive\Documents\application_gestion_competences\application_gestion_competences\backend\controllers\checkInController.js:91:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Body: {"objective_id":"6a01d98c384e1bdfc2cafa58","cycle_id":"6a01d969384e1bdfc2caf997","progress_percent":11,"notes":"ffffff","priority":"medium","attachments":[{"name":"1720444653899.jpg","url":"/uploads/checkins/69a39d7f980bd9ad8c666186-1778506324779-206419596.jpg","type":"file","size":11967,"mimetype":"image/jpeg"}]}

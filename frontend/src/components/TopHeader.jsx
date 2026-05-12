@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useTheme } from './ThemeContext';
 import Notifications from './Notifications';
+import useActiveCycle from '../hooks/useActiveCycle';
 
 var pageTitles = {
     '/dashboard': 'Dashboard',
@@ -11,7 +12,7 @@ var pageTitles = {
     '/meetings': 'Meetings',
     '/feed': 'Team Feed',
     '/cycles': 'Annual Cycles',
-    '/midyear-assessments': 'Mid-Year Execution',
+    '/midyear-assessments': 'Mid-Year Assessment',
     '/final-evaluations': 'End-Year Review',
     '/performance': 'Performance',
     '/my-team': 'My Team',
@@ -54,9 +55,14 @@ function TopHeader({ onMobileToggle }) {
     var location = useLocation();
     var { user } = useAuth();
     var { darkMode, toggleDarkMode } = useTheme();
+    var { activeCycle, currentPhase } = useActiveCycle();
 
     var title = pageTitles[location.pathname] || 'Page';
     var section = pageSections[location.pathname] || '';
+    var phaseLabel = currentPhase === 'phase1' ? 'Phase 1' :
+        currentPhase === 'phase2' ? 'Phase 2' :
+        currentPhase === 'phase3' ? 'Phase 3' :
+        currentPhase === 'closed' ? 'Closed' : '';
 
     return (
         <header className="ent-header">
@@ -69,6 +75,12 @@ function TopHeader({ onMobileToggle }) {
                 <div>
                     {section && <span className="ent-header__breadcrumb">{section} /</span>}
                     <h1 className="ent-header__page-title">{title}</h1>
+                    {phaseLabel && (
+                        <div style={{ marginTop: '0.3rem', fontSize: '0.8rem', color: '#64748b' }}>
+                            <strong>{phaseLabel}</strong>
+                            {activeCycle?.name ? ' · ' + activeCycle.name : ''}
+                        </div>
+                    )}
                 </div>
             </div>
 

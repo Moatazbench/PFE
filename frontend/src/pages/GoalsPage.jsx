@@ -4,7 +4,6 @@ import { useAuth } from '../components/AuthContext';
 import { useToast } from '../components/common/Toast';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import GoalFilters from '../components/goals/GoalFilters';
-import GoalProgressSummary from '../components/goals/GoalProgressSummary';
 import GoalTable from '../components/goals/GoalTable';
 import GoalDetailsPanel from '../components/goals/GoalDetailsPanel';
 import CreateGoalModal from '../components/goals/CreateGoalModal';
@@ -35,6 +34,7 @@ function GoalsPage() {
     var [reviewGoal, setReviewGoal] = useState(null);
     var [evaluateGoal, setEvaluateGoal] = useState(null);
     var [showSubmitDialog, setShowSubmitDialog] = useState(false);
+    var [submittingAll, setSubmittingAll] = useState(false);
 
     var toast = useToast();
 
@@ -176,10 +176,28 @@ function GoalsPage() {
     var unapprovedObjectives = useMemo(function () {
         return individualObjectives.filter(function(o) { return !['approved', 'validated'].includes(o.status); });
     }, [individualObjectives]);
+    
+    // Validate all fields for submission
+    var objectiveValidationErrors = useMemo(function() {
+        var errors = {};
+        unapprovedObjectives.forEach(function(obj) {
+            var objErrors = [];
+            if (!obj.title || obj.title.trim() === '') objErrors.push('Missing title');
+            if (!obj.weight || obj.weight <= 0) objErrors.push('Missing or invalid weight');
+            if (!obj.successIndicator || obj.successIndicator.trim() === '') objErrors.push('Missing success indicator');
+            if (objErrors.length > 0) {
+                errors[obj._id] = objErrors;
+            }
+        });
+        return errors;
+    }, [unapprovedObjectives]);
+    
+    var hasAnyFieldErrors = Object.keys(objectiveValidationErrors).length > 0;
+    
     var isDraftCycle = unapprovedObjectives.length > 0 && unapprovedObjectives.every(function (o) { return o.status === 'draft' || o.status === 'rejected' || o.status === 'revision_requested'; });
     var totalWeight = unapprovedObjectives.reduce(function (sum, o) { return sum + (o.weight || 0); }, 0);
     var validCount = unapprovedObjectives.length >= 3 && unapprovedObjectives.length <= 10;
-    var canSubmit = validCount && totalWeight === 100 && isDraftCycle;
+    var canSubmit = validCount && totalWeight === 100 && isDraftCycle && !hasAnyFieldErrors;
 
     // Status counts for summary
     var statusCounts = useMemo(function () {
@@ -193,10 +211,18 @@ function GoalsPage() {
     }, [individualObjectives, teamObjectives]);
 
     async function handleSubmitCycle() {
+        setSubmittingAll(true);
         try {
             await api.post('/api/objectives/submit', { cycle: selectedCycle });
-            toast.success('All objectives submitted for approval!'); setShowSubmitDialog(false); fetchObjectives();
-        } catch (err) { toast.error(err.response?.data?.message || 'Failed to submit objectives.'); setShowSubmitDialog(false); }
+            toast.success('All objectives submitted for approval!');
+            setShowSubmitDialog(false);
+            fetchObjectives();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to submit objectives.');
+            setShowSubmitDialog(false);
+        } finally {
+            setSubmittingAll(false);
+        }
     }
 
     var groupedByUser = useMemo(function () {
@@ -290,7 +316,6 @@ function GoalsPage() {
                 cycles={cycles} selectedCycle={selectedCycle} onCycleChange={function(c) { setSelectedCycle(c); var cObj = cycles.find(function(cy) { return cy._id === c; }); if (cObj) setActiveCycleData(cObj); }}
                 searchTerm={searchTerm} onSearchChange={setSearchTerm}
             />
-            <GoalProgressSummary objectives={objectives} />
 
             {/* Submission Panel — only shows when conditions allow */}
             {activeTab === 'my' && selectedCycle && unapprovedObjectives.length > 0 && (
@@ -319,23 +344,60 @@ function GoalsPage() {
                                     <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: isDraftCycle ? '#059669' : '#dc2626', display: 'inline-block' }}></span>
                                     <span style={{ color: isDraftCycle ? '#059669' : '#dc2626' }}>Status: <strong>{isDraftCycle ? 'Ready to Submit' : 'Some Already Submitted'}</strong></span>
                                 </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: !hasAnyFieldErrors ? '#059669' : '#dc2626', display: 'inline-block' }}></span>
+                                    <span style={{ color: !hasAnyFieldErrors ? '#059669' : '#dc2626' }}>Fields: <strong>{hasAnyFieldErrors ? Object.keys(objectiveValidationErrors).length + ' incomplete' : 'All complete'}</strong></span>
+                                </div>
                             </div>
+                            {hasAnyFieldErrors && (
+                                <div style={{ marginTop: '0.75rem', padding: '0.5rem 0.75rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', fontSize: '0.85rem', color: '#991b1b' }}>
+                                    <strong>⚠ Incomplete objectives:</strong>
+                                    <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                                        {Object.entries(objectiveValidationErrors).map(function(entry) {
+                                            var objId = entry[0];
+                                            var errs = entry[1];
+                                            var obj = unapprovedObjectives.find(function(o) { return o._id === objId; });
+                                            return (
+                                                <li key={objId} style={{ marginBottom: '2px' }}>
+                                                    <strong>{obj ? obj.title || 'Untitled' : 'Objective'}</strong>: {errs.join(', ')}
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                </div>
+                            )}
                         </div>
-                        {canSubmit && (
-                            <button onClick={function() { setShowSubmitDialog(true); }} style={{
-                                background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff',
-                                border: 'none', padding: '12px 28px', borderRadius: '10px',
-                                cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem',
-                                boxShadow: '0 4px 14px rgba(5,150,105,0.35)',
-                                transition: 'transform 0.15s, box-shadow 0.15s',
-                                whiteSpace: 'nowrap'
-                            }}
-                            onMouseOver={function(e) { e.target.style.transform = 'translateY(-1px)'; }}
-                            onMouseOut={function(e) { e.target.style.transform = 'translateY(0)'; }}
-                            >
-                                ✅ Submit All Objectives
-                            </button>
-                        )}
+                        <div style={{ position: 'relative', flexShrink: 0 }}>
+                            {canSubmit ? (
+                                <button onClick={function() { setShowSubmitDialog(true); }} style={{
+                                    background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff',
+                                    border: 'none', padding: '12px 28px', borderRadius: '10px',
+                                    cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem',
+                                    boxShadow: '0 4px 14px rgba(5,150,105,0.35)',
+                                    transition: 'transform 0.15s, box-shadow 0.15s',
+                                    whiteSpace: 'nowrap'
+                                }}
+                                onMouseOver={function(e) { e.target.style.transform = 'translateY(-1px)'; }}
+                                onMouseOut={function(e) { e.target.style.transform = 'translateY(0)'; }}
+                                >
+                                    ✅ Submit All Objectives
+                                </button>
+                            ) : isDraftCycle && unapprovedObjectives.length > 0 ? (
+                                <button disabled title={
+                                    hasAnyFieldErrors ? 'Complete all required fields before submitting' :
+                                    !validCount ? 'You need between 3 and 10 objectives' :
+                                    totalWeight !== 100 ? 'Total weight must equal 100%' :
+                                    'Cannot submit yet'
+                                } style={{
+                                    background: '#94a3b8', color: '#fff',
+                                    border: 'none', padding: '12px 28px', borderRadius: '10px',
+                                    cursor: 'not-allowed', fontWeight: 700, fontSize: '0.95rem',
+                                    opacity: 0.7, whiteSpace: 'nowrap'
+                                }}>
+                                    🔒 Submit All Objectives
+                                </button>
+                            ) : null}
+                        </div>
                     </div>
                 </div>
             )}
@@ -430,6 +492,7 @@ function GoalsPage() {
                             onSubmit={handleSubmitSingle}
                             showOwner={activeTab !== 'my'}
                             currentUser={user}
+                            validationErrors={activeTab === 'my' ? objectiveValidationErrors : {}}
                         />
                     )}
                     {activeView === 'feed' && (
@@ -484,8 +547,8 @@ function GoalsPage() {
             <ConfirmDialog open={!!deletingObjective} title="Delete Objective" message="Are you sure you want to delete this objective? This action cannot be undone."
                 confirmLabel="Delete" onConfirm={handleDeleteConfirm} onCancel={function () { setDeletingObjective(null); }} danger />
 
-            <ConfirmDialog open={showSubmitDialog} title="Submit All Objectives" message="Submit all objectives for this cycle? Once submitted, they cannot be structurally edited until reviewed."
-                confirmLabel="Submit All" onConfirm={handleSubmitCycle} onCancel={function () { setShowSubmitDialog(false); }} />
+            <ConfirmDialog open={showSubmitDialog} title={submittingAll ? 'Submitting...' : 'Submit All Objectives'} message={submittingAll ? 'Please wait while your objectives are being submitted...' : 'Submit all objectives for this cycle? Once submitted, they cannot be structurally edited until reviewed.'}
+                confirmLabel={submittingAll ? 'Submitting...' : 'Submit All'} onConfirm={submittingAll ? function(){} : handleSubmitCycle} onCancel={submittingAll ? function(){} : function () { setShowSubmitDialog(false); }} />
         </div>
     );
 }

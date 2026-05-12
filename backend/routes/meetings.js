@@ -5,6 +5,46 @@ const auth = require('../middleware/auth');
 const rateLimiter = require('../middleware/rateLimiter');
 const { createNotification } = require('../controllers/notificationController');
 
+function sanitizeUserIds(ids) {
+    const seen = new Set();
+    return (ids || []).filter(function (id) {
+        if (!id) return false;
+        const key = String(id);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
+function resolveMeetingParticipants(body) {
+    const isOneOnOne = body.type === 'one_on_one';
+    const employeeId = body.employee_id && String(body.employee_id).length > 0 ? body.employee_id : null;
+    const selectedParticipants = sanitizeUserIds(body.participants || body.attendees || []);
+
+    if (isOneOnOne && employeeId) {
+        const autoParticipants = sanitizeUserIds([employeeId]);
+        return {
+            attendees: autoParticipants,
+            participants: autoParticipants,
+            employee_id: employeeId
+        };
+    }
+
+    return {
+        attendees: selectedParticipants,
+        participants: selectedParticipants,
+        employee_id: employeeId
+    };
+}
+
+function normalizeMeetingType(value) {
+    return ['general', 'mid-year-review', 'final-evaluation'].includes(value) ? value : 'general';
+}
+
+function normalizeMeetingCategory(value) {
+    return ['one_on_one', 'team', 'all_hands', 'check_in', 'review', 'planning', 'other'].includes(value) ? value : 'team';
+}
+
 // Get all meetings for current user (as organizer or attendee)
 router.get('/', rateLimiter, auth, async function (req, res) {
     try {
@@ -12,7 +52,8 @@ router.get('/', rateLimiter, auth, async function (req, res) {
         var filter = {
             $or: [
                 { organizer: req.user.id },
-                { attendees: req.user.id }
+                { attendees: req.user.id },
+                { participants: req.user.id }
             ]
         };
 
@@ -69,6 +110,7 @@ router.get('/', rateLimiter, auth, async function (req, res) {
         var meetings = await Meeting.find(filter)
             .populate('organizer', 'name email role')
             .populate('attendees', 'name email role')
+            .populate('participants', 'name email role')
             .populate('team', 'name')
             .populate('relatedObjectives', 'title')
             .sort({ date: -1 });
@@ -86,6 +128,7 @@ router.get('/:id', rateLimiter, auth, async function (req, res) {
         var meeting = await Meeting.findById(req.params.id)
             .populate('organizer', 'name email role')
             .populate('attendees', 'name email role')
+            .populate('participants', 'name email role')
             .populate('team', 'name')
             .populate('relatedObjectives', 'title achievementPercent')
             .populate('agenda.presenter', 'name')
@@ -105,7 +148,7 @@ router.get('/:id', rateLimiter, auth, async function (req, res) {
 // Create meeting
 router.post('/', rateLimiter, auth, async function (req, res) {
     try {
-        var { title, description, attendees, date, startTime, endTime, type, agenda, relatedObjectives, team, recurring, location } = req.body;
+        var { title, description, attendees, participants, date, startTime, endTime, type, meeting_type, cycle_id, employee_id, final_evaluation_id, agenda, relatedObjectives, team, recurring, location } = req.body;
 
         if (!title || !date) {
             return res.status(400).json({ success: false, message: 'Title and date are required' });
@@ -113,18 +156,23 @@ router.post('/', rateLimiter, auth, async function (req, res) {
 
         // Sanitize team: empty string is not a valid ObjectId
         var sanitizedTeam = (team && team.length > 0) ? team : null;
-        // Filter out any empty strings from attendees
-        var sanitizedAttendees = (attendees || []).filter(function (a) { return a && a.length > 0; });
+        var normalizedType = normalizeMeetingCategory(type);
+        var participantData = resolveMeetingParticipants({ attendees, participants, type: normalizedType, employee_id });
 
         var meeting = await Meeting.create({
             title,
             description: description || '',
             organizer: req.user.id,
-            attendees: sanitizedAttendees,
+            attendees: participantData.attendees,
+            participants: participantData.participants,
             date,
             startTime: startTime || '09:00',
             endTime: endTime || '10:00',
-            type: type || 'team',
+            type: normalizedType,
+            meeting_type: normalizeMeetingType(meeting_type),
+            cycle_id: cycle_id || null,
+            employee_id: participantData.employee_id,
+            final_evaluation_id: final_evaluation_id || null,
             agenda: agenda || [],
             relatedObjectives: relatedObjectives || [],
             team: sanitizedTeam,
@@ -135,6 +183,7 @@ router.post('/', rateLimiter, auth, async function (req, res) {
         var populated = await Meeting.findById(meeting._id)
             .populate('organizer', 'name email role')
             .populate('attendees', 'name email role')
+            .populate('participants', 'name email role')
             .populate('team', 'name');
 
         // Send notifications (don't fail meeting creation if notifications fail)
@@ -171,24 +220,44 @@ router.put('/:id', rateLimiter, auth, async function (req, res) {
             return res.status(404).json({ success: false, message: 'Meeting not found' });
         }
 
-        var fields = ['title', 'description', 'attendees', 'date', 'startTime', 'endTime', 'type', 'status', 'agenda', 'notes', 'relatedObjectives', 'team', 'recurring', 'location', 'actionItems'];
+        var fields = ['title', 'description', 'date', 'startTime', 'endTime', 'type', 'meeting_type', 'cycle_id', 'final_evaluation_id', 'status', 'agenda', 'notes', 'relatedObjectives', 'team', 'recurring', 'location', 'actionItems'];
         fields.forEach(function (field) {
             if (req.body[field] !== undefined) {
                 if (field === 'team') {
                     meeting[field] = (req.body[field] && req.body[field].length > 0) ? req.body[field] : null;
-                } else if (field === 'attendees') {
-                    meeting[field] = (req.body[field] || []).filter(function (a) { return a && a.length > 0; });
                 } else {
-                    meeting[field] = req.body[field];
+                    meeting[field] = field === 'meeting_type'
+                        ? normalizeMeetingType(req.body[field])
+                        : field === 'type'
+                            ? normalizeMeetingCategory(req.body[field])
+                            : req.body[field];
                 }
             }
         });
+
+        if (
+            req.body.attendees !== undefined ||
+            req.body.participants !== undefined ||
+            req.body.type !== undefined ||
+            req.body.employee_id !== undefined
+        ) {
+            var resolvedParticipants = resolveMeetingParticipants({
+                attendees: req.body.attendees !== undefined ? req.body.attendees : meeting.attendees,
+                participants: req.body.participants !== undefined ? req.body.participants : meeting.participants,
+                type: req.body.type !== undefined ? normalizeMeetingCategory(req.body.type) : meeting.type,
+                employee_id: req.body.employee_id !== undefined ? req.body.employee_id : meeting.employee_id
+            });
+            meeting.attendees = resolvedParticipants.attendees;
+            meeting.participants = resolvedParticipants.participants;
+            meeting.employee_id = resolvedParticipants.employee_id;
+        }
 
         await meeting.save();
 
         var populated = await Meeting.findById(meeting._id)
             .populate('organizer', 'name email role')
             .populate('attendees', 'name email role')
+            .populate('participants', 'name email role')
             .populate('relatedObjectives', 'title');
 
         // Send notifications (don't fail meeting update if notifications fail)
@@ -249,10 +318,15 @@ router.post('/:id/duplicate', rateLimiter, auth, async function (req, res) {
             description: original.description,
             organizer: req.user.id,
             attendees: original.attendees,
+            participants: original.participants,
             date: new Date(),
             startTime: original.startTime,
             endTime: original.endTime,
             type: original.type,
+            meeting_type: original.meeting_type,
+            cycle_id: original.cycle_id,
+            employee_id: original.employee_id,
+            final_evaluation_id: original.final_evaluation_id,
             agenda: original.agenda.map(function (item) {
                 return { title: item.title, duration: item.duration, notes: '', completed: false };
             }),

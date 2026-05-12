@@ -6,8 +6,19 @@ const rateLimit = require('express-rate-limit');
 const xss = require('xss-clean');
 const mongoSanitize = require('express-mongo-sanitize');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, 'uploads');
+const checkinsDir = path.join(uploadsDir, 'checkins');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+if (!fs.existsSync(checkinsDir)) {
+  fs.mkdirSync(checkinsDir, { recursive: true });
+}
 
 // =======================
 // Security Middlewares
@@ -15,7 +26,12 @@ const app = express();
 
 app.use(helmet({ crossOriginResourcePolicy: false }));
 
-const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000'];
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
+  'http://localhost:3000',
+];
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -82,7 +98,9 @@ const routes = {
   '/api/performance': './routes/performance',
   '/api/reports': './routes/reports',
   '/api/evaluations': './routes/evaluations',
-  '/api/pdf': './routes/pdf'
+  '/api/pdf': './routes/pdf',
+  '/api/checkins': './routes/checkins',
+  '/api/final-evaluations': './routes/finalEvaluations'
 };
 
 Object.entries(routes).forEach(([routePath, modulePath]) => {

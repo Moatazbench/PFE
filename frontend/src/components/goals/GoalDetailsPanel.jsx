@@ -81,14 +81,6 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
         } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
     }
 
-    async function handleMarkCompleted() {
-        try {
-            await api.post('/api/objectives/' + goal._id + '/mark-completed', { selfAssessment: '' });
-            toast.success('Objective marked as completed!');
-            fetchDetail(); if (onRefresh) onRefresh();
-        } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
-    }
-
 
     async function handleAddKpi(e) {
         e.preventDefault();
@@ -209,11 +201,6 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
                         {canReview && (
                             <button onClick={function () { setShowReviewModal(true); }} style={{ background: 'linear-gradient(135deg,#f59e0b,#fbbf24)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>⚡ Review & Approve</button>
                         )}
-                        {/* Employee: Mark completed */}
-                        {isOwner && isActive && !isCompleted && (
-                            <button onClick={handleMarkCompleted} style={{ background: 'linear-gradient(135deg,#7c3aed,#a78bfa)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>🏆 Mark Completed</button>
-                        )}
-
                         {/* Manager: Evaluate completed */}
                         {isManager && isActive && isCompleted && !detail.evaluationRating && (!isOwner || isAdmin) && (
                             <button onClick={function () { setShowEvaluateModal(true); }} style={{ background: 'linear-gradient(135deg,#7c3aed,#a78bfa)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>📊 Evaluate</button>
@@ -296,14 +283,20 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
 
                     {activeTab === 'kpis' && (
                         <div className="goal-panel__kpis">
-                            <div className="goal-panel__kpi-header"><h3>Key Results / KPIs ({(detail.kpis || []).length})</h3>{(isOwner || isAdmin) && <button className="goal-panel__add-btn" onClick={function () { setShowKpiForm(!showKpiForm); }} disabled={isPhaseThreeLocked} style={isPhaseThreeLocked ? { opacity: 0.55, cursor: 'not-allowed' } : {}}>+ Add KPI</button>}</div>
-                            {showKpiForm && (<form className="goal-panel__kpi-form" onSubmit={handleAddKpi}><input type="text" placeholder="KPI Title" value={kpiForm.title} onChange={function (e) { setKpiForm(Object.assign({}, kpiForm, { title: e.target.value })); }} required /><select value={kpiForm.metricType} onChange={function (e) { setKpiForm(Object.assign({}, kpiForm, { metricType: e.target.value })); }}><option value="percent">Percent</option><option value="number">Number</option><option value="currency">Currency</option><option value="boolean">Boolean</option><option value="milestone">Milestone</option></select><div className="goal-panel__kpi-form-row"><input type="number" placeholder="Initial" value={kpiForm.initialValue} onChange={function (e) { setKpiForm(Object.assign({}, kpiForm, { initialValue: parseFloat(e.target.value) })); }} /><input type="number" placeholder="Target" value={kpiForm.targetValue} onChange={function (e) { setKpiForm(Object.assign({}, kpiForm, { targetValue: parseFloat(e.target.value) })); }} /><input type="text" placeholder="Unit" value={kpiForm.unit} onChange={function (e) { setKpiForm(Object.assign({}, kpiForm, { unit: e.target.value })); }} /></div><div className="goal-panel__kpi-form-actions"><button type="submit">Add</button><button type="button" onClick={function () { setShowKpiForm(false); }}>Cancel</button></div></form>)}
+                            {['submitted', 'pending', 'pending_approval'].includes(detail.status) && (
+                                <div style={{ padding: '0.75rem 1rem', borderRadius: '8px', background: '#fffbeb', border: '1px solid #fef3c7', color: '#92400e', fontSize: '0.85rem', fontWeight: 600, marginBottom: '1rem' }}>
+                                    🔒 Goal has been submitted. No further edits allowed.
+                                </div>
+                            )}
+                            <div className="goal-panel__kpi-header"><h3>Key Results / KPIs ({(detail.kpis || []).length})</h3>{(isOwner || isAdmin) && !['submitted', 'pending', 'pending_approval'].includes(detail.status) && <button className="goal-panel__add-btn" onClick={function () { setShowKpiForm(!showKpiForm); }} disabled={isPhaseThreeLocked} style={isPhaseThreeLocked ? { opacity: 0.55, cursor: 'not-allowed' } : {}}>+ Add KPI</button>}</div>
+                            {showKpiForm && !['submitted', 'pending', 'pending_approval'].includes(detail.status) && (<form className="goal-panel__kpi-form" onSubmit={handleAddKpi}><input type="text" placeholder="KPI Title" value={kpiForm.title} onChange={function (e) { setKpiForm(Object.assign({}, kpiForm, { title: e.target.value })); }} required /><select value={kpiForm.metricType} onChange={function (e) { setKpiForm(Object.assign({}, kpiForm, { metricType: e.target.value })); }}><option value="percent">Percent</option><option value="number">Number</option><option value="currency">Currency</option><option value="boolean">Boolean</option><option value="milestone">Milestone</option></select><div className="goal-panel__kpi-form-row"><input type="number" placeholder="Initial" value={kpiForm.initialValue} onChange={function (e) { setKpiForm(Object.assign({}, kpiForm, { initialValue: parseFloat(e.target.value) })); }} /><input type="number" placeholder="Target" value={kpiForm.targetValue} onChange={function (e) { setKpiForm(Object.assign({}, kpiForm, { targetValue: parseFloat(e.target.value) })); }} /><input type="text" placeholder="Unit" value={kpiForm.unit} onChange={function (e) { setKpiForm(Object.assign({}, kpiForm, { unit: e.target.value })); }} /></div><div className="goal-panel__kpi-form-actions"><button type="submit">Add</button><button type="button" onClick={function () { setShowKpiForm(false); }}>Cancel</button></div></form>)}
                             <div className="goal-panel__kpi-list">
                                 {(detail.kpis || []).length === 0 ? <p className="goal-panel__empty">No KPIs defined.</p> :
                                     (detail.kpis || []).map(function (kpi) {
                                         var progress = getKpiProgress(kpi);
                                         var localVal = kpiLocalValues[kpi._id] !== undefined ? kpiLocalValues[kpi._id] : kpi.currentValue;
-                                        return (<div key={kpi._id} className="goal-panel__kpi-item"><div className="goal-panel__kpi-top"><span className="goal-panel__kpi-title">{kpi.title}</span><span className="goal-panel__kpi-type">{kpi.metricType}</span><button className="goal-panel__kpi-delete" onClick={function () { handleDeleteKpi(kpi._id); }}>✕</button></div><GoalProgressBar percent={progress} size="small" /><div className="goal-panel__kpi-values"><span>Current: <input type="number" className="goal-panel__kpi-input" value={localVal} onChange={function (e) { handleKpiLocalChange(kpi._id, e.target.value); }} /></span><span>Target: {kpi.targetValue} {kpi.unit}</span></div></div>);
+                                        var isReadOnly = ['submitted', 'pending', 'pending_approval'].includes(detail.status);
+                                        return (<div key={kpi._id} className="goal-panel__kpi-item"><div className="goal-panel__kpi-top"><span className="goal-panel__kpi-title">{kpi.title}</span><span className="goal-panel__kpi-type">{kpi.metricType}</span>{!isReadOnly && <button className="goal-panel__kpi-delete" onClick={function () { handleDeleteKpi(kpi._id); }}>✕</button>}</div><GoalProgressBar percent={progress} size="small" /><div className="goal-panel__kpi-values"><span>Current: <input type="number" className="goal-panel__kpi-input" value={localVal} onChange={function (e) { handleKpiLocalChange(kpi._id, e.target.value); }} disabled={isReadOnly} style={isReadOnly ? { opacity: 0.6, cursor: 'not-allowed' } : {}} /></span><span>Target: {kpi.targetValue} {kpi.unit}</span></div></div>);
                                     })}
                             </div>
                         </div>

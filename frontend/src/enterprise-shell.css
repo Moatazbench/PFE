@@ -891,3 +891,61 @@ body.dark-mode .ent-alert--danger { background: rgba(239,68,68,0.1); border-colo
 /* ── Scrollbar (main) ── */
 .ent-main::-webkit-scrollbar { width: 6px; }
 .ent-main::-webkit-scrollbar-thumb { background: var(--shell-border); border-radius: 3px; }
+
+/* ── FIX: Sidebar collapse polish ── */
+.ent-shell--collapsed .ent-sidebar {
+  overflow: hidden;
+}
+
+.ent-shell__content-wrapper {
+  min-width: 0; /* prevent flex overflow */
+}
+
+/* ── FIX: 3-dot dropdown overflow safety ── */
+.goals-table__row-wrapper {
+  overflow: visible !important;
+  position: relative;
+}
+
+.goals-table__action-menu {
+  position: relative;
+}
+
+.goals-table__dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 200;
+}
+
+/* For last rows: render dropdown upward to avoid clipping at page bottom */
+.goals-table__row-wrapper:last-child .goals-table__dropdown,
+.goals-table__row-wrapper:nth-last-child(2) .goals-table__dropdown {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+/* ── FIX: Modal z-index safety ── */
+.goal-modal-overlay,
+.ent-modal-overlay,
+.goal-panel-overlay {
+  z-index: 1000 !important;
+}
+
+/* ── FIX: Dashboard cards consistent widths ── */
+.dash-stats-row {
+  width: 100%;
+}
+
+.dash-card {
+  min-width: 0; /* prevent flex/grid overflow */
+  overflow: hidden;
+}
+
+.dash-grid {
+  width: 100%;
+}
+
+.dash-bottom-row {
+  width: 100%;
+}

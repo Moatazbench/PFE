@@ -19,9 +19,8 @@ function TasksPage() {
   var [loading, setLoading] = useState(true);
   var [showForm, setShowForm] = useState(false);
   var [editingTask, setEditingTask] = useState(null);
-  var [users, setUsers] = useState([]);
   var [confirmDelete, setConfirmDelete] = useState(null);
-  var [form, setForm] = useState({ title: '', description: '', assigneeId: '', priority: 'medium', dueDate: '', labels: '', linkedGoal: '', notes: '' });
+  var [form, setForm] = useState({ title: '', description: '', priority: 'medium', dueDate: '', labels: '', linkedGoal: '', notes: '' });
   var [sending, setSending] = useState(false);
 
   var hasFetchedRef = React.useRef(false);
@@ -31,6 +30,51 @@ function TasksPage() {
     loadData();
   }, [tab]);
 
+  function normalizeObjectiveResponse(payload) {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.objectives)) return payload.objectives;
+    if (Array.isArray(payload?.individualObjectives) || Array.isArray(payload?.teamObjectives)) {
+      return [].concat(payload.individualObjectives || [], payload.teamObjectives || []);
+    }
+    return [];
+  }
+
+  async function fetchLinkableObjectives() {
+    try {
+      var responses = await Promise.allSettled([
+        api.get('/api/objectives/my'),
+        api.get('/api/objectives'),
+      ]);
+
+      var merged = [];
+      responses.forEach(function (result) {
+        if (result.status === 'fulfilled') {
+          merged = merged.concat(normalizeObjectiveResponse(result.value.data));
+        }
+      });
+
+      var currentUserId = String(user?._id || user?.id || '');
+      var deduped = [];
+      var seen = {};
+
+      merged.forEach(function (objective) {
+        if (!objective || !objective._id || seen[objective._id]) return;
+        var ownerId = String(objective.owner?._id || objective.owner || '');
+        if (ownerId !== currentUserId) return;
+        seen[objective._id] = true;
+        deduped.push(objective);
+      });
+
+      deduped.sort(function (a, b) {
+        return String(a.title || '').localeCompare(String(b.title || ''));
+      });
+
+      setObjectives(deduped);
+    } catch (err) {
+      setObjectives([]);
+    }
+  }
+
   function loadData() {
     // Only show loading for initial load to prevent flickering
     if (!hasFetchedRef.current) setLoading(true);
@@ -38,21 +82,20 @@ function TasksPage() {
     Promise.all([
       api.get(url),
       api.get('/api/tasks/stats'),
-      api.get('/api/users'),
-      api.get('/api/objectives/my'),
     ]).then(function (res) {
       setTasks(res[0].data.tasks || []);
       setStats(res[1].data.stats || null);
-      setUsers(Array.isArray(res[2].data) ? res[2].data : (res[2].data.users || []));
-      setObjectives(Array.isArray(res[3].data) ? res[3].data : (res[3].data.objectives || []));
       hasFetchedRef.current = true;
     }).catch(function (err) {
       toast.error('Failed to load tasks');
-    }).finally(function () { setLoading(false); });
+    }).finally(function () {
+      setLoading(false);
+      fetchLinkableObjectives();
+    });
   }
 
   function handleCreate() {
-    if (!form.title.trim() || !form.assigneeId) return;
+    if (!form.title.trim()) return;
     setSending(true);
     var data = Object.assign({}, form, { 
         labels: form.labels ? form.labels.split(',').map(function (l) { return l.trim(); }) : [],
@@ -63,14 +106,7 @@ function TasksPage() {
       .then(function (res) { 
         setShowForm(false); 
         resetForm(); 
-        
-        // Auto-switch tab if I assigned it to someone else so I see it immediately
-        if (data.assigneeId !== user._id && tab !== 'assigned' && tab !== 'all') {
-          setTab('assigned');
-        } else {
-          // Delay to ensure MongoDB consistency
-          setTimeout(loadData, 500); 
-        }
+        setTimeout(loadData, 500); 
         toast.success('Task created!'); 
       })
       .catch(function (e) { toast.error(e.response?.data?.message || 'Error creating task'); })
@@ -82,7 +118,6 @@ function TasksPage() {
     setForm({
       title: task.title,
       description: task.description || '',
-      assigneeId: task.assignee?._id || '',
       priority: task.priority || 'medium',
       dueDate: task.dueDate ? task.dueDate.substring(0, 10) : '',
       labels: (task.labels || []).join(', '),
@@ -127,7 +162,7 @@ function TasksPage() {
 
   function resetForm() {
     setEditingTask(null);
-    setForm({ title: '', description: '', assigneeId: '', priority: 'medium', dueDate: '', labels: '', linkedGoal: '', notes: '' });
+    setForm({ title: '', description: '', priority: 'medium', dueDate: '', labels: '', linkedGoal: '', notes: '' });
   }
 
   function cancelForm() {
@@ -174,13 +209,6 @@ function TasksPage() {
               <textarea className="form-textarea" rows={2} placeholder="Description..." value={form.description} onChange={function (e) { setForm(Object.assign({}, form, { description: e.target.value })); }} />
             </div>
             <div className="form-group">
-              <label>Assign To *</label>
-              <select className="form-select" value={form.assigneeId} onChange={function (e) { setForm(Object.assign({}, form, { assigneeId: e.target.value })); }}>
-                <option value="">Select person...</option>
-                {users.map(function (u) { return <option key={u._id} value={u._id}>{u.name}</option>; })}
-              </select>
-            </div>
-            <div className="form-group">
               <label>Priority</label>
               <select className="form-select" value={form.priority} onChange={function (e) { setForm(Object.assign({}, form, { priority: e.target.value })); }}>
                 <option value="low">Low</option>
@@ -197,8 +225,16 @@ function TasksPage() {
               <label>Linked Goal</label>
               <select className="form-select" value={form.linkedGoal} onChange={function (e) { setForm(Object.assign({}, form, { linkedGoal: e.target.value })); }}>
                 <option value="">No linked goal</option>
-                {objectives.map(function (o) { return <option key={o._id} value={o._id}>{o.title}</option>; })}
+                {objectives.map(function (o) {
+                  var cycleName = o.cycle?.name ? ' - ' + o.cycle.name : '';
+                  return <option key={o._id} value={o._id}>{o.title + cycleName}</option>;
+                })}
               </select>
+              {objectives.length === 0 && (
+                <div style={{ marginTop: '0.4rem', fontSize: '0.82rem', color: '#b45309' }}>
+                  No goals loaded yet. Reopen the form or refresh if you recently created goals.
+                </div>
+              )}
             </div>
             <div className="form-group">
               <label>Labels (comma-separated)</label>
@@ -207,7 +243,7 @@ function TasksPage() {
           </div>
           <div className="form-actions">
             <button className="btn btn--secondary" onClick={cancelForm}>Cancel</button>
-            <button className="btn btn--primary" onClick={editingTask ? handleUpdate : handleCreate} disabled={sending || !form.title.trim() || !form.assigneeId}>
+            <button className="btn btn--primary" onClick={editingTask ? handleUpdate : handleCreate} disabled={sending || !form.title.trim()}>
               {sending ? (editingTask ? 'Saving...' : 'Creating...') : (editingTask ? 'Save Changes' : 'Create Task')}
             </button>
           </div>

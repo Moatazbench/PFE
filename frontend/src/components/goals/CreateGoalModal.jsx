@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../AuthContext';
-import { normalizeWeight, sumObjectiveWeights, validateObjectiveForm } from '../../utils/objectiveRules';
+import { normalizeWeight, sumObjectiveWeights, sumTeamObjectiveWeights, validateObjectiveForm } from '../../utils/objectiveRules';
 
 function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoals, existingObjectives }) {
     var { user } = useAuth();
@@ -27,7 +27,7 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
     var [analysisResult, setAnalysisResult] = useState(null);
     var [refinementResult, setRefinementResult] = useState(null);
     var [fieldErrors, setFieldErrors] = useState({});
-    var [capacityInfo, setCapacityInfo] = useState({ remainingWeight: null, message: '' });
+    var [capacityInfo, setCapacityInfo] = useState({ usedWeight: null, remainingWeight: null, message: '' });
     var [aiSuggestions, setAiSuggestions] = useState(null);
     var [aiSuggestionsLoading, setAiSuggestionsLoading] = useState(false);
 
@@ -55,31 +55,26 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
     useEffect(function () {
         var activeCycle = form.cycle || selectedCycle;
         if (!activeCycle) {
-            setCapacityInfo({ remainingWeight: null, message: '' });
+            setCapacityInfo({ usedWeight: null, remainingWeight: null, message: '' });
             return;
         }
 
         async function updateCapacity() {
             try {
                 if (form.category === 'team' && form.targetTeam) {
-                    var res = await api.get('/api/objectives', { params: { cycle: activeCycle, scope: 'team' } });
-                    var objectivesData = Array.isArray(res.data.objectives) ? res.data.objectives : [].concat(res.data.individualObjectives || [], res.data.teamObjectives || []);
                     var selectedTeam = availableTeams.find(function (team) { return team._id === form.targetTeam; });
                     if (!selectedTeam) {
-                        setCapacityInfo({ remainingWeight: null, message: '' });
+                        setCapacityInfo({ usedWeight: null, remainingWeight: null, message: '' });
                         return;
                     }
-                    var memberIds = (selectedTeam.members || []).map(function (member) { return String(member._id || member); });
-                    var memberWeights = {};
-                    objectivesData.filter(function (objective) {
-                        return objective.category === 'team' && memberIds.indexOf(String(objective.owner)) !== -1;
-                    }).forEach(function (objective) {
-                        var ownerId = String(objective.owner);
-                        memberWeights[ownerId] = (memberWeights[ownerId] || 0) + normalizeWeight(objective.weight);
+                    var res = await api.get('/api/objectives/team-weight-capacity', { params: { teamId: form.targetTeam, cycleId: activeCycle } });
+                    var usedWeight = Number(res.data.usedWeight || 0);
+                    var remaining = Number(res.data.remainingWeight || 0);
+                    setCapacityInfo({
+                        usedWeight: usedWeight,
+                        remainingWeight: remaining,
+                        message: selectedTeam.name + ' is currently using ' + usedWeight + '% and has ' + remaining + '% remaining.'
                     });
-                    var remainingByMember = memberIds.map(function (id) { return Math.max(0, 100 - (memberWeights[id] || 0)); });
-                    var minimumRemaining = remainingByMember.length > 0 ? Math.min.apply(null, remainingByMember) : 100;
-                    setCapacityInfo({ remainingWeight: minimumRemaining, message: `Team capacity sets the max new objective weight to ${minimumRemaining}%.` });
                     return;
                 }
 
@@ -88,14 +83,14 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
                     var userObjectives = Array.isArray(res.data.individualObjectives) ? res.data.individualObjectives : [];
                     var usedWeightForUser = sumObjectiveWeights(userObjectives);
                     var remaining = Math.max(0, 100 - usedWeightForUser);
-                    setCapacityInfo({ remainingWeight: remaining, message: `Assigned employee has ${remaining}% remaining capacity for individual objectives.` });
+                    setCapacityInfo({ usedWeight: usedWeightForUser, remainingWeight: remaining, message: `Assigned employee has ${remaining}% remaining capacity for individual objectives.` });
                     return;
                 }
 
-                setCapacityInfo({ remainingWeight: null, message: '' });
+                setCapacityInfo({ usedWeight: null, remainingWeight: null, message: '' });
             } catch (err) {
                 console.error('Failed to fetch capacity info', err);
-                setCapacityInfo({ remainingWeight: null, message: '' });
+                setCapacityInfo({ usedWeight: null, remainingWeight: null, message: '' });
             }
         }
 
@@ -105,10 +100,19 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
     // Smart weight calculation (Bug 7 fix)
     var currentCycleObjectives = (existingObjectives || []).filter(function(o) {
         var objCycleId = o.cycle?._id || o.cycle;
-        return objCycleId === (form.cycle || selectedCycle) && o.category === form.category;
+        var sameCycle = objCycleId === (form.cycle || selectedCycle);
+        if (!sameCycle || o.category !== form.category) return false;
+        if (form.category === 'team') {
+            var objectiveTeamId = o.team?._id || o.team || '';
+            return form.targetTeam ? String(objectiveTeamId) === String(form.targetTeam) : false;
+        }
+        var targetOwner = form.targetUser || user.id;
+        var objectiveOwnerId = o.owner?._id || o.owner;
+        return String(objectiveOwnerId) === String(targetOwner);
     });
-    var usedWeight = sumObjectiveWeights(currentCycleObjectives);
-    var localRemainingWeight = Math.max(0, 100 - usedWeight);
+    var localUsedWeight = form.category === 'team' ? sumTeamObjectiveWeights(currentCycleObjectives) : sumObjectiveWeights(currentCycleObjectives);
+    var usedWeight = typeof capacityInfo.usedWeight === 'number' ? capacityInfo.usedWeight : localUsedWeight;
+    var localRemainingWeight = Math.max(0, 100 - localUsedWeight);
     var effectiveRemainingWeight = typeof capacityInfo.remainingWeight === 'number' ? capacityInfo.remainingWeight : localRemainingWeight;
     var remainingWeight = Math.max(0, effectiveRemainingWeight);
     var maxWeight = Math.min(100, Math.max(1, remainingWeight));
@@ -425,10 +429,18 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
 
 
                             <div className="goal-modal__field">
-                                <label>Weight: {form.weight}%</label>
+                                <label>Weight: {normalizeWeight(form.weight)}%</label>
                                 <input type="range" min="1" max={maxWeight || 1} value={Math.min(normalizeWeight(form.weight), maxWeight || 1)} onChange={function (e) { handleChange('weight', e.target.value); }} style={{ width: '100%' }} disabled={isCreateLocked} />
-                                <div style={{ fontSize: '0.75rem', marginTop: '4px', textAlign: 'right', color: 'var(--text-muted)' }}>
-                                    Remaining: {remainingWeight}%
+                                <div className="weight-capacity-bar">
+                                    <div className="weight-capacity-bar__track">
+                                        <div className="weight-capacity-bar__used" style={{ width: usedWeight + '%' }}></div>
+                                        <div className="weight-capacity-bar__new" style={{ width: Math.min(normalizeWeight(form.weight), remainingWeight) + '%', left: usedWeight + '%' }}></div>
+                                    </div>
+                                    <div className="weight-capacity-bar__labels">
+                                        <span>Used: {usedWeight}%</span>
+                                        <span>This goal: {normalizeWeight(form.weight)}%</span>
+                                        <span>Remaining: {Math.max(0, remainingWeight - normalizeWeight(form.weight))}%</span>
+                                    </div>
                                 </div>
                                 {capacityInfo.message && <div style={{ fontSize: '0.75rem', marginTop: '4px', color: '#475569' }}>{capacityInfo.message}</div>}
                                 {form.category === 'team' && !form.targetTeam && (

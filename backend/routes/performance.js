@@ -41,18 +41,29 @@ async function computeSummary(employeeId, cycleId) {
       performanceLabel: 'Below Expectations',
       totalObjectives: 0,
       totalWeight: 0,
+      individualWeight: 0,
+      teamWeight: 0,
     };
   }
 
-  let weightedScore = 0;
-  let totalWeight = 0;
+  let individualWeightedScore = 0;
+  let teamWeightedScore = 0;
+  let individualWeight = 0;
+  let teamWeight = 0;
   let ratingSum = 0;
   let ratingCount = 0;
 
   const objectiveDetails = objectives.map((objective) => {
     const score = calculateObjectiveScore(objective);
-    weightedScore += score;
-    totalWeight += Number(objective.weight || 0);
+    const isTeam = objective.category === 'team';
+
+    if (isTeam) {
+      teamWeightedScore += score;
+      teamWeight += Number(objective.weight || 0);
+    } else {
+      individualWeightedScore += score;
+      individualWeight += Number(objective.weight || 0);
+    }
 
     if (objective.evaluationNumericRating != null) {
       ratingSum += Number(objective.evaluationNumericRating);
@@ -72,7 +83,15 @@ async function computeSummary(employeeId, cycleId) {
     };
   });
 
-  const performanceScore = roundScore(weightedScore);
+  // Use the 70/30 composite score formula matching the validation panel:
+  // Final Score = (Individual Score × 70%) + (Team Score × 30%)
+  const individualScoreRaw = Math.min(individualWeightedScore, 100);
+  const teamScoreRaw = Math.min(teamWeightedScore, 100);
+  const hasTeamObjectives = teamWeight > 0;
+  // If employee has only individual objectives, use 100% individual score
+  const performanceScore = hasTeamObjectives
+    ? roundScore((individualScoreRaw * 0.70) + (teamScoreRaw * 0.30))
+    : roundScore(individualScoreRaw);
   const averageRating = ratingCount > 0 ? roundScore(ratingSum / ratingCount) : 0;
 
   return {
@@ -84,7 +103,9 @@ async function computeSummary(employeeId, cycleId) {
     averageRating,
     performanceLabel: getPerformanceLabel(performanceScore),
     totalObjectives: objectives.length,
-    totalWeight: roundScore(totalWeight),
+    totalWeight: roundScore(individualWeight),
+    individualWeight: roundScore(individualWeight),
+    teamWeight: roundScore(teamWeight),
   };
 }
 

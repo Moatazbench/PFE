@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import useActiveCycle from '../hooks/useActiveCycle';
 
 function EnterpriseSidebar({ collapsed, setCollapsed }) {
     var location = useLocation();
     var { user, logout } = useAuth();
+    var { activeCycle, currentPhase } = useActiveCycle();
 
     if (!user) return null;
 
@@ -12,6 +14,7 @@ function EnterpriseSidebar({ collapsed, setCollapsed }) {
         return location.pathname === path;
     }
 
+    // Phase metadata: which phases each nav item is visible in (for employees)
     var navSections = [
         {
             label: 'Main',
@@ -26,9 +29,11 @@ function EnterpriseSidebar({ collapsed, setCollapsed }) {
         {
             label: 'Annual Cycle',
             items: [
-                { path: '/cycles', label: 'Manage Cycles', icon: 'refresh', roles: ['ADMIN', 'HR'] },
-                { path: '/midyear-assessments', label: 'Mid-Year Execution', icon: 'bar-chart' },
+                { path: '/cycles', label: 'Manage Cycles', icon: 'refresh' },
+                { path: '/midyear-assessments', label: 'Mid-Year Assessment', icon: 'bar-chart' },
+                { path: '/manager-review', label: 'Goal Check-Up', icon: 'star' },
                 { path: '/final-evaluations', label: 'End-Year Review', icon: 'clipboard' },
+                { path: '/evaluation-scoring', label: 'Evaluation Scoring', icon: 'bar-chart' },
                 { path: '/performance', label: 'Performance', icon: 'trending-up' },
             ],
         },
@@ -49,12 +54,13 @@ function EnterpriseSidebar({ collapsed, setCollapsed }) {
         {
             label: 'Management',
             items: [
-                { path: '/validation', label: 'Validation', icon: 'check-circle', roles: ['ADMIN', 'TEAM_LEADER'] },
-                { path: '/hr-decisions', label: 'HR Decisions', icon: 'briefcase', roles: ['ADMIN', 'TEAM_LEADER', 'HR'] },
-                { path: '/teams', label: 'Teams', icon: 'layers', roles: ['ADMIN', 'HR', 'TEAM_LEADER'] },
-                { path: '/users', label: 'Users', icon: 'user', roles: ['ADMIN', 'HR'] },
-                { path: '/analytics', label: 'Analytics', icon: 'pie-chart', roles: ['ADMIN', 'HR', 'TEAM_LEADER'] },
-                { path: '/audit-logs', label: 'Audit Logs', icon: 'shield', roles: ['ADMIN', 'HR'] },
+                { path: '/validation', label: 'Validation', icon: 'check-circle' },
+                { path: '/hr-validation', label: 'HR Validation', icon: 'shield' },
+                { path: '/hr-decisions', label: 'HR Decisions', icon: 'briefcase' },
+                { path: '/teams', label: 'Teams', icon: 'layers' },
+                { path: '/users', label: 'Users', icon: 'user' },
+                { path: '/analytics', label: 'Analytics', icon: 'pie-chart' },
+                { path: '/audit-logs', label: 'Audit Logs', icon: 'shield' },
                 { path: '/settings', label: 'Settings', icon: 'settings' },
             ],
         },
@@ -90,6 +96,11 @@ function EnterpriseSidebar({ collapsed, setCollapsed }) {
 
     var initials = user.name ? user.name.split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase() : '?';
 
+    var phaseLabel = currentPhase === 'phase1' ? 'Phase 1' :
+        currentPhase === 'phase2' ? 'Phase 2' :
+        currentPhase === 'phase3' ? 'Phase 3' :
+        currentPhase === 'closed' ? 'Closed' : 'No active phase';
+
     return (
         <aside className="ent-sidebar">
             {/* Toggle button */}
@@ -108,12 +119,20 @@ function EnterpriseSidebar({ collapsed, setCollapsed }) {
                 <span className="ent-sidebar__app-name">PerfManager</span>
             </div>
 
+            <div style={{ margin: '0 1rem 1rem', padding: '0.85rem 0.95rem', borderRadius: '10px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: '0.35rem' }}>Active phase</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>{phaseLabel}</div>
+                <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: '0.2rem' }}>{activeCycle?.name || 'No active cycle selected'}</div>
+            </div>
+
             {/* Navigation */}
             <nav className="ent-sidebar__nav">
                 {navSections.map(function(section, sIndex) {
                     var visibleItems = section.items.filter(function(item) {
-                        if (!item.roles) return true;
-                        return item.roles.includes(user.role);
+                        // Role filter
+                        if (item.roles && !item.roles.includes(user.role)) return false;
+                        if (item.phases && item.phases.indexOf(currentPhase) === -1) return false;
+                        return true;
                     });
                     if (visibleItems.length === 0) return null;
 

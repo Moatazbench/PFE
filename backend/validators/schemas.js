@@ -89,7 +89,10 @@ const schemas = {
     },
     cycle: {
         create: Joi.object({
-            name: Joi.string().required(),
+            name: Joi.string().trim().min(1).max(100).required().messages({
+                'string.empty': 'Cycle name is required.',
+                'string.max': 'Cycle name cannot exceed 100 characters.'
+            }),
             year: Joi.number().integer().min(2020).max(2100).required(),
             status: Joi.string().valid('draft', 'open', 'active', 'in_progress', 'closed').default('draft'),
             phase1Start: Joi.date().iso().allow(null, ''),
@@ -101,7 +104,10 @@ const schemas = {
             currentPhase: Joi.string().valid('phase1', 'phase2', 'phase3', 'closed').default('phase1')
         }),
         update: Joi.object({
-            name: Joi.string(),
+            name: Joi.string().trim().min(1).max(100).messages({
+                'string.empty': 'Cycle name cannot be empty.',
+                'string.max': 'Cycle name cannot exceed 100 characters.'
+            }),
             year: Joi.number().integer().min(2020).max(2100),
             status: Joi.string().valid('draft', 'open', 'active', 'in_progress', 'closed'),
             phase1Start: Joi.date().iso().allow(null, ''),

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import GoalProgressBar from './GoalProgressBar';
 import GoalStatusBadge from './GoalStatusBadge';
 
-function GoalTable({ objectives, onGoalClick, onStatusChange, onDelete, onDuplicate, onEdit, onValidate, onSubmit, showOwner, currentUser }) {
+function GoalTable({ objectives, onGoalClick, onStatusChange, onDelete, onDuplicate, onEdit, onValidate, onSubmit, showOwner, currentUser, validationErrors }) {
     var [expandedRows, setExpandedRows] = useState({});
     var [sortConfig, setSortConfig] = useState({ key: null, direction: null });
     var [openMenuId, setOpenMenuId] = useState(null);
@@ -113,6 +113,11 @@ function GoalTable({ objectives, onGoalClick, onStatusChange, onDelete, onDuplic
 
                         <div className="goals-table__col goals-table__col--weight">
                             <span className="goals-table__weight-badge" style={{ backgroundColor: getWeightColor(obj.weight) }}>{obj.weight}</span>
+                            {obj.category === 'team' && obj.assignedUsers && obj.assignedUsers.length > 1 && (
+                                <span style={{ fontSize: '0.65rem', color: '#64748b', marginLeft: '4px', whiteSpace: 'nowrap' }} title={'Per member: ' + Math.round(obj.weight / obj.assignedUsers.length) + '%'}>
+                                    ({Math.round(obj.weight / obj.assignedUsers.length)}/m)
+                                </span>
+                            )}
                         </div>
 
                         <div className="goals-table__col goals-table__col--status">
@@ -157,7 +162,7 @@ function GoalTable({ objectives, onGoalClick, onStatusChange, onDelete, onDuplic
                         <div className="goals-table__expanded">
                             <div className="goals-table__expanded-info">
                                 <div><strong>Description:</strong> {obj.description || 'No description'}</div>
-                                <div><strong>Weight:</strong> {obj.weight}%</div>
+                                <div><strong>Weight:</strong> {obj.weight}%{obj.category === 'team' && obj.assignedUsers && obj.assignedUsers.length > 1 && <span style={{ color: '#64748b', marginLeft: '6px' }}>(Per member: {Math.round(obj.weight / obj.assignedUsers.length)}%)</span>}</div>
                                 <div><strong>KPIs:</strong> {obj.kpis?.length || 0}</div>
                                 {obj.successIndicator && <div><strong>Success Indicator:</strong> {obj.successIndicator}</div>}
                                 {obj.source === 'manager_assigned' && obj.assignedBy && <div><strong>Assigned by:</strong> {obj.assignedBy?.name || obj.assignedBy}</div>}
@@ -173,6 +178,34 @@ function GoalTable({ objectives, onGoalClick, onStatusChange, onDelete, onDuplic
                                     </div>
                                 )}
                             </div>
+                        </div>
+                    )}
+
+                    {/* Inline field validation errors */}
+                    {validationErrors && validationErrors[obj._id] && (
+                        <div style={{
+                            padding: '6px 12px 6px 32px',
+                            background: '#fef2f2',
+                            borderTop: '1px solid #fecaca',
+                            fontSize: '0.8rem',
+                            color: '#991b1b',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            flexWrap: 'wrap'
+                        }}>
+                            <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>⚠️</span>
+                            {validationErrors[obj._id].map(function(err, idx) {
+                                return (
+                                    <span key={idx} style={{
+                                        background: '#fee2e2',
+                                        padding: '2px 8px',
+                                        borderRadius: '4px',
+                                        fontWeight: 600,
+                                        fontSize: '0.78rem'
+                                    }}>{err}</span>
+                                );
+                            })}
                         </div>
                     )}
                 </div>

@@ -22,4 +22,8 @@ router.delete('/paths/:id', ctrl.deleteCareerPath);
 // Development actions
 router.put('/paths/:pathId/actions/:actionId', ctrl.updateDevAction);
 
+// Career Recommendations
+router.post('/recommendations/generate', role('ADMIN', 'HR', 'TEAM_LEADER'), ctrl.generateRecommendation);
+router.post('/recommendations', role('ADMIN', 'HR', 'TEAM_LEADER'), ctrl.saveRecommendation);
+
 module.exports = router;

@@ -37,7 +37,7 @@ function Dashboard() {
 
       const promises = [
         api.get('/api/stats/dashboard', { params }),
-        api.get('/api/stats/recent-activity', { params }).catch(function() { return { data: { objectives: [], decisions: [] } }; }),
+        api.get('/api/stats/recent-activity', { params }).catch(function(e) { console.error('Recent activity endpoint unavailable:', e.message); return { data: { objectives: [], decisions: [] } }; }),
       ];
 
       if (tab === 'me') {
@@ -49,7 +49,7 @@ function Dashboard() {
       }
 
       if (user.role === 'ADMIN' || user.role === 'HR') {
-        promises.push(api.get('/api/stats/performance'));
+        promises.push(api.get('/api/stats/performance').catch(function(e) { console.error('Performance stats endpoint unavailable:', e.message); return { data: null }; }));
       }
 
       // Fetch active cycle info

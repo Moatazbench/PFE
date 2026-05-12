@@ -5,12 +5,13 @@ const User = require('../models/User');
 exports.createTask = async (req, res) => {
   try {
     const { title, description, assigneeId, status, priority, labels, dueDate, recurring, linkedGoal, linkedMeeting, team, notes } = req.body;
+    const resolvedAssigneeId = assigneeId || req.user._id;
 
-    if (!title || !assigneeId) {
-      return res.status(400).json({ success: false, message: 'Title and assignee are required' });
+    if (!title) {
+      return res.status(400).json({ success: false, message: 'Title is required' });
     }
 
-    const assignee = await User.findById(assigneeId);
+    const assignee = await User.findById(resolvedAssigneeId);
     if (!assignee) {
       return res.status(404).json({ success: false, message: 'Assignee not found' });
     }
@@ -18,7 +19,7 @@ exports.createTask = async (req, res) => {
     const task = await Task.create({
       title,
       description: description || '',
-      assignee: assigneeId,
+      assignee: resolvedAssigneeId,
       assignedBy: req.user._id,
       status: status || 'todo',
       priority: priority || 'medium',
@@ -152,6 +153,20 @@ exports.updateTask = async (req, res) => {
       .populate('assignedBy', 'name email role')
       .populate('linkedGoal', 'title')
       .populate('linkedMeeting', 'title');
+
+    // Auto-update objective progress
+    const objId = updated.objective_id || updated.linkedGoal?._id || updated.linkedGoal;
+    if (objId) {
+      const allTasks = await Task.find({
+        $or: [ { objective_id: objId }, { linkedGoal: objId } ]
+      });
+      if (allTasks.length > 0) {
+        const completedTasks = allTasks.filter(t => t.status === 'done').length;
+        const newPercent = Math.round((completedTasks / allTasks.length) * 100);
+        const Objective = require('../models/Objective');
+        await Objective.findByIdAndUpdate(objId, { achievementPercent: newPercent });
+      }
+    }
 
     res.json({ success: true, task: updated });
   } catch (err) {

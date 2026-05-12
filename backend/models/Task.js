@@ -24,6 +24,9 @@ const TaskSchema = new mongoose.Schema({
     default: 'none'
   },
   linkedGoal: { type: mongoose.Schema.Types.ObjectId, ref: 'Objective', default: null },
+  objective_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Objective' },
+  phase: { type: Number, enum: [1, 2, 3] },
+  kpi_id: { type: mongoose.Schema.Types.ObjectId, ref: 'KPI' },
   linkedMeeting: { type: mongoose.Schema.Types.ObjectId, ref: 'Meeting', default: null },
   team: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', default: null },
   notes: { type: String, default: '' },

@@ -24,18 +24,18 @@ const upload = multer({
   }
 });
 
+// Profile and filtering
+router.get('/filter/list', rateLimiter, auth, userController.getUsers);
+
+// Legacy/Helper endpoints (case corrected in controller)
+router.get('/managers', rateLimiter, auth, userController.getManagers);
+router.get('/collaborators', rateLimiter, auth, userController.getCollaborators);
+
 // Admin management
 router.get('/', rateLimiter, auth, role('ADMIN'), userController.getAllUsers);
 router.get('/:id', rateLimiter, auth, role('ADMIN'), userController.getUserById);
 router.delete('/:id', rateLimiter, auth, role('ADMIN'), userController.deleteUser);
 router.put('/:id', rateLimiter, auth, userController.updateUser);
-
-// Profile and filtering
-router.get('/filter/list', rateLimiter, auth, userController.getUsers);
 router.put('/:id/avatar', rateLimiter, auth, upload.single('avatar'), userController.updateAvatar);
-
-// Legacy/Helper endpoints (case corrected in controller)
-router.get('/managers', rateLimiter, auth, userController.getManagers);
-router.get('/collaborators', rateLimiter, auth, userController.getCollaborators);
 
 module.exports = router;

@@ -160,3 +160,75 @@ exports.updateDevAction = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+// === CAREER RECOMMENDATIONS ===
+
+const CareerRecommendation = require('../models/CareerRecommendation');
+const FinalEvaluation = require('../models/FinalEvaluation');
+
+exports.generateRecommendation = async (req, res) => {
+  try {
+    const { employee_id, cycle_id } = req.body;
+    
+    // Fetch evaluation to analyze weaknesses
+    const evaluation = await FinalEvaluation.findOne({ employee_id, cycle_id });
+    
+    let suggested_path = 'Standard Progression';
+    let skills_to_develop = [];
+    let basis = '';
+
+    if (evaluation) {
+      if (evaluation.weaknesses && evaluation.weaknesses.length > 0) {
+        skills_to_develop = evaluation.weaknesses.map(w => w.split(' ')[0] + ' improvement');
+        basis = 'Based on identified areas for improvement in recent evaluation.';
+      }
+      if (evaluation.recommendation === 'promotion') {
+        suggested_path = 'Accelerated Leadership Track';
+        basis = 'Strong performance and promotion recommendation.';
+      } else if (evaluation.recommendation === 'performance_improvement_plan') {
+        suggested_path = 'Core Competency Reinforcement';
+        basis = 'Recent performance requires focused improvement.';
+      }
+    }
+
+    res.json({
+      success: true,
+      recommendation: {
+        suggested_path,
+        skills_to_develop,
+        basis,
+        source: 'auto'
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.saveRecommendation = async (req, res) => {
+  try {
+    const { employee_id, cycle_id, suggested_path, skills_to_develop, source, basis } = req.body;
+
+    let rec = await CareerRecommendation.findOne({ employee_id, cycle_id });
+    if (rec) {
+      rec.suggested_path = suggested_path;
+      rec.skills_to_develop = skills_to_develop;
+      rec.source = source || 'manager';
+      rec.basis = basis;
+      await rec.save();
+    } else {
+      rec = await CareerRecommendation.create({
+        employee_id,
+        cycle_id,
+        suggested_path,
+        skills_to_develop,
+        source: source || 'manager',
+        basis
+      });
+    }
+
+    res.json({ success: true, recommendation: rec });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};

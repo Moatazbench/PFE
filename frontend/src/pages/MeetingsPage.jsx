@@ -4,10 +4,20 @@ import { useAuth } from '../components/AuthContext';
 import { useToast } from '../components/common/Toast';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
+import { useLocation } from 'react-router-dom';
+
+function normalizeMeetingType(value) {
+    return ['general', 'mid-year-review', 'final-evaluation'].includes(value) ? value : 'general';
+}
+
+function normalizeMeetingCategory(value) {
+    return ['one_on_one', 'team', 'all_hands', 'check_in', 'review', 'planning', 'other'].includes(value) ? value : 'team';
+}
 
 function MeetingsPage() {
     var { user } = useAuth();
     var toast = useToast();
+    var location = useLocation();
     var [meetings, setMeetings] = useState([]);
     var [users, setUsers] = useState([]);
     var [teams, setTeams] = useState([]);
@@ -21,8 +31,10 @@ function MeetingsPage() {
 
     var [form, setForm] = useState({
         title: '', description: '', date: '', startTime: '09:00', endTime: '10:00',
-        type: 'team', attendees: [], team: '', recurring: 'none', location: '',
+        type: 'team', meeting_type: 'general', cycle_id: '', employee_id: '',
+        participants: [], team: '', recurring: 'none', location: '',
     });
+    var [cycles, setCycles] = useState([]);
 
     async function fetchMeetings() {
         var currentFetchId = ++fetchIdRef.current;
@@ -47,7 +59,7 @@ function MeetingsPage() {
 
     async function fetchUsers() {
         try {
-            var res = await api.get('/api/users');
+            var res = await api.get('/api/users/filter/list');
             setUsers(res.data.users || res.data || []);
         } catch (err) { console.error(err); }
     }
@@ -59,10 +71,48 @@ function MeetingsPage() {
         } catch (err) { /* Collaborators may not have access */ }
     }
 
-    useEffect(function () { fetchUsers(); fetchTeams(); }, []);
+    async function fetchCycles() {
+        try {
+            var res = await api.get('/api/cycles');
+            setCycles(res.data || []);
+        } catch (err) { }
+    }
+
+    useEffect(function () { fetchUsers(); fetchTeams(); fetchCycles(); }, []);
     useEffect(function () { setLoading(true); fetchMeetings(); }, [filter]);
 
-    function openCreateModal() {
+    useEffect(function() {
+        if (location.state && location.state.createMeeting && users.length > 0) {
+            openCreateModal({
+                title: location.state.title || '',
+                type: 'one_on_one',
+                meeting_type: normalizeMeetingType(location.state.meeting_type),
+                cycle_id: location.state.cycle_id || '',
+                employee_id: location.state.employee_id || '',
+                participants: location.state.employee_id ? [location.state.employee_id] : []
+            });
+            window.history.replaceState({}, document.title);
+        }
+    }, [location.state, users]);
+
+    useEffect(function () {
+        if (form.type !== 'one_on_one') return;
+        setForm(function (prev) {
+            var nextParticipants = prev.employee_id ? [prev.employee_id] : [];
+            if (
+                prev.participants.length === nextParticipants.length &&
+                prev.participants.every(function (id, index) { return id === nextParticipants[index]; })
+            ) {
+                return prev;
+            }
+            return Object.assign({}, prev, { participants: nextParticipants });
+        });
+    }, [form.type, form.employee_id]);
+
+    function openCreateModal(initialData = {}) {
+        if (initialData && typeof initialData.preventDefault === 'function') {
+            initialData = {};
+        }
         var now = new Date();
         var nextHour = new Date(now);
         nextHour.setHours(now.getHours() + 1, 0, 0, 0);
@@ -72,9 +122,19 @@ function MeetingsPage() {
         var todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
 
         setForm({ 
-            title: '', description: '', date: todayStr, 
-            startTime: formatTime(nextHour), endTime: formatTime(endHour), 
-            type: 'team', attendees: [], team: '', recurring: 'none', location: '' 
+            title: initialData.title || '', 
+            description: initialData.description || '', 
+            date: todayStr, 
+            startTime: formatTime(nextHour), 
+            endTime: formatTime(endHour), 
+            type: normalizeMeetingCategory(initialData.type), 
+            meeting_type: normalizeMeetingType(initialData.meeting_type), 
+            cycle_id: initialData.cycle_id || '', 
+            employee_id: initialData.employee_id || '',
+            participants: initialData.participants || [], 
+            team: '', 
+            recurring: 'none', 
+            location: '' 
         });
         setIsEditing(false);
         setEditingId(null);
@@ -88,8 +148,11 @@ function MeetingsPage() {
             date: meeting.date ? meeting.date.substring(0, 10) : '',
             startTime: meeting.startTime || '09:00',
             endTime: meeting.endTime || '10:00',
-            type: meeting.type || 'team',
-            attendees: (meeting.attendees || []).map(a => typeof a === 'object' ? a._id : a),
+            type: normalizeMeetingCategory(meeting.type),
+            meeting_type: normalizeMeetingType(meeting.meeting_type),
+            cycle_id: meeting.cycle_id ? (typeof meeting.cycle_id === 'object' ? meeting.cycle_id._id : meeting.cycle_id) : '',
+            employee_id: meeting.employee_id ? (typeof meeting.employee_id === 'object' ? meeting.employee_id._id : meeting.employee_id) : '',
+            participants: (meeting.participants || meeting.attendees || []).map(a => typeof a === 'object' ? a._id : a),
             team: meeting.team ? (typeof meeting.team === 'object' ? meeting.team._id : meeting.team) : '',
             recurring: meeting.recurring || 'none',
             location: meeting.location || ''
@@ -103,11 +166,15 @@ function MeetingsPage() {
         e.preventDefault();
         try {
             var res;
+            var payload = Object.assign({}, form, {
+                type: normalizeMeetingCategory(form.type),
+                meeting_type: normalizeMeetingType(form.meeting_type)
+            });
             if (isEditing) {
-                res = await api.put('/api/meetings/' + editingId, form);
+                res = await api.put('/api/meetings/' + editingId, payload);
                 toast.success('Meeting updated!');
             } else {
-                res = await api.post('/api/meetings', form);
+                res = await api.post('/api/meetings', payload);
                 toast.success('Meeting created!');
             }
             setShowModal(false);
@@ -193,13 +260,13 @@ function MeetingsPage() {
         }
     }
 
-    function toggleAttendee(userId) {
+    function toggleParticipant(userId) {
         setForm(function (prev) {
-            var arr = prev.attendees.slice();
+            var arr = prev.participants.slice();
             var idx = arr.indexOf(userId);
             if (idx > -1) arr.splice(idx, 1);
             else arr.push(userId);
-            return Object.assign({}, prev, { attendees: arr });
+            return Object.assign({}, prev, { participants: arr });
         });
     }
 
@@ -214,7 +281,7 @@ function MeetingsPage() {
                     <h1 className="page-title">📅 Meetings</h1>
                     <p className="page-subtitle">Schedule and manage your 1-on-1s and team meetings</p>
                 </div>
-                <button onClick={openCreateModal} className="btn btn--primary">+ New Meeting</button>
+                <button onClick={function () { openCreateModal(); }} className="btn btn--primary">+ New Meeting</button>
             </div>
 
             {/* Filter Tabs */}
@@ -234,7 +301,7 @@ function MeetingsPage() {
                     <div className="empty-state__icon">📅</div>
                     <h3>No meetings found</h3>
                     <p>Schedule your first meeting to get started</p>
-                    <button className="btn btn--primary" onClick={openCreateModal}>+ New Meeting</button>
+                    <button className="btn btn--primary" onClick={function () { openCreateModal(); }}>+ New Meeting</button>
                 </div>
             ) : (
                 <div className="meetings-grid">
@@ -251,12 +318,12 @@ function MeetingsPage() {
                                     <span>🕐 {meeting.startTime || '—'} – {meeting.endTime || '—'}</span>
                                     {meeting.location && <span>📍 {meeting.location}</span>}
                                 </div>
-                                {meeting.attendees && meeting.attendees.length > 0 && (
+                                {meeting.participants && meeting.participants.length > 0 && (
                                     <div className="meeting-card__attendees">
-                                        {meeting.attendees.slice(0, 4).map(function (a) {
+                                        {meeting.participants.slice(0, 4).map(function (a) {
                                             return <span key={a._id} className="meeting-card__avatar" title={a.name}>{a.name ? a.name.charAt(0).toUpperCase() : '?'}</span>;
                                         })}
-                                        {meeting.attendees.length > 4 && <span className="meeting-card__avatar meeting-card__avatar--more">+{meeting.attendees.length - 4}</span>}
+                                        {meeting.participants.length > 4 && <span className="meeting-card__avatar meeting-card__avatar--more">+{meeting.participants.length - 4}</span>}
                                     </div>
                                 )}
                                 {meeting.recurring !== 'none' && <span className="meta-tag">🔄 {meeting.recurring}</span>}
@@ -306,6 +373,34 @@ function MeetingsPage() {
                                     <option value="other">Other</option>
                                 </select>
                             </div>
+                            <div className="form-group form-group--full">
+                                <label>Evaluation Type</label>
+                                <select className="form-select" value={form.meeting_type} onChange={function (e) { setForm(Object.assign({}, form, { meeting_type: e.target.value })); }}>
+                                    <option value="general">General</option>
+                                    <option value="mid-year-review">Mid-Year Review</option>
+                                    <option value="final-evaluation">Final Evaluation</option>
+                                </select>
+                            </div>
+                            {(form.meeting_type === 'mid-year-review' || form.meeting_type === 'final-evaluation') && (
+                                <>
+                                    <div className="form-group">
+                                        <label>Evaluation Cycle</label>
+                                        <select className="form-select" value={form.cycle_id} onChange={function (e) { setForm(Object.assign({}, form, { cycle_id: e.target.value })); }}>
+                                            <option value="">Select Cycle...</option>
+                                            {cycles.map(function(c) { return <option key={c._id} value={c._id}>{c.name}</option>; })}
+                                        </select>
+                                    </div>
+                                </>
+                            )}
+                            {(form.type === 'one_on_one' || form.meeting_type === 'mid-year-review' || form.meeting_type === 'final-evaluation') && (
+                                <div className="form-group">
+                                    <label>{form.type === 'one_on_one' ? 'Employee Participant' : 'Employee (Reviewee)'}</label>
+                                    <select className="form-select" value={form.employee_id} onChange={function (e) { setForm(Object.assign({}, form, { employee_id: e.target.value })); }}>
+                                        <option value="">Select Employee...</option>
+                                        {users.map(function(u) { return <option key={u._id} value={u._id}>{u.name}</option>; })}
+                                    </select>
+                                </div>
+                            )}
                             <div className="form-group">
                                 <label>Start Time</label>
                                 <input className="form-input" type="time" value={form.startTime} onChange={function (e) { setForm(Object.assign({}, form, { startTime: e.target.value })); }} />
@@ -338,20 +433,35 @@ function MeetingsPage() {
                                 </div>
                             )}
                             <div className="form-group form-group--full">
-                                <label>Attendees</label>
-                                <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '8px' }}>
-                                    {users.map(function (u) {
-                                        var isSelected = form.attendees.includes(u._id);
-                                        return (
-                                            <label key={u._id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px', cursor: 'pointer', borderRadius: '6px', background: isSelected ? 'var(--primary-light)' : 'transparent' }}>
-                                                <input type="checkbox" checked={isSelected} onChange={function () { toggleAttendee(u._id); }} />
-                                                <span>{u.name}</span>
-                                                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>({u.role})</span>
-                                            </label>
-                                        );
-                                    })}
-                                </div>
-                                <p className="form-hint">Selected: {form.attendees.length} attendee(s)</p>
+                                <label>Participants</label>
+                                {form.type === 'one_on_one' ? (
+                                    <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px', background: 'var(--primary-light)' }}>
+                                        <div style={{ fontWeight: 600, marginBottom: '6px' }}>Automatic participant assignment is enabled for One-on-One meetings.</div>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                                            {form.employee_id
+                                                ? 'Participant: ' + ((users.find(function (u) { return u._id === form.employee_id; }) || {}).name || 'Selected employee')
+                                                : 'Select an employee above and they will be added automatically as the participant.'}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '8px' }}>
+                                        {users.map(function (u) {
+                                            var isSelected = form.participants.includes(u._id);
+                                            return (
+                                                <label key={u._id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px', cursor: 'pointer', borderRadius: '6px', background: isSelected ? 'var(--primary-light)' : 'transparent' }}>
+                                                    <input type="checkbox" checked={isSelected} onChange={function () { toggleParticipant(u._id); }} />
+                                                    <span>{u.name}</span>
+                                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>({u.role})</span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                <p className="form-hint">
+                                    {form.type === 'one_on_one'
+                                        ? 'The selected employee will be saved as the meeting participant automatically.'
+                                        : 'Selected: ' + form.participants.length + ' participant(s)'}
+                                </p>
                             </div>
                             <div className="form-actions form-group--full">
                                 <button type="button" className="btn btn--secondary" onClick={function () { setShowModal(false); }}>Cancel</button>
@@ -488,8 +598,8 @@ function MeetingDetailPanel({ meeting, onClose, onRefresh, onSaveNotes, onStatus
                             <div className="detail-row"><span>Location</span><span>{detail.location || '—'}</span></div>
                             <div className="detail-row"><span>Team</span><span>{detail.team?.name || '—'}</span></div>
                             <div className="detail-row">
-                                <span>Attendees</span>
-                                <span>{(detail.attendees || []).map(function (a) { return a.name; }).join(', ') || 'None'}</span>
+                                <span>Participants</span>
+                                <span>{(detail.participants || detail.attendees || []).map(function (a) { return a.name; }).join(', ') || 'None'}</span>
                             </div>
                         </div>
                     )}

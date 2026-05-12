@@ -42,7 +42,17 @@ function validatePhaseDatesFromBody(body, existing) {
 // ========== GET ALL CYCLES ==========
 router.get('/', rateLimiter, auth, async function (req, res) {
   try {
-    var cycles = await Cycle.find()
+    var filter = {};
+    var search = req.query.search;
+    var qStatus = req.query.status;
+    var qYear = req.query.year;
+    if (search && search.trim()) {
+      filter.name = { $regex: search.trim(), $options: 'i' };
+    }
+    if (qStatus) filter.status = qStatus;
+    if (qYear) filter.year = Number(qYear);
+
+    var cycles = await Cycle.find(filter)
       .populate('createdBy', 'name email')
       .sort({ createdAt: -1 });
     res.json(cycles);
@@ -74,6 +84,29 @@ router.post('/', rateLimiter, auth, role('ADMIN', 'HR'), validate(schemas.cycle.
           phase1Start, phase1End, phase2Start, phase2End, phase3Start, phase3End, currentPhase } = req.body;
 
     if (req.user.role !== 'ADMIN') {
+      // Explicit field validation for non-admin
+      if (!name || !name.trim()) {
+        return res.status(400).json({ message: 'Cycle name is required.' });
+      }
+      if (name.trim().length > 100) {
+        return res.status(400).json({ message: 'Cycle name cannot exceed 100 characters.' });
+      }
+      if (!year) {
+        return res.status(400).json({ message: 'Year is required.' });
+      }
+      // Validate each phase pair: end must be after start
+      var phasePairs = [
+        { start: phase1Start, end: phase1End, label: 'Phase 1' },
+        { start: phase2Start, end: phase2End, label: 'Phase 2' },
+        { start: phase3Start, end: phase3End, label: 'Phase 3' },
+      ];
+      for (var pp = 0; pp < phasePairs.length; pp++) {
+        if (phasePairs[pp].start && phasePairs[pp].end) {
+          if (new Date(phasePairs[pp].end) <= new Date(phasePairs[pp].start)) {
+            return res.status(400).json({ message: phasePairs[pp].label + ' end date must be after start date.' });
+          }
+        }
+      }
       var phaseError = validatePhaseDatesFromBody(req.body, null);
       if (phaseError) {
         return res.status(400).json({ message: phaseError });
@@ -109,8 +142,8 @@ router.post('/', rateLimiter, auth, role('ADMIN', 'HR'), validate(schemas.cycle.
   }
 });
 
-// ========== UPDATE CYCLE — PUT (ADMIN / HR, backward compatible) ==========
-router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR'), validate(schemas.cycle.update), async function (req, res) {
+// ========== UPDATE CYCLE — PUT (ADMIN / HR / TEAM_LEADER) ==========
+router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), validate(schemas.cycle.update), async function (req, res) {
   try {
     var { name, year, status,
           phase1Start, phase1End, phase2Start, phase2End, phase3Start, phase3End, currentPhase } = req.body;
@@ -123,6 +156,26 @@ router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR'), validate(schemas.cycl
     }
 
     if (req.user.role !== 'ADMIN') {
+      // Explicit field validation for non-admin
+      if (name !== undefined && (!name || !name.trim())) {
+        return res.status(400).json({ message: 'Cycle name cannot be empty.' });
+      }
+      if (name && name.trim().length > 100) {
+        return res.status(400).json({ message: 'Cycle name cannot exceed 100 characters.' });
+      }
+      // Validate each phase pair: end must be after start
+      var phasePairsU = [
+        { start: phase1Start || (cycle.phase1Start && cycle.phase1Start.toISOString()), end: phase1End || (cycle.phase1End && cycle.phase1End.toISOString()), label: 'Phase 1' },
+        { start: phase2Start || (cycle.phase2Start && cycle.phase2Start.toISOString()), end: phase2End || (cycle.phase2End && cycle.phase2End.toISOString()), label: 'Phase 2' },
+        { start: phase3Start || (cycle.phase3Start && cycle.phase3Start.toISOString()), end: phase3End || (cycle.phase3End && cycle.phase3End.toISOString()), label: 'Phase 3' },
+      ];
+      for (var ppU = 0; ppU < phasePairsU.length; ppU++) {
+        if (phasePairsU[ppU].start && phasePairsU[ppU].end) {
+          if (new Date(phasePairsU[ppU].end) <= new Date(phasePairsU[ppU].start)) {
+            return res.status(400).json({ message: phasePairsU[ppU].label + ' end date must be after start date.' });
+          }
+        }
+      }
       var phaseError = validatePhaseDatesFromBody(req.body, cycle);
       if (phaseError) {
         return res.status(400).json({ message: phaseError });
@@ -212,8 +265,8 @@ router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR'), validate(schemas.cycl
   }
 });
 
-// ========== PATCH CYCLE CONFIG (ADMIN / HR) — partial update for dates & name ==========
-router.patch('/:id', rateLimiter, auth, role('ADMIN', 'HR'), validate(schemas.cycle.update), async function (req, res) {
+// ========== PATCH CYCLE CONFIG (ADMIN / HR / TEAM_LEADER) — partial update for dates & name ==========
+router.patch('/:id', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), validate(schemas.cycle.update), async function (req, res) {
   try {
     var cycle = await Cycle.findById(req.params.id);
     if (!cycle) {
@@ -282,7 +335,24 @@ router.patch('/:id/phase', rateLimiter, auth, role('ADMIN', 'HR'), validate(sche
       return res.status(400).json({ message: 'Invalid phase: ' + currentPhase });
     }
 
-    // ADMIN can freely move between any phases — no guards
+    // ===== SEQUENTIAL PHASE ENFORCEMENT (ALL users, including Admin) =====
+    if (cycle.status === 'draft') {
+      if (currentPhase !== 'phase1') {
+        return res.status(400).json({ message: 'Invalid phase transition. Current phase: draft, cannot move to ' + currentPhase + '. Draft cycles must start at Phase 1.' });
+      }
+    } else {
+      var oldIndex = phaseOrder.indexOf(oldPhase);
+      if (newIndex <= oldIndex) {
+        return res.status(400).json({ message: 'Invalid phase transition. Current phase: ' + oldPhase + ', cannot move to ' + currentPhase + '. Cannot go backwards.' });
+      }
+      if (newIndex !== oldIndex + 1) {
+        return res.status(400).json({ message: 'Invalid phase transition. Current phase: ' + oldPhase + ', cannot move to ' + currentPhase + '. Must advance sequentially to ' + phaseOrder[oldIndex + 1] + '.' });
+      }
+    }
+
+    // ===== WORKFLOW READINESS GUARDS (all users) =====
+
+    // Phase 2 readiness: all objectives must be approved
     if (currentPhase === 'phase2') {
       var objBlockingStatuses = ['draft', 'pending', 'submitted', 'pending_approval', 'revision_requested', 'assigned', 'acknowledged', 'rejected'];
       var unapprovedObjectives = await Objective.find({
@@ -306,44 +376,20 @@ router.patch('/:id/phase', rateLimiter, auth, role('ADMIN', 'HR'), validate(sche
       }
     }
 
-    if (req.user.role === 'ADMIN') {
-      // Admin override: allow any valid phase transition after Phase 2 readiness passes
-      if (cycle.status === 'draft' && currentPhase !== 'phase1') {
-        // Even admin must start a draft cycle at phase1
-        // (but can then jump freely once active)
-      }
-    } else {
-      // Non-admin: enforce forward-only sequential transitions
-      if (cycle.status === 'draft') {
-        if (currentPhase !== 'phase1') {
-          return res.status(400).json({ message: 'Draft cycles must start at Phase 1.' });
-        }
-      } else {
-        var oldIndex = phaseOrder.indexOf(oldPhase);
-        if (newIndex <= oldIndex) {
-          return res.status(400).json({ message: 'Cannot go backwards. Current phase: ' + oldPhase + '. Requested: ' + currentPhase });
-        }
-        if (newIndex !== oldIndex + 1) {
-          return res.status(400).json({ message: 'Cannot skip phases. Must advance from ' + oldPhase + ' to ' + phaseOrder[oldIndex + 1] });
-        }
-      }
-
-      // ===== WORKFLOW READINESS GUARDS (non-admin only) =====
-
-      // All objectives must have progress tracked before advancing to Phase 3
-      if (currentPhase === 'phase3') {
-        var objNoProgress = await Objective.countDocuments({
-          cycle: cycle._id,
-          status: { $in: ['approved', 'validated'] },
-          $or: [{ achievementPercent: null }, { achievementPercent: 0, 'kpis.0': { $exists: false } }]
+    // Phase 3 readiness: all objectives must have progress tracked
+    if (currentPhase === 'phase3') {
+      var objNoProgress = await Objective.countDocuments({
+        cycle: cycle._id,
+        status: { $in: ['approved', 'validated'] },
+        $or: [{ achievementPercent: null }, { achievementPercent: 0, 'kpis.0': { $exists: false } }]
+      });
+      if (objNoProgress > 0) {
+        return res.status(400).json({
+          message: 'Cannot advance to Phase 3: ' + objNoProgress + ' objective(s) have no progress recorded.'
         });
-        if (objNoProgress > 0) {
-          return res.status(400).json({
-            message: 'Cannot advance to Phase 3: ' + objNoProgress + ' objective(s) have no progress recorded.'
-          });
-        }
       }
     }
+
 
     cycle.currentPhase = currentPhase;
 
@@ -375,7 +421,7 @@ router.patch('/:id/phase', rateLimiter, auth, role('ADMIN', 'HR'), validate(sche
 });
 
 // ========== PHASE PRE-CHECK (before advancing) ==========
-router.get('/:id/phase-check', rateLimiter, auth, role('ADMIN', 'HR'), async function (req, res) {
+router.get('/:id/phase-check', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), async function (req, res) {
   try {
     var cycle = await Cycle.findById(req.params.id);
     if (!cycle) return res.status(404).json({ message: 'Cycle not found' });

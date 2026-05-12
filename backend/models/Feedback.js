@@ -18,6 +18,9 @@ const FeedbackSchema = new mongoose.Schema({
   relatedMeeting: { type: mongoose.Schema.Types.ObjectId, ref: 'Meeting', default: null },
   relatedReview: { type: mongoose.Schema.Types.ObjectId, ref: 'ManagerReview', default: null },
   relatedObjective: { type: mongoose.Schema.Types.ObjectId, ref: 'Objective', default: null },
+  objective_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Objective' },
+  check_in_id: { type: mongoose.Schema.Types.ObjectId, ref: 'CheckIn' },
+  cycle_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cycle' },
   rating: { type: Number, min: 1, max: 5, default: null },
   tags: [{ type: String, trim: true }],
   status: {

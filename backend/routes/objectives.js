@@ -20,6 +20,8 @@ router.get('/pending-validation', rateLimiter, auth, role('TEAM_LEADER'), object
 router.get('/stale', rateLimiter, auth, role('TEAM_LEADER', 'ADMIN'), objectiveController.getStaleObjectives);
 router.get('/pending-change-requests', rateLimiter, auth, role('TEAM_LEADER', 'ADMIN'), objectiveController.getPendingChangeRequests);
 router.get('/completed-awaiting-evaluation', rateLimiter, auth, role('TEAM_LEADER', 'ADMIN'), objectiveController.getCompletedAwaitingEvaluation);
+router.get('/team-goals', rateLimiter, auth, role('ADMIN', 'TEAM_LEADER', 'HR'), objectiveController.getTeamGoalsForManager);
+router.get('/team-weight-capacity', rateLimiter, auth, role('ADMIN', 'TEAM_LEADER', 'HR'), objectiveController.getTeamWeightCapacity);
 router.get('/:id', rateLimiter, auth, objectiveController.getObjectiveById);
 
 // Creation and modification
@@ -28,7 +30,7 @@ router.put('/:id', rateLimiter, auth, role('ADMIN', 'TEAM_LEADER', 'COLLABORATOR
 router.delete('/:id', rateLimiter, auth, role('ADMIN', 'TEAM_LEADER', 'COLLABORATOR'), objectiveController.deleteObjective);
 
 // Workflow actions
-router.post('/submit-all', rateLimiter, auth, role('COLLABORATOR'), validate(schemas.objective.submitAll), objectiveController.submitObjectives);
+router.post('/submit-all', rateLimiter, auth, role('ADMIN', 'TEAM_LEADER', 'COLLABORATOR'), validate(schemas.objective.submitAll), objectiveController.submitObjectives);
 router.post('/submit', rateLimiter, auth, validate(schemas.objective.submitAll), objectiveController.submitObjectives);
 router.post('/submit/:id', rateLimiter, auth, objectiveController.submitObjective);
 router.post('/:id/submit', rateLimiter, auth, role('ADMIN', 'TEAM_LEADER', 'COLLABORATOR'), validate(schemas.objective.submitProgress), objectiveController.submitProgress);
@@ -38,8 +40,8 @@ router.post('/:id/acknowledge', rateLimiter, auth, objectiveController.acknowled
 router.post('/:id/mark-completed', rateLimiter, auth, objectiveController.markCompleted);
 router.post('/:id/midyear-review', rateLimiter, auth, role('ADMIN', 'TEAM_LEADER'), objectiveController.midYearReviewObjective);
 router.post('/:id/final-self-assessment', rateLimiter, auth, objectiveController.finalSelfAssessmentObjective);
-router.post('/:id/evaluate', rateLimiter, auth, role('ADMIN', 'TEAM_LEADER'), objectiveController.evaluateObjective);
-router.post('/:id/lock', rateLimiter, auth, role('ADMIN', 'TEAM_LEADER'), objectiveController.lockObjective);
+router.post('/:id/evaluate', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), objectiveController.evaluateObjective);
+router.post('/:id/lock', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), objectiveController.lockObjective);
 
 // Change requests
 router.post('/:id/change-requests', rateLimiter, auth, objectiveController.createChangeRequest);
@@ -68,5 +70,8 @@ router.get('/:id/children', rateLimiter, auth, objectiveController.getSubObjecti
 
 // Duplicate
 router.post('/:id/duplicate', rateLimiter, auth, objectiveController.duplicateObjective);
+
+// Manager Goal Check-up Panel
+router.put('/:id/note', rateLimiter, auth, role('ADMIN', 'TEAM_LEADER', 'HR'), objectiveController.addManagerNote);
 
 module.exports = router;

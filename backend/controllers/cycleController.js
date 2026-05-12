@@ -1,4 +1,5 @@
 const EvaluationCycle = require('../models/EvaluationCycle');
+const auditLogger = require('../utils/auditLogger');
 
 exports.createCycle = async (req, res) => {
   try {
@@ -41,11 +42,15 @@ exports.createCycle = async (req, res) => {
 
 exports.getCycles = async (req, res) => {
   try {
-    const { year, type, status } = req.query;
+    const { year, type, status, search } = req.query;
     const filter = {};
     if (year) filter.year = Number(year);
     if (type) filter.type = type;
     if (status) filter.status = status;
+    
+    if (search && search.trim()) {
+      filter.name = { $regex: search.trim(), $options: 'i' };
+    }
 
     const cycles = await EvaluationCycle.find(filter)
       .populate('createdBy', 'name email')
@@ -188,6 +193,12 @@ exports.openCycle = async (req, res) => {
     cycle.status = 'open';
     await cycle.save();
 
+    await auditLogger.log(req.user.id || req.user._id, 'cycle.opened', 'Cycle', cycle._id, {
+      name: cycle.name,
+      type: cycle.type,
+      year: cycle.year
+    });
+
     res.json({ success: true, message: 'Cycle opened', cycle });
   } catch (err) {
     console.error('Open cycle error:', err);
@@ -205,6 +216,12 @@ exports.closeCycle = async (req, res) => {
 
     cycle.status = 'closed';
     await cycle.save();
+
+    await auditLogger.log(req.user.id || req.user._id, 'cycle.closed', 'Cycle', cycle._id, {
+      name: cycle.name,
+      type: cycle.type,
+      year: cycle.year
+    });
 
     res.json({ success: true, message: 'Cycle closed', cycle });
   } catch (err) {

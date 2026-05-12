@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './components/AuthContext';
 import { ThemeProvider } from './components/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import CyclePhaseRoute from './components/CyclePhaseRoute';
 import DashboardLayout from './components/DashboardLayout';
 
 import Login from './pages/Login';
@@ -30,6 +31,8 @@ import PerformancePage from './pages/PerformancePage';
 import EvaluationScoringPage from './pages/EvaluationScoringPage';
 // EvaluationListPage removed from UI
 import AuditLogsPage from './pages/AuditLogsPage';
+import ManagerReviewPage from './pages/ManagerReviewPage';
+import HRValidation from './pages/HRValidation';
 // AI Assistant intentionally removed from the application
 
 import './App.css';
@@ -47,37 +50,33 @@ function RoleRoute({ allowedRoles, children }) {
   return children;
 }
 
+import ErrorBoundary from './components/common/ErrorBoundary';
+
 function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
           <Route path="/feed" element={<ProtectedRoute><DashboardLayout><TeamFeed /></DashboardLayout></ProtectedRoute>} />
           <Route path="/my-team" element={<ProtectedRoute><DashboardLayout><MyTeamPage /></DashboardLayout></ProtectedRoute>} />
           <Route path="/cycles" element={<ProtectedRoute><DashboardLayout><Cycles /></DashboardLayout></ProtectedRoute>} />
-          <Route path="/midyear-assessments" element={<ProtectedRoute><DashboardLayout><MidYearPage /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/midyear-assessments" element={<ProtectedRoute><DashboardLayout><CyclePhaseRoute allowedPhases={['phase2']}><MidYearPage /></CyclePhaseRoute></DashboardLayout></ProtectedRoute>} />
           <Route path="/final-evaluations" element={<ProtectedRoute><DashboardLayout><FinalEvaluationPage /></DashboardLayout></ProtectedRoute>} />
           <Route path="/performance" element={<ProtectedRoute><DashboardLayout><PerformancePage /></DashboardLayout></ProtectedRoute>} />
 
           <Route path="/evaluation-scoring" element={<ProtectedRoute><DashboardLayout><EvaluationScoringPage /></DashboardLayout></ProtectedRoute>} />
 
-          <Route path="/audit-logs" element={<ProtectedRoute><DashboardLayout><RoleRoute allowedRoles={['ADMIN', 'HR']}><AuditLogsPage /></RoleRoute></DashboardLayout></ProtectedRoute>} />
+          <Route path="/audit-logs" element={<ProtectedRoute><DashboardLayout><AuditLogsPage /></DashboardLayout></ProtectedRoute>} />
           <Route path="/goals" element={<ProtectedRoute><DashboardLayout><GoalsPage /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/manager-review" element={<ProtectedRoute><DashboardLayout><ManagerReviewPage /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/hr-validation" element={<ProtectedRoute><DashboardLayout><HRValidation /></DashboardLayout></ProtectedRoute>} />
           <Route path="/evaluations" element={<ProtectedRoute><DashboardLayout><Evaluations /></DashboardLayout></ProtectedRoute>} />
           <Route path="/validation" element={<ProtectedRoute><DashboardLayout><Validation /></DashboardLayout></ProtectedRoute>} />
           <Route path="/hr-decisions" element={<ProtectedRoute><DashboardLayout><HRDecisions /></DashboardLayout></ProtectedRoute>} />
-          {/* Teams: only accessible to ADMIN, HR, TEAM_LEADER — collaborators are redirected */}
-          <Route path="/teams" element={
-            <ProtectedRoute>
-              <DashboardLayout>
-                <RoleRoute allowedRoles={['ADMIN', 'HR', 'TEAM_LEADER']}>
-                  <Teams />
-                </RoleRoute>
-              </DashboardLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/teams" element={<ProtectedRoute><DashboardLayout><Teams /></DashboardLayout></ProtectedRoute>} />
           <Route path="/users" element={<ProtectedRoute><DashboardLayout><Users /></DashboardLayout></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><DashboardLayout><Settings /></DashboardLayout></ProtectedRoute>} />
           <Route path="/meetings" element={<ProtectedRoute><DashboardLayout><MeetingsPage /></DashboardLayout></ProtectedRoute>} />
@@ -89,6 +88,7 @@ function App() {
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
+        </ErrorBoundary>
       </ThemeProvider>
     </AuthProvider>
   );
