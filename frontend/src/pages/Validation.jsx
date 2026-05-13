@@ -13,7 +13,7 @@ function Validation() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  var API = 'http://localhost:5000';
+  var API = '/api';
 
   async function fetchObjectives() {
     try {

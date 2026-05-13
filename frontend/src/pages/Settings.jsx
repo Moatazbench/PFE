@@ -12,7 +12,7 @@ function Settings() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
 
-  var API = 'http://localhost:5000';
+  var API = '/api';
 
   async function handleTestNotification(e) {
     e.preventDefault();

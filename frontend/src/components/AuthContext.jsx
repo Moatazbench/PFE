@@ -18,7 +18,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const initialLoadDone = useRef(false);
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
   // Axios setup
   useEffect(() => {

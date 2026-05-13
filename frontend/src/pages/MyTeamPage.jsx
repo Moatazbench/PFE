@@ -122,7 +122,7 @@ function MyTeamPage() {
                                 <div className="user-card__profile">
                                     {member.avatar && !member.avatar.includes('default') ? (
                                         <img 
-                                            src={member.avatar.startsWith('http') ? member.avatar : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${member.avatar}`} 
+                                            src={member.avatar.startsWith('http') ? member.avatar : member.avatar} 
                                             alt={member.name || 'Member'} 
                                             className="user-card__avatar"
                                             onError={(e) => {

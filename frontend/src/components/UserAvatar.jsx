@@ -1,6 +1,6 @@
 import React from 'react';
 
-const API = 'http://localhost:5000';
+const API = '/api';
 
 function UserAvatar({ user, size = 32, style = {}, className = '' }) {
     if (!user) {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../components/AuthContext';
 
-var API = 'http://localhost:5000';
+var API = '/api';
 
 function CareerPage() {
   var { user } = useAuth();

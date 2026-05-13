@@ -4,7 +4,7 @@ import { useAuth } from '../components/AuthContext';
 import { useToast } from '../components/common/Toast';
 import { useNavigate } from 'react-router-dom';
 
-const API_BASE_URL = api.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = api.defaults.baseURL || import.meta.env.VITE_API_BASE_URL || '/api';
 
 const getDueBadge = (dueDate) => {
   if (!dueDate) return null;
