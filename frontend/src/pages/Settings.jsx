@@ -20,7 +20,7 @@ function Settings() {
     setError('');
 
     try {
-      await axios.post(API + '/api/notifications', {
+      await axios.post(API + '/notifications', {
         userId: user._id,
         title: notifTitle || 'Test Notification',
         message: notifMessage || 'This is a test notification',
@@ -38,7 +38,7 @@ function Settings() {
     if (!window.confirm('Send notification to ALL users?')) return;
 
     try {
-      var res = await axios.post(API + '/api/notifications/broadcast', {
+      var res = await axios.post(API + '/notifications/broadcast', {
         title: 'System Announcement',
         message: 'This is a broadcast message to all users.',
         sendEmail: false
@@ -60,7 +60,7 @@ function Settings() {
     setSuccess('');
 
     try {
-      const res = await axios.put(`${API}/api/users/${user._id}/avatar`, formData, {
+      const res = await axios.put(`${API}/users/${user._id}/avatar`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       updateUser(res.data);

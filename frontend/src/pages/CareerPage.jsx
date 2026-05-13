@@ -28,10 +28,10 @@ function CareerPage() {
 
   function loadData() {
     setLoading(true);
-    var pathUrl = tab === 'my-path' ? '/api/career/paths/my' : '/api/career/paths/all';
+    var pathUrl = tab === 'my-path' ? '/career/paths/my' : '/career/paths/all';
     Promise.all([
       axios.get(API + pathUrl, { headers: headers }),
-      axios.get(API + '/api/career/competencies', { headers: headers })
+      axios.get(API + '/career/competencies', { headers: headers })
     ]).then(function (res) {
       setCareerPaths(res[0].data.careerPaths || []);
       setCompetencies(res[1].data.competencies || []);
@@ -41,7 +41,7 @@ function CareerPage() {
   function handleCreatePath() {
     if (!pathForm.currentRole) return;
     setSending(true);
-    axios.post(API + '/api/career/paths', pathForm, { headers: headers })
+    axios.post(API + '/career/paths', pathForm, { headers: headers })
       .then(function () { setShowPathForm(false); setPathForm({ currentRole: '', targetRole: '', targetDate: '', notes: '' }); loadData(); })
       .catch(function (e) { alert(e.response?.data?.message || 'Error'); })
       .finally(function () { setSending(false); });
@@ -51,7 +51,7 @@ function CareerPage() {
     if (!compForm.name) return;
     setSending(true);
     var data = Object.assign({}, compForm, { skills: compForm.skills ? compForm.skills.split(',').map(function (s) { return s.trim(); }) : [] });
-    axios.post(API + '/api/career/competencies', data, { headers: headers })
+    axios.post(API + '/career/competencies', data, { headers: headers })
       .then(function () { setShowCompForm(false); setCompForm({ name: '', description: '', category: 'other', level: 'beginner', skills: '' }); loadData(); })
       .catch(function (e) { alert(e.response?.data?.message || 'Error'); })
       .finally(function () { setSending(false); });
@@ -59,7 +59,7 @@ function CareerPage() {
 
   function handleDeleteComp(id) {
     if (!confirm('Delete this competency?')) return;
-    axios.delete(API + '/api/career/competencies/' + id, { headers: headers }).then(function () { loadData(); });
+    axios.delete(API + '/career/competencies/' + id, { headers: headers }).then(function () { loadData(); });
   }
 
   var tabs = [{ key: 'my-path', label: 'My Career Path' }, { key: 'competencies', label: 'Competencies' }];

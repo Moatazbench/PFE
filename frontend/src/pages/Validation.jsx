@@ -17,7 +17,7 @@ function Validation() {
 
   async function fetchObjectives() {
     try {
-      var res = await axios.get(API + '/api/objectives/pending-validation');
+      var res = await axios.get(API + '/objectives/pending-validation');
       setObjectives(res.data);
     } catch (err) {
       console.error('Fetch objectives error:', err);
@@ -44,7 +44,7 @@ function Validation() {
     setProcessing(true);
     
     try {
-      await axios.post(API + '/api/objectives/' + selectedObjective._id + '/validate', {
+      await axios.post(API + '/objectives/' + selectedObjective._id + '/validate', {
         status: approved ? 'approved' : 'rejected',
         managerAdjustedPercent: adjustedPercent,
         managerComments: managerComments,

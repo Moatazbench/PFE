@@ -15,7 +15,7 @@ function ProgressChart({ userId }) {
       }
       
       try {
-        const res = await axios.get(API_BASE_URL + '/api/progress/' + userId);
+        const res = await axios.get(API_BASE_URL + '/progress/' + userId);
         setData(res.data);
       } catch (err) {
         console.error('Fetch progress error:', err);
