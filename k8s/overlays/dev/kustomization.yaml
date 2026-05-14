@@ -19,6 +19,6 @@ patches:
 
 images:
   - name: moatazbench/pfe-backend
-    newTag: ac9431a85637e856c2b0f4ae8b89457f21c93f73
+    newTag: 7dabe3cd2fb138aced915a263445dc5cf230b4df
   - name: moatazbench/pfe-frontend
-    newTag: ac9431a85637e856c2b0f4ae8b89457f21c93f73
+    newTag: 7dabe3cd2fb138aced915a263445dc5cf230b4df
