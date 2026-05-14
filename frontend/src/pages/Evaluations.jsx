@@ -19,8 +19,8 @@ function Evaluations() {
     setError('');
     try {
       const [cyclesRes, objectivesRes] = await Promise.all([
-        api.get('/api/cycles'),
-        api.get('/api/objectives/my'),
+        api.get('/cycles'),
+        api.get('/objectives/my'),
       ]);
 
       const cycleData = cyclesRes.data || [];

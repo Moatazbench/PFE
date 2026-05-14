@@ -31,6 +31,7 @@ router.delete('/:id', rateLimiter, auth, role('ADMIN', 'TEAM_LEADER', 'COLLABORA
 
 // Workflow actions
 router.post('/submit-all', rateLimiter, auth, role('ADMIN', 'TEAM_LEADER', 'COLLABORATOR'), validate(schemas.objective.submitAll), objectiveController.submitObjectives);
+router.post('/validate-all', rateLimiter, auth, role('ADMIN', 'TEAM_LEADER'), objectiveController.validateAllTeamObjectives);
 router.post('/submit', rateLimiter, auth, validate(schemas.objective.submitAll), objectiveController.submitObjectives);
 router.post('/submit/:id', rateLimiter, auth, objectiveController.submitObjective);
 router.post('/:id/submit', rateLimiter, auth, role('ADMIN', 'TEAM_LEADER', 'COLLABORATOR'), validate(schemas.objective.submitProgress), objectiveController.submitProgress);

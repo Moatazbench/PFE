@@ -19,7 +19,7 @@ export default function useActiveCycle() {
 
         async function loadActiveCycle() {
             try {
-                var res = await api.get('/api/cycles');
+                var res = await api.get('/cycles');
                 if (!cancelled) {
                     setActiveCycle(pickActiveCycle(Array.isArray(res.data) ? res.data : []));
                 }

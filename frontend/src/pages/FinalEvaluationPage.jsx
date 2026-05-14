@@ -22,7 +22,7 @@ function FinalEvaluationPage() {
 
   async function fetchCycles() {
     try {
-      const res = await api.get('/api/cycles');
+      const res = await api.get('/cycles');
       const data = (Array.isArray(res.data) ? res.data : []).filter(c =>
         (c.currentPhase === 'phase3' || c.currentPhase === 'closed') && c.status !== 'draft'
       );

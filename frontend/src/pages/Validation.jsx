@@ -12,6 +12,8 @@ function Validation() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [bulkAction, setBulkAction] = useState(null);
+  const [bulkComment, setBulkComment] = useState('');
 
   var API = '/api';
 
@@ -61,6 +63,30 @@ function Validation() {
     }
   }
 
+  async function handleBulkValidate() {
+    if (!bulkComment.trim()) {
+      setError('Comment is mandatory.');
+      return;
+    }
+    setError('');
+    setSuccess('');
+    setProcessing(true);
+    try {
+      await axios.post(API + '/objectives/validate-all', {
+        status: bulkAction,
+        managerComments: bulkComment
+      });
+      setSuccess(`✅ All objectives ${bulkAction}`);
+      setBulkAction(null);
+      setBulkComment('');
+      fetchObjectives();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to validate all');
+    } finally {
+      setProcessing(false);
+    }
+  }
+
   function getWeightedScore() {
     if (!selectedObjective) return 0;
     return ((selectedObjective.weight * adjustedPercent) / 100).toFixed(2);
@@ -86,6 +112,33 @@ function Validation() {
       {!selectedObjective ? (
         <div>
           <h2>📋 Pending Objectives ({objectives.length})</h2>
+          
+          {bulkAction ? (
+            <div style={{ background: '#f3f4f6', padding: '16px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #e5e7eb' }}>
+              <h3>{bulkAction === 'approved' ? '✅ Accept All' : '❌ Reject All'}</h3>
+              <div style={{ marginTop: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Comment (required):</label>
+                <textarea value={bulkComment} onChange={e => setBulkComment(e.target.value)} placeholder="Add your feedback..." rows={4} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #d1d5db', fontFamily: 'inherit' }} />
+              </div>
+              <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+                <button onClick={handleBulkValidate} disabled={processing || !bulkComment.trim()} style={{ padding: '8px 16px', borderRadius: '4px', background: bulkAction === 'approved' ? '#10b981' : '#ef4444', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                  {processing ? 'Processing...' : `${bulkAction === 'approved' ? 'Accept' : 'Reject'} All`}
+                </button>
+                <button onClick={() => { setBulkAction(null); setBulkComment(''); }} style={{ padding: '8px 16px', borderRadius: '4px', background: '#e5e7eb', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : objectives.length > 0 && (
+            <div style={{ marginBottom: '16px', display: 'flex', gap: '8px' }}>
+              <button onClick={() => setBulkAction('approved')} style={{ padding: '8px 16px', borderRadius: '4px', background: '#10b981', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                ✅ Accept All
+              </button>
+              <button onClick={() => setBulkAction('rejected')} style={{ padding: '8px 16px', borderRadius: '4px', background: '#ef4444', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                ❌ Reject All
+              </button>
+            </div>
+          )}
           
           {objectives.length === 0 ? (
             <div className="empty-state">

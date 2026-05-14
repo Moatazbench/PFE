@@ -352,26 +352,12 @@ router.patch('/:id/phase', rateLimiter, auth, role('ADMIN', 'HR'), validate(sche
 
     // ===== WORKFLOW READINESS GUARDS (all users) =====
 
-    // Phase 2 readiness: all objectives must be approved
+    // Phase 2 readiness: check only if objectives exist
     if (currentPhase === 'phase2') {
-      var objBlockingStatuses = ['draft', 'pending', 'submitted', 'pending_approval', 'revision_requested', 'assigned', 'acknowledged', 'rejected'];
-      var unapprovedObjectives = await Objective.find({
-        cycle: cycle._id,
-        status: { $in: objBlockingStatuses }
-      }).select('_id title status owner').populate('owner', 'name');
-
       var totalObjectives = await Objective.countDocuments({ cycle: cycle._id });
-
       if (totalObjectives === 0) {
         return res.status(400).json({
           message: 'Cannot advance to Mid-Year Execution: No objectives exist in this cycle.'
-        });
-      }
-
-      if (unapprovedObjectives.length > 0) {
-        return res.status(400).json({
-          message: unapprovedObjectives.length + ' objectives are not yet approved. Resolve before advancing.',
-          unapprovedObjectives: unapprovedObjectives.map(function(o) { return { _id: o._id, title: o.title, status: o.status, owner: o.owner?.name || 'Unknown' }; })
         });
       }
     }
@@ -436,22 +422,9 @@ router.get('/:id/phase-check', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEAD
     var unapprovedObjectives = [];
 
     if (nextPhase === 'phase2') {
-      var objBlockingStatuses = ['draft', 'pending', 'submitted', 'pending_approval', 'revision_requested', 'assigned', 'acknowledged', 'rejected'];
-      var blockedObjs = await Objective.find({
-        cycle: cycle._id,
-        status: { $in: objBlockingStatuses }
-      }).select('_id title status owner').populate('owner', 'name');
-
       var totalObjectives = await Objective.countDocuments({ cycle: cycle._id });
-
       if (totalObjectives === 0) {
         issues.push('No objectives exist in this cycle.');
-      }
-      if (blockedObjs.length > 0) {
-        issues.push(blockedObjs.length + ' objectives are not yet approved. Resolve before advancing.');
-        unapprovedObjectives = blockedObjs.map(function(o) {
-          return { _id: o._id, title: o.title, status: o.status, owner: o.owner?.name || 'Unknown' };
-        });
       }
     }
 

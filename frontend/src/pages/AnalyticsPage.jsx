@@ -21,14 +21,14 @@ function AnalyticsPage() {
     else if (user && user.role === 'TEAM_LEADER') scope = 'team';
 
     var promises = [
-      api.get('/api/stats/dashboard?scope=' + scope).catch(function () { return { data: {} }; }),
-      api.get('/api/tasks/stats').catch(function () { return { data: {} }; }),
-      api.get('/api/feedback/stats').catch(function () { return { data: {} }; }),
-      api.get('/api/objectives' + (scope === 'me' ? '/my' : '')).catch(function () { return { data: [] }; }),
-      api.get('/api/cycles').catch(function () { return { data: [] }; }),
+      api.get('/stats/dashboard?scope=' + scope).catch(function () { return { data: {} }; }),
+      api.get('/tasks/stats').catch(function () { return { data: {} }; }),
+      api.get('/feedback/stats').catch(function () { return { data: {} }; }),
+      api.get('/objectives' + (scope === 'me' ? '/my' : '')).catch(function () { return { data: [] }; }),
+      api.get('/cycles').catch(function () { return { data: [] }; }),
     ];
     if (user && (user.role === 'ADMIN' || user.role === 'HR')) {
-      promises.push(api.get('/api/stats/performance').catch(function () { return null; }));
+      promises.push(api.get('/stats/performance').catch(function () { return null; }));
     }
 
     Promise.all(promises)

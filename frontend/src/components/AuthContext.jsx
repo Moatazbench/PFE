@@ -42,7 +42,7 @@ export function AuthProvider({ children }) {
           const storedRefreshToken = localStorage.getItem('refreshToken');
           if (storedRefreshToken) {
             try {
-              const res = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
+              const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {
                 refreshToken: storedRefreshToken
               });
 
@@ -82,7 +82,7 @@ export function AuthProvider({ children }) {
     async function loadUser() {
       if (token && !initialLoadDone.current) {
         try {
-          const res = await axios.get(API_BASE_URL + '/api/auth/me');
+          const res = await axios.get(API_BASE_URL + '/auth/me');
           if (isMounted) {
             setUser(res.data);
             initialLoadDone.current = true;
@@ -101,7 +101,7 @@ export function AuthProvider({ children }) {
 
   async function login(email, password) {
     try {
-      const res = await axios.post(API_BASE_URL + '/api/auth/login', { email, password });
+      const res = await axios.post(API_BASE_URL + '/auth/login', { email, password });
 
       const newAccessToken = res.data.accessToken;
       const newRefreshToken = res.data.refreshToken;
@@ -126,7 +126,7 @@ export function AuthProvider({ children }) {
     try {
       const storedRefreshToken = localStorage.getItem('refreshToken');
       if (storedRefreshToken) {
-        await axios.post(API_BASE_URL + '/api/auth/logout', {
+        await axios.post(API_BASE_URL + '/auth/logout', {
           refreshToken: storedRefreshToken
         });
       }

@@ -31,10 +31,10 @@ function FeedbackPage() {
 
   function loadData() {
     setLoading(true);
-    var url = tab === 'received' ? '/api/feedback/received' : tab === 'sent' ? '/api/feedback/sent' : '/api/feedback/all';
+    var url = tab === 'received' ? '/feedback/received' : tab === 'sent' ? '/feedback/sent' : '/feedback/all';
     Promise.all([
       api.get(url),
-      api.get('/api/users/filter/list'),
+      api.get('/users/filter/list'),
     ]).then(function (res) {
       setFeedbacks(res[0].data.feedbacks || []);
       setUsers(Array.isArray(res[1].data) ? res[1].data : (res[1].data.users || []));
@@ -46,7 +46,7 @@ function FeedbackPage() {
   function handleSend() {
     if (!form.recipientId || !form.message.trim()) return;
     setSending(true);
-    api.post('/api/feedback', form)
+    api.post('/feedback', form)
       .then(function () { setShowForm(false); setForm({ recipientId: '', type: 'praise', message: '', anonymous: false, visibility: 'private', rating: null }); loadData(); toast.success('Feedback sent!'); })
       .catch(function (e) { toast.error(e.response?.data?.message || 'Error sending feedback'); })
       .finally(function () { setSending(false); });
@@ -55,14 +55,14 @@ function FeedbackPage() {
   function handleRequest() {
     if (!requestForm.fromUserId) return;
     setSending(true);
-    api.post('/api/feedback/request', requestForm)
+    api.post('/feedback/request', requestForm)
       .then(function () { setShowForm(false); setRequestForm({ fromUserId: '', message: '' }); toast.success('Feedback request sent!'); })
       .catch(function (e) { toast.error(e.response?.data?.message || 'Error sending request'); })
       .finally(function () { setSending(false); });
   }
 
   function handleDelete(id) {
-    api.delete('/api/feedback/' + id)
+    api.delete('/feedback/' + id)
       .then(function () { loadData(); toast.success('Feedback deleted'); })
       .catch(function () { toast.error('Failed to delete feedback'); });
     setConfirmDelete(null);

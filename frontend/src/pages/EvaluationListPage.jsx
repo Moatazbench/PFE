@@ -39,7 +39,7 @@ function EvaluationListPage() {
   async function fetchInitialData() {
     setLoading(true);
     try {
-      const cyclesRes = await api.get('/api/cycles');
+      const cyclesRes = await api.get('/cycles');
       const availableCycles = (cyclesRes.data || []).filter((cycle) => cycle.status !== 'draft');
       setCycles(availableCycles);
       if (availableCycles.length > 0) {
@@ -47,7 +47,7 @@ function EvaluationListPage() {
       }
 
       if (isManager) {
-        const teamRes = await api.get('/api/team-members');
+        const teamRes = await api.get('/team-members');
         setTeamMembers(Array.isArray(teamRes.data) ? teamRes.data : (teamRes.data.members || []));
       }
     } catch (err) {

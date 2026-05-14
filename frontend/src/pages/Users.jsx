@@ -11,7 +11,7 @@ function Users() {
 
   async function fetchUsers() {
     try {
-      const res = await api.get('/api/users');
+      const res = await api.get('/users');
       const data = res.data;
       setUsers(Array.isArray(data) ? data : data.users || []);
     } catch (err) {
@@ -28,7 +28,7 @@ function Users() {
 
   async function handleDeleteUser(id) {
     try {
-      await api.delete('/api/users/' + id);
+      await api.delete('/users/' + id);
       fetchUsers();
     } catch (err) {
       console.error('Delete user error:', err);

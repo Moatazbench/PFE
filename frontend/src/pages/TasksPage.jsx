@@ -42,8 +42,8 @@ function TasksPage() {
   async function fetchLinkableObjectives() {
     try {
       var responses = await Promise.allSettled([
-        api.get('/api/objectives/my'),
-        api.get('/api/objectives'),
+        api.get('/objectives/my'),
+        api.get('/objectives'),
       ]);
 
       var merged = [];
@@ -78,10 +78,10 @@ function TasksPage() {
   function loadData() {
     // Only show loading for initial load to prevent flickering
     if (!hasFetchedRef.current) setLoading(true);
-    var url = tab === 'my' ? '/api/tasks/my' : tab === 'assigned' ? '/api/tasks/assigned' : '/api/tasks/all';
+    var url = tab === 'my' ? '/tasks/my' : tab === 'assigned' ? '/tasks/assigned' : '/tasks/all';
     Promise.all([
       api.get(url),
-      api.get('/api/tasks/stats'),
+      api.get('/tasks/stats'),
     ]).then(function (res) {
       setTasks(res[0].data.tasks || []);
       setStats(res[1].data.stats || null);
@@ -102,7 +102,7 @@ function TasksPage() {
         linkedGoal: form.linkedGoal || null,
         dueDate: form.dueDate || null 
     });
-    api.post('/api/tasks', data)
+    api.post('/tasks', data)
       .then(function (res) { 
         setShowForm(false); 
         resetForm(); 
@@ -135,7 +135,7 @@ function TasksPage() {
         linkedGoal: form.linkedGoal || null,
         dueDate: form.dueDate || null
     });
-    api.put('/api/tasks/' + editingTask, data)
+    api.put('/tasks/' + editingTask, data)
       .then(function () { 
         setShowForm(false); 
         setEditingTask(null); 
@@ -148,13 +148,13 @@ function TasksPage() {
   }
 
   function handleStatusChange(id, status) {
-    api.put('/api/tasks/' + id, { status: status })
+    api.put('/tasks/' + id, { status: status })
       .then(function () { loadData(); if (status === 'done') toast.success('Task marked as done! 🎉'); })
       .catch(function () { toast.error('Failed to update status'); });
   }
 
   function handleDelete(id) {
-    api.delete('/api/tasks/' + id)
+    api.delete('/tasks/' + id)
       .then(function () { loadData(); toast.success('Task deleted'); })
       .catch(function () { toast.error('Failed to delete task'); });
     setConfirmDelete(null);

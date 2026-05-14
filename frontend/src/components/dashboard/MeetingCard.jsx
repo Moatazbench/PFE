@@ -9,7 +9,7 @@ function MeetingCard() {
     useEffect(function () {
         async function fetch() {
             try {
-                var res = await api.get('/api/meetings', { params: { upcoming: 'true' } });
+                var res = await api.get('/meetings', { params: { upcoming: 'true' } });
                 setMeetings((res.data.meetings || []).slice(0, 3));
             } catch (err) { console.error(err); }
             finally { setLoading(false); }

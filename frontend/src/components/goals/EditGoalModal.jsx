@@ -45,7 +45,7 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, parentGoals, existing
     var localUsedWeight = form.category === 'team' ? sumTeamObjectiveWeights(currentCycleObjectives) : sumObjectiveWeights(currentCycleObjectives);
     var usedWeight = typeof capacityInfo.usedWeight === 'number' ? capacityInfo.usedWeight : localUsedWeight;
     var remainingWeight = typeof capacityInfo.remainingWeight === 'number' ? capacityInfo.remainingWeight : Math.max(0, 100 - localUsedWeight);
-    var maxWeight = Math.min(100, remainingWeight);
+    var maxWeight = Math.min(40, remainingWeight);
     var cycleData = (cycles || []).find(function (cycle) { return cycle._id === form.cycle; }) || goal.cycle || {};
     var currentPhase = cycleData?.currentPhase || 'phase1';
     var isAdmin = user.role === 'ADMIN';
@@ -76,7 +76,7 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, parentGoals, existing
 
         async function fetchTeamCapacity() {
             try {
-                var res = await api.get('/api/objectives/team-weight-capacity', {
+                var res = await api.get('/objectives/team-weight-capacity', {
                     params: {
                         teamId: teamId,
                         cycleId: form.cycle,
@@ -116,14 +116,14 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, parentGoals, existing
 
     async function handleAnalyzeObjective() {
         setAiLoading('analyze'); setAiError('');
-        try { var response = await api.post('/api/ai/analyze-objective-quality', getObjectivePayload()); setAnalysisResult(response.data); }
+        try { var response = await api.post('/ai/analyze-objective-quality', getObjectivePayload()); setAnalysisResult(response.data); }
         catch (err) { setAiError(err.response?.data?.message || 'Failed to analyze objective.'); }
         finally { setAiLoading(''); }
     }
 
     async function handleRefineObjective() {
         setAiLoading('refine'); setAiError('');
-        try { var response = await api.post('/api/ai/refine-objective', getObjectivePayload()); setRefinementResult(response.data); }
+        try { var response = await api.post('/ai/refine-objective', getObjectivePayload()); setRefinementResult(response.data); }
         catch (err) { setAiError(err.response?.data?.message || 'Failed to refine objective.'); }
         finally { setAiLoading(''); }
     }
@@ -163,7 +163,7 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, parentGoals, existing
                     parentObjective: form.parentObjective || null,
                 };
             }
-            await api.put('/api/objectives/' + goal._id, payload);
+            await api.put('/objectives/' + goal._id, payload);
             if (onUpdated) onUpdated();
             onClose();
         } catch (err) {

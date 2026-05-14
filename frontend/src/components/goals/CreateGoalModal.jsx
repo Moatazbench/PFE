@@ -35,7 +35,7 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
         if (user.role === 'TEAM_LEADER' || user.role === 'ADMIN' || user.role === 'HR') {
             const fetchAssignmentData = async () => {
                 try {
-                    const res = await api.get('/api/teams');
+                    const res = await api.get('/teams');
                     const teamsData = Array.isArray(res.data) ? res.data : (res.data?.teams || []);
                     setAvailableTeams(teamsData);
                         
@@ -67,7 +67,7 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
                         setCapacityInfo({ usedWeight: null, remainingWeight: null, message: '' });
                         return;
                     }
-                    var res = await api.get('/api/objectives/team-weight-capacity', { params: { teamId: form.targetTeam, cycleId: activeCycle } });
+                    var res = await api.get('/objectives/team-weight-capacity', { params: { teamId: form.targetTeam, cycleId: activeCycle } });
                     var usedWeight = Number(res.data.usedWeight || 0);
                     var remaining = Number(res.data.remainingWeight || 0);
                     setCapacityInfo({
@@ -79,7 +79,7 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
                 }
 
                 if (form.category === 'individual' && form.targetUser && form.targetUser !== user.id) {
-                    var res = await api.get('/api/objectives/user/' + form.targetUser + '/cycle/' + activeCycle);
+                    var res = await api.get('/objectives/user/' + form.targetUser + '/cycle/' + activeCycle);
                     var userObjectives = Array.isArray(res.data.individualObjectives) ? res.data.individualObjectives : [];
                     var usedWeightForUser = sumObjectiveWeights(userObjectives);
                     var remaining = Math.max(0, 100 - usedWeightForUser);
@@ -115,7 +115,7 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
     var localRemainingWeight = Math.max(0, 100 - localUsedWeight);
     var effectiveRemainingWeight = typeof capacityInfo.remainingWeight === 'number' ? capacityInfo.remainingWeight : localRemainingWeight;
     var remainingWeight = Math.max(0, effectiveRemainingWeight);
-    var maxWeight = Math.min(100, Math.max(1, remainingWeight));
+    var maxWeight = Math.min(40, Math.max(1, remainingWeight));
     var selectedCycleData = (cycles || []).find(function (cycle) { return cycle._id === (form.cycle || selectedCycle); });
     var currentPhase = selectedCycleData?.currentPhase || 'phase1';
     var cycleStatus = selectedCycleData?.status || 'draft';
@@ -155,7 +155,7 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
         setAiLoading('analyze');
         setAiError('');
         try {
-            var res = await api.post('/api/ai/analyze-objective-quality', getObjectivePayload());
+            var res = await api.post('/ai/analyze-objective-quality', getObjectivePayload());
             setAnalysisResult(res.data);
         } catch (err) {
             setAiError(err.response?.data?.message || 'Failed to analyze objective.');
@@ -168,7 +168,7 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
         setAiLoading('refine');
         setAiError('');
         try {
-            var res = await api.post('/api/ai/refine-objective', Object.assign({}, getObjectivePayload(), {
+            var res = await api.post('/ai/refine-objective', Object.assign({}, getObjectivePayload(), {
                 context: { department: user.department || 'General' }
             }));
             setRefinementResult(res.data);
@@ -185,7 +185,7 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
         setAiSuggestions(null);
         setAiError('');
         try {
-            var res = await api.post('/api/ai/goal-suggestions', {
+            var res = await api.post('/ai/goal-suggestions', {
                 context: form.title || ''
             });
             setAiSuggestions(res.data.suggestions || []);
@@ -231,7 +231,7 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
                 targetUser: form.targetUser || null,
                 targetTeam: form.targetTeam || null
             };
-            await api.post('/api/objectives', payload);
+            await api.post('/objectives', payload);
             if (onCreated) onCreated();
             onClose();
         } catch (err) {

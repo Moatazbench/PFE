@@ -26,8 +26,15 @@ if (!fs.existsSync(checkinsDir)) {
 
 app.use(helmet({ crossOriginResourcePolicy: false }));
 
+const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:8081'];
+
 app.use(cors({
-  origin: true,
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 

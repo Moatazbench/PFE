@@ -865,6 +865,46 @@ exports.validateObjective = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
+// ========== ACCEPT ALL / REJECT ALL ==========
+exports.validateAllTeamObjectives = async (req, res) => {
+  try {
+    const { status, managerComments } = req.body;
+    if (!managerComments || !managerComments.trim()) {
+      return res.status(400).json({ success: false, message: 'Comment is mandatory.' });
+    }
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Status must be approved or rejected.' });
+    }
+
+    const objectives = await Objective.find({
+      submittedTo: req.user.id,
+      status: { $in: ['pending', 'submitted', 'pending_approval'] }
+    });
+
+    if (objectives.length === 0) {
+      return res.status(400).json({ success: false, message: 'No pending objectives to validate.' });
+    }
+
+    const updated = [];
+    for (const objective of objectives) {
+      const oldStatus = objective.status;
+      objective.status = status;
+      objective.managerComments = managerComments;
+      objective.validatedBy = req.user.id;
+      objective.validatedAt = new Date();
+      addActivity(objective, req.user.id, status === 'rejected' ? 'rejected' : 'approved', managerComments, oldStatus, status);
+      await objective.save();
+      updated.push(objective._id);
+
+      const notifTitle = status === 'rejected' ? 'All Goals Rejected' : 'All Goals Approved';
+      const notifMsg = status === 'rejected' ? `Your goals were rejected: ${managerComments}` : `Your goals were approved: ${managerComments}`;
+      await createNotification(objective.owner, notifTitle, notifMsg, '/goals', status === 'rejected' ? 'GOAL_REJECTED' : 'GOAL_APPROVED');
+    }
+
+    res.json({ success: true, count: updated.length, message: `${updated.length} objectives ${status}` });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
 // ========== ACKNOWLEDGE (Employee - for manager-assigned goals) ==========
 exports.acknowledgeObjective = async (req, res) => {
   try {

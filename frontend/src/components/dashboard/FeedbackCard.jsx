@@ -25,7 +25,7 @@ function FeedbackCard() {
     async function fetchFeedbacks() {
         setLoading(true);
         try {
-            var res = await api.get('/api/feedback/received');
+            var res = await api.get('/feedback/received');
             setFeedbacks((res.data.feedbacks || []).slice(0, 5));
         } catch (err) {
             console.error('Error fetching feedbacks', err);
@@ -36,7 +36,7 @@ function FeedbackCard() {
 
     useEffect(function() {
         if (showForm && users.length === 0) {
-            api.get('/api/users/filter/list').then(res => setUsers(res.data.users || [])).catch(console.error);
+            api.get('/users/filter/list').then(res => setUsers(res.data.users || [])).catch(console.error);
         }
     }, [showForm, users.length]);
 
@@ -44,7 +44,7 @@ function FeedbackCard() {
         if (!form.recipientId || !form.message.trim()) return;
 
         try {
-            await api.post('/api/feedback', {
+            await api.post('/feedback', {
                 recipientId: form.recipientId,
                 type: form.type,
                 message: form.message,

@@ -36,10 +36,10 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
     setLoading(true);
     try {
       const [evaluationResult, objectivesResult, checkinsResult, historyResult] = await Promise.allSettled([
-        api.get(`/api/final-evaluations/${cycleId}/${user._id}`),
-        api.get(`/api/objectives/user/${user._id}/cycle/${cycleId}`),
-        api.get('/api/checkins', { params: { cycle_id: cycleId } }),
-        api.get(`/api/final-evaluations/user/${user._id}/history`)
+        api.get(`/final-evaluations/${cycleId}/${user._id}`),
+        api.get(`/objectives/user/${user._id}/cycle/${cycleId}`),
+        api.get('/checkins', { params: { cycle_id: cycleId } }),
+        api.get(`/final-evaluations/user/${user._id}/history`)
       ]);
 
       if (evaluationResult.status === 'fulfilled') {
@@ -105,7 +105,7 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
 
     try {
       setSavingObjectiveId(objectiveId);
-      await api.post(`/api/objectives/${objectiveId}/final-self-assessment`, {
+      await api.post(`/objectives/${objectiveId}/final-self-assessment`, {
         progressPercentage: Number(form.progressPercentage),
         rating: form.rating === '' ? null : Number(form.rating),
         comment: form.comment

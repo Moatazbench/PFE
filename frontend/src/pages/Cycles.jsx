@@ -37,7 +37,7 @@ function Cycles() {
     try {
       var params = {};
       if (searchQuery.trim()) params.search = searchQuery.trim();
-      var res = await api.get('/api/cycles', { params });
+      var res = await api.get('/cycles', { params });
       setCycles(res.data.cycles || res.data);
     } catch (err) {
       toast.error('Failed to fetch cycles.');
@@ -151,10 +151,10 @@ function Cycles() {
 
     try {
       if (editingCycle) {
-        await api.put('/api/cycles/' + editingCycle._id, formData);
+        await api.put('/cycles/' + editingCycle._id, formData);
         toast.success('Cycle updated successfully!');
       } else {
-        await api.post('/api/cycles', formData);
+        await api.post('/cycles', formData);
         toast.success('Cycle created successfully!');
       }
       setShowModal(false); fetchCycles();
@@ -165,7 +165,7 @@ function Cycles() {
 
   async function handleDelete(cycle) {
     try {
-      await api.delete('/api/cycles/' + cycle._id);
+      await api.delete('/cycles/' + cycle._id);
       toast.success('Cycle deleted.'); fetchCycles();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to delete cycle.');
@@ -180,7 +180,7 @@ async function handlePhasePreCheck(cycle) {
 
   setCheckingPhase(cycle._id);
   try {
-    var res = await api.get('/api/cycles/' + cycle._id + '/phase-check');
+    var res = await api.get('/cycles/' + cycle._id + '/phase-check');
     if (res.data.ready) {
       setConfirmPhaseStart(cycle);
     } else {
@@ -202,7 +202,7 @@ async function handlePhasePreCheck(cycle) {
     else if (cycle.currentPhase === 'phase2') nextPhase = 'phase3';
     else if (cycle.currentPhase === 'phase3') nextPhase = 'closed';
     try {
-      await api.patch('/api/cycles/' + cycle._id + '/phase', { currentPhase: nextPhase });
+      await api.patch('/cycles/' + cycle._id + '/phase', { currentPhase: nextPhase });
       toast.success('Advanced to ' + (nextPhase === 'closed' ? 'Closed' : 'Phase ' + nextPhase.replace('phase', '')));
       setConfirmPhaseStart(null); fetchCycles();
     } catch (err) {
@@ -213,7 +213,7 @@ async function handlePhasePreCheck(cycle) {
 
   async function handleRollback(cycle) {
     try {
-      await api.post('/api/cycles/' + cycle._id + '/rollback');
+      await api.post('/cycles/' + cycle._id + '/rollback');
       toast.success('Phase rolled back to Phase 1 (Goal Setting).');
       setShowModal(false);
       setEditingCycle(null);

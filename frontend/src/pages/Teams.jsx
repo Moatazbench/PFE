@@ -21,8 +21,8 @@ function Teams() {
   async function fetchData() {
     try {
       var [teamsRes, usersRes] = await Promise.all([
-        api.get('/api/teams'),
-        api.get('/api/users')
+        api.get('/teams'),
+        api.get('/users')
       ]);
       setTeams(Array.isArray(teamsRes.data) ? teamsRes.data : teamsRes.data.teams || []);
       var userData = usersRes.data;
@@ -78,10 +78,10 @@ function Teams() {
 
     try {
       if (editingTeam) {
-        await api.put('/api/teams/' + editingTeam._id, formData);
+        await api.put('/teams/' + editingTeam._id, formData);
         setSuccess('Team updated successfully!');
       } else {
-        await api.post('/api/teams', formData);
+        await api.post('/teams', formData);
         setSuccess('Team created successfully!');
       }
       setShowModal(false);
@@ -93,7 +93,7 @@ function Teams() {
 
   async function handleDelete(id) {
     try {
-      await api.delete('/api/teams/' + id);
+      await api.delete('/teams/' + id);
       fetchData();
     } catch (err) {
       setError('Failed to delete team');

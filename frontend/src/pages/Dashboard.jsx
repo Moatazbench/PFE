@@ -36,26 +36,26 @@ function Dashboard() {
       const params = { scope };
 
       const promises = [
-        api.get('/api/stats/dashboard', { params }),
-        api.get('/api/stats/recent-activity', { params }).catch(function(e) { console.error('Recent activity endpoint unavailable:', e.message); return { data: { objectives: [], decisions: [] } }; }),
+        api.get('/stats/dashboard', { params }),
+        api.get('/stats/recent-activity', { params }).catch(function(e) { console.error('Recent activity endpoint unavailable:', e.message); return { data: { objectives: [], decisions: [] } }; }),
       ];
 
       if (tab === 'me') {
-        promises.push(api.get('/api/objectives/my'));
+        promises.push(api.get('/objectives/my'));
       } else if (tab === 'team') {
-        promises.push(api.get('/api/objectives', { params: { scope: 'team' } }));
+        promises.push(api.get('/objectives', { params: { scope: 'team' } }));
       } else {
-        promises.push(api.get('/api/objectives'));
+        promises.push(api.get('/objectives'));
       }
 
       if (user.role === 'ADMIN' || user.role === 'HR') {
-        promises.push(api.get('/api/stats/performance').catch(function(e) { console.error('Performance stats endpoint unavailable:', e.message); return { data: null }; }));
+        promises.push(api.get('/stats/performance').catch(function(e) { console.error('Performance stats endpoint unavailable:', e.message); return { data: null }; }));
       }
 
       // Fetch active cycle info
-      promises.push(api.get('/api/cycles').catch(function() { return { data: [] }; }));
+      promises.push(api.get('/cycles').catch(function() { return { data: [] }; }));
       if (user.role === 'TEAM_LEADER' || user.role === 'ADMIN') {
-        promises.push(api.get('/api/objectives/stale').catch(function() {
+        promises.push(api.get('/objectives/stale').catch(function() {
           return { data: { summary: { critical: 0, warning: 0, total: 0 }, staleObjectives: [] } };
         }));
       }
@@ -92,7 +92,7 @@ function Dashboard() {
       
       if (tab === 'team') {
         try {
-          const teamsRes = await api.get('/api/teams');
+          const teamsRes = await api.get('/teams');
           const allTeams = Array.isArray(teamsRes.data) ? teamsRes.data : (teamsRes.data.teams || []);
           const myTeams = allTeams.filter(t => {
             const isLeader = t.leader && (t.leader._id === user.id || t.leader === user.id);

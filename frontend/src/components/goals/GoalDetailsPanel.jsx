@@ -58,16 +58,16 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
     }, [detail]);
 
     async function fetchDetail() {
-        try { var res = await api.get('/api/objectives/' + goal._id); setDetail(res.data.objective || res.data); } catch (err) { console.error(err); }
+        try { var res = await api.get('/objectives/' + goal._id); setDetail(res.data.objective || res.data); } catch (err) { console.error(err); }
     }
     async function fetchChildren() {
-        try { var res = await api.get('/api/objectives/' + goal._id + '/children'); setChildren(res.data.objectives || []); } catch (err) { console.error(err); }
+        try { var res = await api.get('/objectives/' + goal._id + '/children'); setChildren(res.data.objectives || []); } catch (err) { console.error(err); }
     }
 
     // === WORKFLOW ACTIONS ===
     async function handleSubmitForApproval() {
         try {
-            await api.post('/api/objectives/submit/' + goal._id);
+            await api.post('/objectives/submit/' + goal._id);
             toast.success('Objective submitted for approval!');
             fetchDetail(); if (onRefresh) onRefresh();
         } catch (err) { toast.error(err.response?.data?.message || 'Failed to submit'); }
@@ -75,7 +75,7 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
 
     async function handleAcknowledge(accepted, message) {
         try {
-            await api.post('/api/objectives/' + goal._id + '/acknowledge', { accepted, clarificationMessage: message });
+            await api.post('/objectives/' + goal._id + '/acknowledge', { accepted, clarificationMessage: message });
             toast.success(accepted ? 'Objective accepted!' : 'Clarification requested.');
             fetchDetail(); if (onRefresh) onRefresh();
         } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
@@ -85,7 +85,7 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
     async function handleAddKpi(e) {
         e.preventDefault();
         try {
-            await api.post('/api/objectives/' + goal._id + '/kpis', kpiForm);
+            await api.post('/objectives/' + goal._id + '/kpis', kpiForm);
             setKpiForm({ title: '', metricType: 'percent', initialValue: 0, targetValue: 100, currentValue: 0, unit: '' });
             setShowKpiForm(false); fetchDetail(); if (onRefresh) onRefresh(); toast.success('KPI added');
         } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
@@ -97,10 +97,10 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
         debounceTimers.current[kpiId] = setTimeout(function () { handleUpdateKpiDebounced(kpiId, value); }, 800);
     }
     async function handleUpdateKpiDebounced(kpiId, currentValue) {
-        try { await api.put('/api/objectives/' + goal._id + '/kpis/' + kpiId, { currentValue: parseFloat(currentValue) }); fetchDetail(); if (onRefresh) onRefresh(); } catch (err) { toast.error('Failed to update KPI'); }
+        try { await api.put('/objectives/' + goal._id + '/kpis/' + kpiId, { currentValue: parseFloat(currentValue) }); fetchDetail(); if (onRefresh) onRefresh(); } catch (err) { toast.error('Failed to update KPI'); }
     }
     async function handleDeleteKpi(kpiId) {
-        try { await api.delete('/api/objectives/' + goal._id + '/kpis/' + kpiId); fetchDetail(); if (onRefresh) onRefresh(); toast.success('KPI deleted'); } catch (err) { toast.error('Failed'); }
+        try { await api.delete('/objectives/' + goal._id + '/kpis/' + kpiId); fetchDetail(); if (onRefresh) onRefresh(); toast.success('KPI deleted'); } catch (err) { toast.error('Failed'); }
     }
 
     // Comment handling with inner component
@@ -110,11 +110,11 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
         setDetail(function (prev) { return Object.assign({}, prev, { comments: [...(prev.comments || []), tempComment] }); });
         setter('');
         try {
-            var res = await api.post('/api/objectives/' + goal._id + '/comments', { text }); setDetail(res.data.objective || res.data); toast.success('Comment added');
+            var res = await api.post('/objectives/' + goal._id + '/comments', { text }); setDetail(res.data.objective || res.data); toast.success('Comment added');
         } catch (err) { setDetail(function (prev) { return Object.assign({}, prev, { comments: (prev.comments || []).filter(function (c) { return c._id !== tempComment._id; }) }); }); setter(text); toast.error('Failed'); }
     }
     async function handleDeleteComment(cid) {
-        try { await api.delete('/api/objectives/' + goal._id + '/comments/' + cid); setDetail(function (prev) { return Object.assign({}, prev, { comments: (prev.comments || []).filter(function (c) { return c._id !== cid; }) }); }); toast.success('Deleted'); } catch (err) { toast.error('Failed'); }
+        try { await api.delete('/objectives/' + goal._id + '/comments/' + cid); setDetail(function (prev) { return Object.assign({}, prev, { comments: (prev.comments || []).filter(function (c) { return c._id !== cid; }) }); }); toast.success('Deleted'); } catch (err) { toast.error('Failed'); }
     }
 
     async function handleCreateSubGoal(e) {
@@ -184,7 +184,7 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
                     <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
                         {/* Employee: Submit draft to team leader */}
                         {isOwner && detail.status === 'draft' && (
-                            <button onClick={async function() { try { await api.post('/api/objectives/submit/' + goal._id); toast.success('Objective submitted to Team Leader!'); fetchDetail(); if (onRefresh) onRefresh(); } catch (err) { toast.error(err.response?.data?.message || 'Failed to submit'); } }} style={{ background: 'linear-gradient(135deg,#3b82f6,#60a5fa)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>📤 Submit to Team Leader</button>
+                            <button onClick={async function() { try { await api.post('/objectives/submit/' + goal._id); toast.success('Objective submitted to Team Leader!'); fetchDetail(); if (onRefresh) onRefresh(); } catch (err) { toast.error(err.response?.data?.message || 'Failed to submit'); } }} style={{ background: 'linear-gradient(135deg,#3b82f6,#60a5fa)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>📤 Submit to Team Leader</button>
                         )}
                         {/* Employee: Resubmit after revision/rejection */}
                         {isOwner && ['revision_requested', 'rejected'].includes(detail.status) && (

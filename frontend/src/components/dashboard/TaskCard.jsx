@@ -12,8 +12,8 @@ function TaskCard() {
         async function fetch() {
             try {
                 var [resTasks, resStats] = await Promise.all([
-                    api.get('/api/tasks/my', { params: { status: 'todo' } }),
-                    api.get('/api/tasks/stats')
+                    api.get('/tasks/my', { params: { status: 'todo' } }),
+                    api.get('/tasks/stats')
                 ]);
                 setTasks((resTasks.data.tasks || []).slice(0, 3));
                 if (resStats.data.stats) {
