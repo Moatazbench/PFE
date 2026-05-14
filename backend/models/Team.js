@@ -19,6 +19,11 @@ const TeamSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User' 
   }],
+  parentTeam: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    default: null
+  },
   createdBy: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User' 

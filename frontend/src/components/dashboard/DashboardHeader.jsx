@@ -8,7 +8,7 @@ function DashboardHeader({ activeTab, onTabChange }) {
     const tabs = [
         { key: 'me', label: 'Me' },
         { key: 'team', label: 'My Team' },
-        { key: 'org', label: 'My Organization' },
+        ...(user && (user.role === 'ADMIN' || user.role === 'HR') ? [{ key: 'org', label: 'My Organization' }] : []),
     ];
 
     return (

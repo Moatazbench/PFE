@@ -7,6 +7,8 @@ import MeetingCard from '../components/dashboard/MeetingCard';
 import TaskCard from '../components/dashboard/TaskCard';
 import FeedbackCard from '../components/dashboard/FeedbackCard';
 import ProgressDonut from '../components/dashboard/ProgressDonut';
+import DashboardAnalytics from '../components/dashboard/DashboardAnalytics';
+import LoadingSkeleton from '../components/common/LoadingSkeleton';
 
 function Dashboard() {
   const { user } = useAuth();
@@ -17,6 +19,7 @@ function Dashboard() {
   const [performance, setPerformance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userTeams, setUserTeams] = useState([]);
+  const [accessibleTeams, setAccessibleTeams] = useState([]);
   const [activeCycle, setActiveCycle] = useState(null);
   const [staleSummary, setStaleSummary] = useState({ critical: 0, warning: 0, total: 0 });
   const [staleObjectives, setStaleObjectives] = useState([]);
@@ -87,21 +90,28 @@ function Dashboard() {
         setStaleSummary({ critical: 0, warning: 0, total: 0 });
         setStaleObjectives([]);
       }
-      
-      hasFetchedRef.current = true;
-      
-      if (tab === 'team') {
-        try {
-          const teamsRes = await api.get('/teams');
-          const allTeams = Array.isArray(teamsRes.data) ? teamsRes.data : (teamsRes.data.teams || []);
-          const myTeams = allTeams.filter(t => {
-            const isLeader = t.leader && (t.leader._id === user.id || t.leader === user.id);
-            const isMember = (t.members || []).some(m => (m._id || m) === user.id);
+
+      try {
+        const teamsRes = await api.get('/teams');
+        const allTeams = Array.isArray(teamsRes.data) ? teamsRes.data : (teamsRes.data.teams || []);
+        setAccessibleTeams(allTeams);
+
+        if (tab === 'team') {
+          const myTeams = allTeams.filter(function (team) {
+            const isLeader = team.leader && (team.leader._id === user.id || team.leader === user.id);
+            const isMember = (team.members || []).some(function (member) { return (member._id || member) === user.id; });
             return isLeader || isMember;
           });
           setUserTeams(myTeams);
-        } catch (e) { setUserTeams([]); }
-      } else { setUserTeams([]); }
+        } else {
+          setUserTeams([]);
+        }
+      } catch (e) {
+        setAccessibleTeams([]);
+        setUserTeams([]);
+      }
+      
+      hasFetchedRef.current = true;
     } catch (err) {
       console.error('Fetch dashboard data error:', err);
     } finally {
@@ -155,13 +165,17 @@ function Dashboard() {
 
 
   var labels = getStatsLabels();
+  var analyticsTeams = activeTab === 'team' ? userTeams : accessibleTeams;
 
   var staleGoals = (user.role === 'TEAM_LEADER' || user.role === 'ADMIN') ? staleObjectives : getNeedsAttentionGoals();
 
   if (loading) {
-    return (
-      <div className="ds-main__inner">
-        <div className="page-loading"><div className="spinner"></div><p>Loading your dashboard...</p></div>
+      return (
+        <div className="ds-main__inner">
+        <div className="dash-loading-state">
+          <LoadingSkeleton rows={2} height={104} />
+          <LoadingSkeleton rows={3} height={120} />
+        </div>
       </div>
     );
   }
@@ -248,7 +262,7 @@ function Dashboard() {
               : 0;
             return (
               <>
-                <ProgressDonut percentage={liveAvg} size={150} strokeWidth={15} />
+                <ProgressDonut percent={liveAvg} size={150} strokeWidth={15} />
                 <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
                   <span style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>{liveAvg}%</span>
                   <p className="text-muted">Average goal progress {activeTab === 'me' ? '(personal)' : activeTab === 'team' ? '(team)' : '(organisation)'}</p>
@@ -301,6 +315,13 @@ function Dashboard() {
           })()}
         </div>
       </div>
+
+      <DashboardAnalytics
+        activeTab={activeTab}
+        objectives={objectives}
+        teams={analyticsTeams}
+        user={user}
+      />
 
       {/* AI Risk Alerts removed — AI feature removed */}
 

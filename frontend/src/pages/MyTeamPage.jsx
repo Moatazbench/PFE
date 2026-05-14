@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import './MyTeamPage.css'; 
+import './MyTeamPage.css';
 
 function MyTeamPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [teamMembers, setTeamMembers] = useState([]);
+    const [teamHierarchy, setTeamHierarchy] = useState({ team: null, subTeams: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -19,8 +20,11 @@ function MyTeamPage() {
         setLoading(true);
         setError('');
         try {
-            const res = await api.get('/api/team-members');
-            // Ensure we strictly set an array, even if API returned empty or weird object
+            const [res, hierarchyRes] = await Promise.all([
+                api.get('/team-members'),
+                api.get('/teams/my-team')
+            ]);
+
             if (Array.isArray(res.data)) {
                 setTeamMembers(res.data);
             } else if (res.data && res.data.members && Array.isArray(res.data.members)) {
@@ -28,6 +32,11 @@ function MyTeamPage() {
             } else {
                 setTeamMembers([]);
             }
+
+            setTeamHierarchy({
+                team: hierarchyRes.data?.team || null,
+                subTeams: Array.isArray(hierarchyRes.data?.subTeams) ? hierarchyRes.data.subTeams : []
+            });
         } catch (err) {
             console.error('Failed to load team dashboard:', err);
             setError('Failed to load team information.');
@@ -50,7 +59,7 @@ function MyTeamPage() {
     };
 
     const formatStatus = (status) => {
-        switch(status) {
+        switch (status) {
             case 'available': return 'Available';
             case 'busy': return 'Busy';
             case 'do_not_disturb': return 'Do Not Disturb';
@@ -72,7 +81,7 @@ function MyTeamPage() {
         return (
             <div className="team-dashboard">
                 <div className="team-dashboard__header">
-                    <h1 className="team-dashboard__title">👥 Team Dashboard</h1>
+                    <h1 className="team-dashboard__title">Team Dashboard</h1>
                 </div>
                 <div className="my-team-page__empty">
                     <h2 style={{ color: 'var(--apple-text-primary)' }}>Failed to Load</h2>
@@ -86,7 +95,7 @@ function MyTeamPage() {
         <div className="team-dashboard">
             <div className="team-dashboard__header">
                 <div>
-                    <h1 className="team-dashboard__title">👥 Team Dashboard</h1>
+                    <h1 className="team-dashboard__title">Team Dashboard</h1>
                     <p className="team-dashboard__subtitle">Overview of your team members, their ongoing tasks, and goals.</p>
                 </div>
                 <div className="team-dashboard__stats">
@@ -96,9 +105,42 @@ function MyTeamPage() {
                 </div>
             </div>
 
+            {teamHierarchy.team && (
+                <div className="my-team-page__section">
+                    <h2 className="my-team-page__section-title">Team Structure</h2>
+                    <div className="my-team-page__leader-card">
+                        <div className="my-team-page__person-info">
+                            <div className="my-team-page__person-name">{teamHierarchy.team.name}</div>
+                            <div className="my-team-page__person-email">
+                                {teamHierarchy.team.leader ? `Leader: ${teamHierarchy.team.leader.name}` : 'No leader assigned'}
+                            </div>
+                            <div className="my-team-page__person-role">
+                                {teamHierarchy.subTeams.length} sub-team{teamHierarchy.subTeams.length === 1 ? '' : 's'}
+                            </div>
+                        </div>
+                    </div>
+
+                    {teamHierarchy.subTeams.length > 0 && (
+                        <div className="my-team-page__members-grid">
+                            {teamHierarchy.subTeams.map((subTeam) => (
+                                <div key={subTeam._id} className="my-team-page__member-card">
+                                    <div className="my-team-page__person-name">{subTeam.name}</div>
+                                    <div className="my-team-page__person-email">
+                                        {subTeam.leader ? `Leader: ${subTeam.leader.name}` : 'No leader assigned'}
+                                    </div>
+                                    <div className="my-team-page__person-role">
+                                        {subTeam.members?.length || 0} member{subTeam.members?.length === 1 ? '' : 's'}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
             {teamMembers.length === 0 ? (
                 <div className="my-team-page__empty" style={{ textAlign: 'center', padding: '60px 20px' }}>
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>👥</div>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>Team</div>
                     <h2 style={{ color: 'var(--apple-text-primary)' }}>No Team Members Found</h2>
                     <p style={{ color: 'var(--apple-text-secondary)' }}>You aren't assigned to any team or no members were found.</p>
                 </div>
@@ -111,19 +153,16 @@ function MyTeamPage() {
                         const dept = member.department || 'General';
                         return (
                             <div key={memberId || Math.random()} className="user-card">
-                                
-                                {/* Status Indicator */}
                                 <div className={`status-indicator status--${member.status || 'available'}`}>
                                     <div className="status-dot"></div>
                                     <span>{formatStatus(member.status || 'available')}</span>
                                 </div>
 
-                                {/* Profile Info */}
                                 <div className="user-card__profile">
                                     {member.avatar && !member.avatar.includes('default') ? (
-                                        <img 
-                                            src={member.avatar.startsWith('http') ? member.avatar : member.avatar} 
-                                            alt={member.name || 'Member'} 
+                                        <img
+                                            src={member.avatar.startsWith('http') ? member.avatar : member.avatar}
+                                            alt={member.name || 'Member'}
                                             className="user-card__avatar"
                                             onError={(e) => {
                                                 e.target.style.display = 'none';
@@ -131,9 +170,9 @@ function MyTeamPage() {
                                             }}
                                         />
                                     ) : null}
-                                    <div 
-                                        className="user-card__avatar fallback-avatar" 
-                                        style={{ 
+                                    <div
+                                        className="user-card__avatar fallback-avatar"
+                                        style={{
                                             backgroundColor: getAvatarColor(member.name || '?'),
                                             display: (member.avatar && !member.avatar.includes('default')) ? 'none' : 'flex'
                                         }}
@@ -148,21 +187,19 @@ function MyTeamPage() {
                                     <span className="user-card__department">{dept}</span>
                                 </div>
 
-                                {/* Progress Bar */}
                                 <div className="user-card__progress-container">
                                     <div className="user-card__progress-header">
                                         <span>Sprint Progress</span>
                                         <span className="user-card__progress-val">{member.progress || 0}% Complete</span>
                                     </div>
                                     <div className="user-card__progress-bar">
-                                        <div 
-                                            className="user-card__progress-fill" 
+                                        <div
+                                            className="user-card__progress-fill"
                                             style={{ width: `${member.progress || 0}%` }}
                                         ></div>
                                     </div>
                                 </div>
 
-                                {/* Quick Stats */}
                                 <div className="user-card__stats">
                                     <div className="stat-item">
                                         <span className="stat-value">{member.tasksCompleted || 0}</span>
@@ -178,15 +215,14 @@ function MyTeamPage() {
                                     </div>
                                 </div>
 
-                                {/* Actions */}
                                 <div className="user-card__actions">
-                                    <button 
+                                    <button
                                         className="user-card__btn user-card__btn--primary"
                                         onClick={() => navigate(`/users/${memberId}`)}
                                     >
                                         View Profile
                                     </button>
-                                    <button 
+                                    <button
                                         className="user-card__btn user-card__btn--secondary"
                                         onClick={() => navigate('/meetings')}
                                     >

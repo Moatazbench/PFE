@@ -7,7 +7,7 @@ const connectDB = async () => {
   await mongoose.connect(MONGO_URI, {
     dbName: process.env.MONGO_DB_NAME || 'hr_evaluation',
   });
-  console.log('✅ MongoDB connected');
+  console.log('✅ MongoDB connected yes ');
 };
 
 module.exports = connectDB;

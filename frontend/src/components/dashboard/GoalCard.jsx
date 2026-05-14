@@ -1,6 +1,7 @@
 import React from 'react';
 import ProgressDonut from './ProgressDonut';
 import UserAvatar from '../UserAvatar';
+import LoadingSkeleton from '../common/LoadingSkeleton';
 
 function GoalCard({ objectives, loading }) {
     if (loading) {
@@ -11,7 +12,7 @@ function GoalCard({ objectives, loading }) {
                     <h3>Objectives</h3>
                 </div>
                 <div className="dash-card__body">
-                    <p className="dash-card__loading">Loading objectives...</p>
+                    <LoadingSkeleton rows={3} height={72} />
                 </div>
             </div>
         );

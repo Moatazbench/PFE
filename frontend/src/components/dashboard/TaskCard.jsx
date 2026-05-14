@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import ProgressDonut from './ProgressDonut';
+import LoadingSkeleton from '../common/LoadingSkeleton';
 
 function TaskCard() {
     var [tasks, setTasks] = useState([]);
@@ -42,7 +43,7 @@ function TaskCard() {
             <div className="dash-card__body dash-card__body--split">
                 <div className="dash-card__list">
                     {loading ? (
-                        <p className="dash-card__loading">Loading...</p>
+                        <LoadingSkeleton rows={3} height={60} />
                     ) : tasks.length === 0 ? (
                         <div className="dash-card__empty-state">
                             <p>No pending tasks</p>

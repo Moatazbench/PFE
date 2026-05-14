@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import useActiveCycle from '../hooks/useActiveCycle';
+import UserAvatar from './UserAvatar';
 
 function EnterpriseSidebar({ collapsed, setCollapsed }) {
     var location = useLocation();
@@ -94,8 +95,6 @@ function EnterpriseSidebar({ collapsed, setCollapsed }) {
         return icons[name] || <span style={{width:18,height:18,display:'inline-block'}}></span>;
     }
 
-    var initials = user.name ? user.name.split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase() : '?';
-
     var phaseLabel = currentPhase === 'phase1' ? 'Phase 1' :
         currentPhase === 'phase2' ? 'Phase 2' :
         currentPhase === 'phase3' ? 'Phase 3' :
@@ -166,10 +165,10 @@ function EnterpriseSidebar({ collapsed, setCollapsed }) {
                 </button>
 
                 <div className="ent-sidebar__user-block">
-                    <div className="ent-sidebar__avatar">{initials}</div>
+                    <UserAvatar user={user} size={34} className="ent-sidebar__avatar-media" />
                     <div className="ent-sidebar__user-info">
                         <span className="ent-sidebar__user-name">{user.name}</span>
-                        <span className="ent-sidebar__user-role">{user.role}</span>
+                        <span className="ent-sidebar__user-role">{String(user.role || '').replace(/_/g, ' ')}</span>
                     </div>
                 </div>
             </div>

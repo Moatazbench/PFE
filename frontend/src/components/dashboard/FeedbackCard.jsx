@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import api from '../../services/api';
 import { useToast } from '../common/Toast';
+import LoadingSkeleton from '../common/LoadingSkeleton';
 
 function FeedbackCard() {
     var { user } = useAuth();
@@ -126,7 +127,7 @@ function FeedbackCard() {
                 )}
 
                 {loading ? (
-                    <p className="dash-card__loading">Loading...</p>
+                    <LoadingSkeleton rows={3} height={64} />
                 ) : feedbacks.length === 0 ? (
                     <div className="dash-card__empty-state">
                         <div className="dash-card__empty-icon">💬</div>

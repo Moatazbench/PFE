@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
+import LoadingSkeleton from '../common/LoadingSkeleton';
 
 function MeetingCard() {
     var [meetings, setMeetings] = useState([]);
@@ -33,7 +34,7 @@ function MeetingCard() {
             </div>
             <div className="dash-card__body">
                 {loading ? (
-                    <p className="dash-card__loading">Loading...</p>
+                    <LoadingSkeleton rows={3} height={60} />
                 ) : meetings.length === 0 ? (
                     <div className="dash-card__empty-state">
                         <div className="dash-card__empty-icon">📅</div>
