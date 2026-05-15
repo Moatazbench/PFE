@@ -6,11 +6,11 @@ export const fetchHRDecisions = (filters = {}) => {
   if (filters.user) params.append('user', filters.user);
   if (filters.action) params.append('action', filters.action);
 
-  return apiClient.get(`/api/hr-decisions?${params.toString()}`);
+  return apiClient.get(`/hr-decisions?${params.toString()}`);
 };
 
-export const fetchHRDecisionById = (id) => apiClient.get(`/api/hr-decisions/${id}`);
-export const createHRDecision = (decisionData) => apiClient.post('/api/hr-decisions', decisionData);
-export const updateHRDecision = (id, decisionData) => apiClient.put(`/api/hr-decisions/${id}`, decisionData);
-export const deleteHRDecision = (id) => apiClient.delete(`/api/hr-decisions/${id}`);
-export const fetchHRStats = (cycleId) => apiClient.get(`/api/hr-decisions/stats${cycleId ? `?cycle=${cycleId}` : ''}`);
+export const fetchHRDecisionById = (id) => apiClient.get(`/hr-decisions/${id}`);
+export const createHRDecision = (decisionData) => apiClient.post('/hr-decisions', decisionData);
+export const updateHRDecision = (id, decisionData) => apiClient.put(`/hr-decisions/${id}`, decisionData);
+export const deleteHRDecision = (id) => apiClient.delete(`/hr-decisions/${id}`);
+export const fetchHRStats = (cycleId) => apiClient.get(`/hr-decisions/stats${cycleId ? `?cycle=${cycleId}` : ''}`);

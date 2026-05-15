@@ -14,7 +14,7 @@ function DashboardHeader({ activeTab, onTabChange }) {
     return (
         <div className="ds-page-header" style={{ marginBottom: '32px' }}>
             <div className="ds-page-header__left" style={{ flexDirection: 'row', alignItems: 'center', gap: '16px' }}>
-                <UserAvatar user={user} size={48} />
+                <UserAvatar user={user} size={56} />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <h1 className="ds-page-header__title">Hello, {user?.name || 'User'}</h1>
                     <p className="ds-page-header__subtitle">Welcome back! Here's your performance overview.</p>

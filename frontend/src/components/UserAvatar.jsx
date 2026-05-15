@@ -2,7 +2,7 @@ import React from 'react';
 
 const API = '/api';
 
-function UserAvatar({ user, size = 32, style = {}, className = '' }) {
+function UserAvatar({ user, size = 40, style = {}, className = '' }) {
     if (!user) {
         return (
             <div 
@@ -28,10 +28,11 @@ function UserAvatar({ user, size = 32, style = {}, className = '' }) {
     }
 
     if (user.profileImage) {
+        const imgSrc = user.profileImage.startsWith('http') ? user.profileImage : user.profileImage;
         return (
             <img 
                 className={`user-avatar ${className}`}
-                src={`${API}${user.profileImage}`} 
+                src={imgSrc} 
                 alt={user.name || 'User'} 
                 style={{ 
                     ...style,

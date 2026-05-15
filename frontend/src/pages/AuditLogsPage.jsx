@@ -19,7 +19,7 @@ function AuditLogsPage() {
   async function fetchLogs() {
     setLoading(true);
     try {
-      let url = '/api/audit-logs?limit=100';
+      let url = '/audit-logs?limit=100';
       if (filterEntity !== 'all') url += `&entityType=${filterEntity}`;
       if (dateRange.start) url += `&startDate=${dateRange.start}`;
       if (dateRange.end) url += `&endDate=${dateRange.end}`;

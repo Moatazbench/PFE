@@ -1043,6 +1043,9 @@ exports.finalSelfAssessmentObjective = async (req, res) => {
     objective.finalSelfRating = rating !== undefined && rating !== null ? Number(rating) : null;
     objective.finalSelfAssessment = String(comment).trim();
     objective.finalSelfSubmittedAt = new Date();
+    if (req.body.attachment) {
+      objective.finalSelfAttachment = req.body.attachment;
+    }
     objective.achievementPercent = normalizedProgress;
     objective.weightedScore = (objective.weight * normalizedProgress) / 100;
     addActivity(objective, req.user.id, 'final_self_assessment_submitted', 'Final self-assessment submitted.');

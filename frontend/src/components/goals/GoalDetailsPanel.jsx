@@ -120,14 +120,14 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
     async function handleCreateSubGoal(e) {
         e.preventDefault();
         try {
-            await api.post('/api/objectives', { title: subGoalForm.title, weight: parseInt(subGoalForm.weight) || 10, cycle: detail.cycle?._id || detail.cycle, category: detail.category || 'individual', successIndicator: subGoalForm.title, parentObjective: goal._id });
+            await api.post('/objectives', { title: subGoalForm.title, weight: parseInt(subGoalForm.weight) || 10, cycle: detail.cycle?._id || detail.cycle, category: detail.category || 'individual', successIndicator: subGoalForm.title, parentObjective: goal._id });
             setSubGoalForm({ title: '', weight: 10 }); setShowSubGoalForm(false); toast.success('Sub-objective created!'); fetchChildren(); if (onRefresh) onRefresh();
         } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
     }
 
     async function handleResolveChangeRequest(crId, status, note) {
         try {
-            await api.put('/api/objectives/' + goal._id + '/change-requests/' + crId, { status, resolutionNote: note || '' });
+            await api.put('/objectives/' + goal._id + '/change-requests/' + crId, { status, resolutionNote: note || '' });
             toast.success('Change request ' + status + '!'); fetchDetail(); if (onRefresh) onRefresh();
         } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
     }

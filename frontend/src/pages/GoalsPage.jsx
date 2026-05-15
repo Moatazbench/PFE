@@ -35,6 +35,8 @@ function GoalsPage() {
     var [evaluateGoal, setEvaluateGoal] = useState(null);
     var [showSubmitDialog, setShowSubmitDialog] = useState(false);
     var [submittingAll, setSubmittingAll] = useState(false);
+    var [bulkComment, setBulkComment] = useState('');
+    var [bulkProcessing, setBulkProcessing] = useState(false);
 
     var toast = useToast();
 
@@ -51,9 +53,9 @@ function GoalsPage() {
 
     async function fetchCycles() {
         try {
-            var res = await api.get('/api/cycles');
+            var res = await api.get('/cycles');
             setCycles(res.data);
-            var active = res.data.filter(function (c) { return c.status === 'active' || c.status === 'in_progress'; });
+            var active = res.data.filter(function (c) { return c.status === 'open' || c.status === 'active' || c.status === 'in_progress'; });
             if (active.length > 0) {
                 setSelectedCycle(active[0]._id);
                 setActiveCycleData(active[0]);
@@ -71,20 +73,20 @@ function GoalsPage() {
             var indArr = [];
             var tmArr = [];
             if (activeTab === 'pending') {
-                var pendingRes = await api.get('/api/objectives/pending-validation');
+                var pendingRes = await api.get('/objectives/pending-validation');
                 var pendingData = Array.isArray(pendingRes.data) ? pendingRes.data : (pendingRes.data.objectives || []);
                 indArr = pendingData; tmArr = [];
                 setIndividualObjectives(indArr); setTeamObjectives(tmArr); setValidation(null);
                 result = indArr;
             } else if (activeTab === 'awaiting_eval') {
-                var evalRes = await api.get('/api/objectives/completed-awaiting-evaluation');
+                var evalRes = await api.get('/objectives/completed-awaiting-evaluation');
                 var evalData = evalRes.data.objectives || [];
                 indArr = evalData; tmArr = [];
                 setIndividualObjectives(indArr); setTeamObjectives(tmArr); setValidation(null);
                 result = indArr;
             } else if (activeTab === 'my') {
                 if (selectedCycle) {
-                    var structRes = await api.get('/api/objectives/user/' + user._id + '/cycle/' + selectedCycle);
+                    var structRes = await api.get('/objectives/user/' + user._id + '/cycle/' + selectedCycle);
                     indArr = structRes.data.individualObjectives || [];
                     tmArr = structRes.data.teamObjectives || [];
                     setIndividualObjectives(indArr); setTeamObjectives(tmArr);
@@ -94,7 +96,7 @@ function GoalsPage() {
                     var cycleObj = cycles.find(function(c) { return c._id === selectedCycle; });
                     if (cycleObj) setActiveCycleData(cycleObj);
                 } else {
-                    var res = await api.get('/api/objectives/my');
+                    var res = await api.get('/objectives/my');
                     var data = res.data;
                     var allData = Array.isArray(data) ? data : (data.objectives || []);
                     indArr = allData.filter(function (o) { return o.category !== 'team'; });
@@ -106,7 +108,7 @@ function GoalsPage() {
                 var params = {};
                 if (selectedCycle) params.cycle = selectedCycle;
                 if (activeTab === 'team') params.scope = 'team';
-                var res2 = await api.get('/api/objectives', { params: params });
+                var res2 = await api.get('/objectives', { params: params });
                 var data2 = res2.data;
                 var allData2 = [];
                 if (data2.objectives) { allData2 = data2.objectives; }
@@ -129,7 +131,7 @@ function GoalsPage() {
     async function handleDeleteConfirm() {
         if (!deletingObjective) return;
         try {
-            await api.delete('/api/objectives/' + deletingObjective);
+            await api.delete('/objectives/' + deletingObjective);
             toast.success('Objective deleted successfully!');
             if (selectedGoal && selectedGoal._id === deletingObjective) setSelectedGoal(null);
             setDeletingObjective(null); setShowDeleteDialog(false);
@@ -138,7 +140,7 @@ function GoalsPage() {
     }
     async function handleDuplicate(id) {
         try { 
-            await api.post('/api/objectives/' + id + '/duplicate'); 
+            await api.post('/objectives/' + id + '/duplicate'); 
             toast.success('Objective duplicated!'); 
             setTimeout(fetchObjectives, 500);
         }
@@ -149,7 +151,7 @@ function GoalsPage() {
 
     async function handleSubmitSingle(objId) {
         try {
-            await api.post('/api/objectives/submit/' + objId);
+            await api.post('/objectives/submit/' + objId);
             toast.success('Objective submitted for approval!');
             setTimeout(fetchObjectives, 500);
         } catch (err) {
@@ -213,7 +215,7 @@ function GoalsPage() {
     async function handleSubmitCycle() {
         setSubmittingAll(true);
         try {
-            await api.post('/api/objectives/submit', { cycle: selectedCycle });
+            await api.post('/objectives/submit', { cycle: selectedCycle });
             toast.success('All objectives submitted for approval!');
             setShowSubmitDialog(false);
             fetchObjectives();
@@ -223,6 +225,19 @@ function GoalsPage() {
         } finally {
             setSubmittingAll(false);
         }
+    }
+
+    async function handleBulkValidate(action) {
+        if (!bulkComment.trim()) { toast.error('Please provide a comment for all objectives.'); return; }
+        setBulkProcessing(true);
+        try {
+            var res = await api.post('/objectives/validate-all', { status: action, managerComments: bulkComment.trim() });
+            toast.success((res.data.count || 0) + ' objectives ' + action + ' successfully!');
+            setBulkComment('');
+            fetchObjectives();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Bulk action failed.');
+        } finally { setBulkProcessing(false); }
     }
 
     var groupedByUser = useMemo(function () {
@@ -473,6 +488,63 @@ function GoalsPage() {
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#059669', display: 'inline-block' }}></span> Approved</span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#dc2626', display: 'inline-block' }}></span> Rejected</span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ea580c', display: 'inline-block' }}></span> Revision Requested</span>
+                </div>
+            )}
+
+            {/* Bulk Approve / Reject Panel */}
+            {activeTab === 'pending' && filteredObjectives.length > 0 && (
+                <div style={{
+                    background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+                    border: '1.5px solid #7dd3fc', borderRadius: '12px',
+                    padding: '1.25rem 1.5rem', marginBottom: '1.25rem',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+                }}>
+                    <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem', color: '#0c4a6e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        ⚡ Bulk Review — {filteredObjectives.length} objective{filteredObjectives.length !== 1 ? 's' : ''}
+                    </h3>
+                    <div style={{ marginBottom: '0.75rem' }}>
+                        <textarea
+                            value={bulkComment}
+                            onChange={function (e) { setBulkComment(e.target.value); }}
+                            placeholder="Comment for all objectives (required)..."
+                            rows={2}
+                            style={{
+                                width: '100%', padding: '10px 12px', borderRadius: '8px',
+                                border: '1.5px solid #bae6fd', fontSize: '0.9rem',
+                                fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box'
+                            }}
+                        ></textarea>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <button
+                            onClick={function () { handleBulkValidate('approved'); }}
+                            disabled={bulkProcessing || !bulkComment.trim()}
+                            style={{
+                                background: bulkComment.trim() ? 'linear-gradient(135deg, #059669, #10b981)' : '#94a3b8',
+                                color: '#fff', border: 'none', padding: '10px 24px',
+                                borderRadius: '8px', cursor: bulkComment.trim() && !bulkProcessing ? 'pointer' : 'not-allowed',
+                                fontWeight: 700, fontSize: '0.9rem',
+                                boxShadow: bulkComment.trim() ? '0 3px 10px rgba(5,150,105,0.3)' : 'none',
+                                transition: 'all 0.15s ease', opacity: bulkProcessing ? 0.7 : 1
+                            }}
+                        >
+                            {bulkProcessing ? '⏳ Processing...' : '✅ Approve All'}
+                        </button>
+                        <button
+                            onClick={function () { handleBulkValidate('rejected'); }}
+                            disabled={bulkProcessing || !bulkComment.trim()}
+                            style={{
+                                background: bulkComment.trim() ? 'linear-gradient(135deg, #dc2626, #ef4444)' : '#94a3b8',
+                                color: '#fff', border: 'none', padding: '10px 24px',
+                                borderRadius: '8px', cursor: bulkComment.trim() && !bulkProcessing ? 'pointer' : 'not-allowed',
+                                fontWeight: 700, fontSize: '0.9rem',
+                                boxShadow: bulkComment.trim() ? '0 3px 10px rgba(220,38,38,0.3)' : 'none',
+                                transition: 'all 0.15s ease', opacity: bulkProcessing ? 0.7 : 1
+                            }}
+                        >
+                            {bulkProcessing ? '⏳ Processing...' : '❌ Reject All'}
+                        </button>
+                    </div>
                 </div>
             )}
 

@@ -39,7 +39,7 @@ function EvaluationScoringPage() {
 
     setLoading(true);
     try {
-      const res = await api.get(`/api/evaluations/${evaluationId}`);
+      const res = await api.get(`/evaluations/${evaluationId}`);
       const record = res.data.evaluation;
       setEvaluation(record);
       setRubric(res.data.rubric || []);
@@ -67,7 +67,7 @@ function EvaluationScoringPage() {
       if (finalScoreInput !== '') {
         payload.finalScore = Number(finalScoreInput);
       }
-      const res = await api.put(`/api/evaluations/${evaluation._id}`, payload);
+      const res = await api.put(`/evaluations/${evaluation._id}`, payload);
       setEvaluation(res.data.evaluation);
       setRubricBand(res.data.rubricBand || null);
       toast.success('Evaluation saved.');
@@ -86,8 +86,8 @@ function EvaluationScoringPage() {
       if (finalScoreInput !== '') {
         payload.finalScore = Number(finalScoreInput);
       }
-      await api.put(`/api/evaluations/${evaluation._id}`, payload);
-      await api.post(`/api/evaluations/${evaluation._id}/submit`);
+      await api.put(`/evaluations/${evaluation._id}`, payload);
+      await api.post(`/evaluations/${evaluation._id}/submit`);
       setConfirmSubmit(false);
       toast.success('Evaluation submitted.');
       fetchEvaluation();
@@ -100,7 +100,7 @@ function EvaluationScoringPage() {
 
   async function handleApprove() {
     try {
-      await api.post(`/api/evaluations/${evaluation._id}/approve`, { comments: '' });
+      await api.post(`/evaluations/${evaluation._id}/approve`, { comments: '' });
       toast.success('Evaluation approved.');
       fetchEvaluation();
     } catch (err) {
@@ -113,7 +113,7 @@ function EvaluationScoringPage() {
     if (!comments) return;
 
     try {
-      await api.post(`/api/evaluations/${evaluation._id}/reject`, { comments });
+      await api.post(`/evaluations/${evaluation._id}/reject`, { comments });
       toast.success('Evaluation rejected.');
       fetchEvaluation();
     } catch (err) {
@@ -123,7 +123,7 @@ function EvaluationScoringPage() {
 
   async function handleAcknowledge() {
     try {
-      await api.post(`/api/evaluations/${evaluation._id}/acknowledge`);
+      await api.post(`/evaluations/${evaluation._id}/acknowledge`);
       toast.success('Evaluation acknowledged.');
       fetchEvaluation();
     } catch (err) {

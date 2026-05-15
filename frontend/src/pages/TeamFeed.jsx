@@ -15,7 +15,7 @@ function TeamFeed() {
     const fetchFeed = async () => {
         try {
             setLoading(true);
-            const res = await axios.get('/api/feed');
+            const res = await axios.get('/feed');
             setActivities(res.data);
         } catch (err) {
             console.error('Error fetching feed:', err);

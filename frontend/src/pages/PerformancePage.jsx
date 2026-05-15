@@ -27,7 +27,7 @@ function PerformancePage() {
   async function fetchCycles() {
     setLoading(true);
     try {
-      const res = await api.get('/api/cycles');
+      const res = await api.get('/cycles');
       const availableCycles = (res.data || []).filter((cycle) => cycle.status !== 'draft');
       setCycles(availableCycles);
       if (availableCycles.length > 0) {
@@ -42,11 +42,11 @@ function PerformancePage() {
   async function fetchPerformanceData() {
     setLoading(true);
     try {
-      const myRes = await api.get(`/api/performance/summary/${user.id}/${selectedCycleId}`);
+      const myRes = await api.get(`/performance/summary/${user.id}/${selectedCycleId}`);
       setMyStats(myRes.data);
 
       if (['TEAM_LEADER', 'ADMIN', 'HR'].includes(user.role)) {
-        const teamRes = await api.get(`/api/performance/team-summary/${user.id}/${selectedCycleId}`);
+        const teamRes = await api.get(`/performance/team-summary/${user.id}/${selectedCycleId}`);
         setTeamStats(teamRes.data.employees || []);
       }
     } catch (err) {

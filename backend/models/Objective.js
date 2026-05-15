@@ -84,6 +84,7 @@ const ObjectiveSchema = new mongoose.Schema({
   finalSelfRating: { type: Number, min: 1, max: 5, default: null },
   finalSelfPercent: { type: Number, min: 0, max: 100, default: null },
   finalSelfSubmittedAt: { type: Date, default: null },
+  finalSelfAttachment: { type: mongoose.Schema.Types.Mixed, default: null },
   managerAdjustedPercent: { type: Number, min: 0, max: 100, default: null },
   managerComments: { type: String, default: '' },
   weightedScore: { type: Number, default: null },

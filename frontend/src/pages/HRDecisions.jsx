@@ -29,7 +29,7 @@ function HRDecisions() {
     setLoading(true);
     setError('');
     try {
-      const res = await api.get('/api/hr-decisions');
+      const res = await api.get('/hr-decisions');
       setDecisions(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       setError('Failed to load HR decisions.');
@@ -40,7 +40,7 @@ function HRDecisions() {
 
   async function handleActionChange(id, action) {
     try {
-      await api.put(`/api/hr-decisions/${id}`, {
+      await api.put(`/hr-decisions/${id}`, {
         action,
         actionLabel: action.replace(/_/g, ' '),
       });
@@ -53,7 +53,7 @@ function HRDecisions() {
   async function handleDelete(id) {
     if (!window.confirm('Delete this HR decision?')) return;
     try {
-      await api.delete(`/api/hr-decisions/${id}`);
+      await api.delete(`/hr-decisions/${id}`);
       fetchDecisions();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to delete HR decision.');

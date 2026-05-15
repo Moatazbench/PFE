@@ -44,7 +44,7 @@ function MeetingsPage() {
             if (filter === 'upcoming') { params.upcoming = 'true'; params.status = 'scheduled,in_progress'; }
             if (filter === 'completed') params.status = 'completed';
             if (filter === 'cancelled') params.status = 'cancelled';
-            var res = await api.get('/api/meetings', { params: params });
+            var res = await api.get('/meetings', { params: params });
             if (currentFetchId === fetchIdRef.current) {
                 setMeetings(res.data.meetings || []);
             }
@@ -59,21 +59,21 @@ function MeetingsPage() {
 
     async function fetchUsers() {
         try {
-            var res = await api.get('/api/users/filter/list');
+            var res = await api.get('/users/filter/list');
             setUsers(res.data.users || res.data || []);
         } catch (err) { console.error(err); }
     }
 
     async function fetchTeams() {
         try {
-            var res = await api.get('/api/teams');
+            var res = await api.get('/teams');
             setTeams(Array.isArray(res.data) ? res.data : (res.data.teams || []));
         } catch (err) { /* Collaborators may not have access */ }
     }
 
     async function fetchCycles() {
         try {
-            var res = await api.get('/api/cycles');
+            var res = await api.get('/cycles');
             setCycles(res.data || []);
         } catch (err) { }
     }
@@ -171,10 +171,10 @@ function MeetingsPage() {
                 meeting_type: normalizeMeetingType(form.meeting_type)
             });
             if (isEditing) {
-                res = await api.put('/api/meetings/' + editingId, payload);
+                res = await api.put('/meetings/' + editingId, payload);
                 toast.success('Meeting updated!');
             } else {
-                res = await api.post('/api/meetings', payload);
+                res = await api.post('/meetings', payload);
                 toast.success('Meeting created!');
             }
             setShowModal(false);
@@ -205,7 +205,7 @@ function MeetingsPage() {
                 if (res && res.data && res.data.meeting) {
                     setShowDetail(res.data.meeting);
                 } else {
-                    res = await api.get('/api/meetings/' + editingId);
+                    res = await api.get('/meetings/' + editingId);
                     setShowDetail(res.data.meeting);
                 }
             }
@@ -216,7 +216,7 @@ function MeetingsPage() {
 
     async function handleDelete(id) {
         try {
-            await api.delete('/api/meetings/' + id);
+            await api.delete('/meetings/' + id);
             toast.success('Meeting deleted');
             fetchMeetings();
             if (showDetail && showDetail._id === id) setShowDetail(null);
@@ -227,7 +227,7 @@ function MeetingsPage() {
 
     async function handleDuplicate(id) {
         try {
-            await api.post('/api/meetings/' + id + '/duplicate');
+            await api.post('/meetings/' + id + '/duplicate');
             toast.success('Meeting duplicated!');
             fetchMeetings();
         } catch (err) {
@@ -237,11 +237,11 @@ function MeetingsPage() {
 
     async function handleStatusChange(id, status) {
         try {
-            await api.put('/api/meetings/' + id, { status });
+            await api.put('/meetings/' + id, { status });
             toast.success('Status updated');
             fetchMeetings();
             if (showDetail && showDetail._id === id) {
-                var res = await api.get('/api/meetings/' + id);
+                var res = await api.get('/meetings/' + id);
                 setShowDetail(res.data.meeting);
             }
         } catch (err) {
@@ -251,9 +251,9 @@ function MeetingsPage() {
 
     async function handleSaveNotes(id, notes) {
         try {
-            await api.put('/api/meetings/' + id, { notes });
+            await api.put('/meetings/' + id, { notes });
             toast.success('Notes saved');
-            var res = await api.get('/api/meetings/' + id);
+            var res = await api.get('/meetings/' + id);
             setShowDetail(res.data.meeting);
         } catch (err) {
             toast.error('Failed to save notes');
@@ -502,7 +502,7 @@ function MeetingDetailPanel({ meeting, onClose, onRefresh, onSaveNotes, onStatus
 
     async function fetchDetail() {
         try {
-            var res = await api.get('/api/meetings/' + meeting._id);
+            var res = await api.get('/meetings/' + meeting._id);
             setDetail(res.data.meeting || meeting);
             setNotes(res.data.meeting?.notes || meeting.notes || '');
         } catch (err) { console.error(err); }
@@ -518,7 +518,7 @@ function MeetingDetailPanel({ meeting, onClose, onRefresh, onSaveNotes, onStatus
         if (!newAgendaItem.trim()) return;
         try {
             var updatedAgenda = [...(detail.agenda || []), { title: newAgendaItem, duration: 5, completed: false }];
-            await api.put('/api/meetings/' + detail._id, { agenda: updatedAgenda });
+            await api.put('/meetings/' + detail._id, { agenda: updatedAgenda });
             toast.success('Agenda item added');
             setNewAgendaItem('');
             fetchDetail();
@@ -530,7 +530,7 @@ function MeetingDetailPanel({ meeting, onClose, onRefresh, onSaveNotes, onStatus
             var updatedAgenda = (detail.agenda || []).map(function (item, i) {
                 return i === index ? Object.assign({}, item, { completed: !item.completed }) : item;
             });
-            await api.put('/api/meetings/' + detail._id, { agenda: updatedAgenda });
+            await api.put('/meetings/' + detail._id, { agenda: updatedAgenda });
             fetchDetail();
         } catch (err) { toast.error('Failed to update agenda item'); }
     }
@@ -539,7 +539,7 @@ function MeetingDetailPanel({ meeting, onClose, onRefresh, onSaveNotes, onStatus
         if (!newActionItem.trim()) return;
         try {
             var updatedActions = [...(detail.actionItems || []), { title: newActionItem, completed: false }];
-            await api.put('/api/meetings/' + detail._id, { actionItems: updatedActions });
+            await api.put('/meetings/' + detail._id, { actionItems: updatedActions });
             toast.success('Action item added');
             setNewActionItem('');
             fetchDetail();
@@ -551,7 +551,7 @@ function MeetingDetailPanel({ meeting, onClose, onRefresh, onSaveNotes, onStatus
             var updatedActions = (detail.actionItems || []).map(function (item, i) {
                 return i === index ? Object.assign({}, item, { completed: !item.completed }) : item;
             });
-            await api.put('/api/meetings/' + detail._id, { actionItems: updatedActions });
+            await api.put('/meetings/' + detail._id, { actionItems: updatedActions });
             fetchDetail();
         } catch (err) { toast.error('Failed to update action item'); }
     }

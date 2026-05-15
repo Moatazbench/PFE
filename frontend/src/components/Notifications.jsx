@@ -27,7 +27,7 @@ function Notifications() {
 
     const fetchNotifications = async () => {
         try {
-            const res = await axios.get('/api/notifications', { params: { t: Date.now() } });
+            const res = await axios.get('/notifications', { params: { t: Date.now() } });
             setNotifications(res.data);
             setUnreadCount(res.data.filter(n => !n.isRead).length);
         } catch (err) {
@@ -37,7 +37,7 @@ function Notifications() {
 
     const markAsRead = async (id) => {
         try {
-            await axios.post(`/api/notifications/${id}/read`);
+            await axios.post(`/notifications/${id}/read`);
             setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
             setUnreadCount(prev => Math.max(0, prev - 1));
         } catch (err) {
@@ -47,7 +47,7 @@ function Notifications() {
 
     const markAllRead = async () => {
         try {
-            await axios.post('/api/notifications/read-all');
+            await axios.post('/notifications/read-all');
             setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
             setUnreadCount(0);
         } catch (err) {

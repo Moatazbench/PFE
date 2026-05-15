@@ -41,7 +41,7 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
   async function fetchTeamData() {
     setLoading(true);
     try {
-      const res = await api.get(`/api/final-evaluations/team/${cycleId}`);
+      const res = await api.get(`/final-evaluations/team/${cycleId}`);
       setEvaluations(res.data.evaluations || []);
       setTeamMembers(res.data.teamMembers || []);
     } catch (err) {
@@ -53,7 +53,7 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
 
   async function handleGenerateEvaluation(employee) {
     try {
-      await api.post(`/api/final-evaluations/generate/${cycleId}/${employee._id}`);
+      await api.post(`/final-evaluations/generate/${cycleId}/${employee._id}`);
       toast.success('Evaluation drafted and auto-scored successfully.');
       fetchTeamData();
     } catch (err) {
@@ -75,7 +75,7 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
     });
 
     try {
-      const objRes = await api.get(`/api/objectives/user/${employee._id}/cycle/${cycleId}`);
+      const objRes = await api.get(`/objectives/user/${employee._id}/cycle/${cycleId}`);
       const list = [...(objRes.data.individualObjectives || []), ...(objRes.data.teamObjectives || [])]
         .filter((objective) => isEvaluationObjectiveStatus(objective.status));
       setEmployeeObjectives(list);
@@ -88,7 +88,7 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
 
   async function handleGenerateCareerRec() {
     try {
-      const res = await api.post('/api/career/recommendations/generate', {
+      const res = await api.post('/career/recommendations/generate', {
         employee_id: selectedEmployee._id,
         cycle_id: cycleId
       });
@@ -118,10 +118,10 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
         status: submitToHR ? 'pending_hr' : 'draft'
       };
 
-      await api.put(`/api/final-evaluations/${selectedEvaluation._id}`, payload);
+      await api.put(`/final-evaluations/${selectedEvaluation._id}`, payload);
 
       if (careerRec.suggested_path) {
-        await api.post('/api/career/recommendations', {
+        await api.post('/career/recommendations', {
           employee_id: selectedEmployee._id,
           cycle_id: cycleId,
           suggested_path: careerRec.suggested_path,
@@ -141,7 +141,7 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
   async function handleExportPDF() {
     if (!selectedEvaluation) return;
     try {
-      const res = await api.get(`/api/final-evaluations/export/${selectedEvaluation._id}`, {
+      const res = await api.get(`/final-evaluations/export/${selectedEvaluation._id}`, {
         responseType: 'blob'
       });
       const url = window.URL.createObjectURL(new Blob([res.data]));
@@ -413,6 +413,58 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
             <div style={{ fontSize: '1.05rem', fontWeight: 800 }}>{activeCycle?.currentPhase || 'phase3'}</div>
           </div>
         </div>
+
+        {employeeObjectives.length > 0 && (
+          <div className="card shadow-sm" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
+            <h4 style={{ margin: '0 0 1rem 0' }}>Employee Self-Assessment Details</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {employeeObjectives.map((obj) => (
+                <div key={obj._id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <span style={{ fontWeight: 700 }}>{obj.title}</span>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                      Weight: {obj.weight}% | Progress: {obj.finalSelfPercent ?? obj.achievementPercent ?? 0}%
+                      {obj.finalSelfRating ? ` | Self-Rating: ${obj.finalSelfRating}/5` : ''}
+                    </span>
+                  </div>
+                  {obj.finalSelfAssessment && (
+                    <p style={{ margin: '0.25rem 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--text-dark)', lineHeight: '1.5', fontStyle: 'italic' }}>
+                      "{obj.finalSelfAssessment}"
+                    </p>
+                  )}
+                  {obj.finalSelfAttachment && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                      <span>📎</span>
+                      <a href={obj.finalSelfAttachment.url} target="_blank" rel="noreferrer" style={{ color: '#1d4ed8', fontWeight: 600, textDecoration: 'underline', fontSize: '0.88rem' }}>
+                        {obj.finalSelfAttachment.name || 'View Attachment'}
+                      </a>
+                      <button type="button" onClick={async () => {
+                        try {
+                          const response = await fetch(obj.finalSelfAttachment.url);
+                          if (!response.ok) throw new Error('Download failed');
+                          const blob = await response.blob();
+                          const blobUrl = window.URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = blobUrl;
+                          link.download = obj.finalSelfAttachment.name || 'attachment';
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          window.URL.revokeObjectURL(blobUrl);
+                        } catch { toast.error('Failed to download attachment'); }
+                      }} style={{ background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+                        Download
+                      </button>
+                    </div>
+                  )}
+                  {!obj.finalSelfSubmittedAt && (
+                    <div className="text-muted" style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>Self-assessment not submitted yet.</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <form id="evalForm">
           <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>

@@ -224,7 +224,14 @@ function MyTeamPage() {
                                     </button>
                                     <button
                                         className="user-card__btn user-card__btn--secondary"
-                                        onClick={() => navigate('/meetings')}
+                                        onClick={() => navigate('/meetings', { state: {
+                                            createMeeting: true,
+                                            title: 'Meeting with ' + (member.name || 'Team Member'),
+                                            type: 'one_on_one',
+                                            meeting_type: 'general',
+                                            employee_id: String(memberId),
+                                            participants: [String(memberId)]
+                                        }})}
                                     >
                                         Meeting
                                     </button>

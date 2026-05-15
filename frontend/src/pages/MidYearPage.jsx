@@ -60,7 +60,7 @@ function MidYearPage() {
       const fd = new FormData();
       fd.append('file', file);
       // Let axios handle Content-Type automatically for FormData
-      const res = await api.post('/api/checkins/upload', fd);
+      const res = await api.post('/checkins/upload', fd);
       setUploadedAttachment(res.data.attachment);
       toast.success('File uploaded: ' + file.name);
     } catch (err) {
@@ -119,7 +119,7 @@ function MidYearPage() {
 
   async function fetchCycles() {
     try {
-      const res = await api.get('/api/cycles');
+      const res = await api.get('/cycles');
       const data = res.data.filter(c => c.currentPhase === 'phase2' && c.status !== 'draft');
       setCycles(data);
       if (data.length > 0) {
@@ -137,13 +137,13 @@ function MidYearPage() {
   async function fetchObjectives() {
     setLoading(true);
     try {
-      const myRes = await api.get('/api/objectives/user/' + user._id + '/cycle/' + selectedCycleId);
+      const myRes = await api.get('/objectives/user/' + user._id + '/cycle/' + selectedCycleId);
       const myList = [...(myRes.data.individualObjectives || []), ...(myRes.data.teamObjectives || [])]
         .filter(o => ['approved', 'validated', 'evaluated', 'locked'].includes(o.status));
       setMyObjectives(myList);
 
       if (isManagerRole) {
-        const teamRes = await api.get('/api/objectives', { params: { cycle: selectedCycleId } });
+        const teamRes = await api.get('/objectives', { params: { cycle: selectedCycleId } });
         const allObjectives = teamRes.data.objectives || [];
         const filteredTeam = allObjectives.filter(o => {
           const ownerId = o.owner?._id || o.owner;
@@ -160,11 +160,11 @@ function MidYearPage() {
 
   async function fetchCheckIns() {
     try {
-      const selfRes = await api.get('/api/checkins', { params: { cycle_id: selectedCycleId } });
+      const selfRes = await api.get('/checkins', { params: { cycle_id: selectedCycleId } });
       setMyCheckIns(selfRes.data.checkIns || []);
 
       if (isManagerRole) {
-        const teamRes = await api.get('/api/checkins/team', { params: { cycle_id: selectedCycleId } });
+        const teamRes = await api.get('/checkins/team', { params: { cycle_id: selectedCycleId } });
         setTeamCheckIns(teamRes.data.checkIns || []);
       }
     } catch (err) {
@@ -199,11 +199,11 @@ function MidYearPage() {
     setLoadingTasks(true);
     setShowCheckInModal(true);
     try {
-      const requests = [api.get('/api/checkins/objective/' + objective._id + '/tasks')];
+      const requests = [api.get('/checkins/objective/' + objective._id + '/tasks')];
       const isManagerView = viewMode === 'team';
 
       if (isManagerView) {
-        requests.push(api.get('/api/checkins/by-objective', { params: { objective_id: objective._id } }));
+        requests.push(api.get('/checkins/by-objective', { params: { objective_id: objective._id } }));
       }
 
       const [taskRes, checkInsRes] = await Promise.all(requests);
@@ -238,7 +238,7 @@ function MidYearPage() {
         attachments
       };
       console.log('Submitting check-in payload:', JSON.stringify(payload));
-      await api.post('/api/checkins', payload);
+      await api.post('/checkins', payload);
       toast.success('Check-in submitted successfully');
       setShowCheckInModal(false);
       fetchCheckIns();
@@ -278,7 +278,7 @@ function MidYearPage() {
         payload.progress_percent = Number(managerReviewData.progress_percent);
       }
       
-      await api.put('/api/checkins/' + existingCheckIn._id + '/review', payload);
+      await api.put('/checkins/' + existingCheckIn._id + '/review', payload);
       toast.success('Review submitted successfully');
       setShowCheckInModal(false);
       fetchCheckIns();
@@ -683,7 +683,7 @@ function MidYearPage() {
                       try {
                         const val = e.target.value.trim();
                         e.target.value = '';
-                        const res = await api.put(`/api/objectives/${selectedObjective._id}/note`, { note: val });
+                        const res = await api.put(`/objectives/${selectedObjective._id}/note`, { note: val });
                         toast.success('Note added!');
                         setSelectedObjective(res.data.objective);
                         fetchObjectives();
@@ -698,7 +698,7 @@ function MidYearPage() {
                       try {
                         const val = input.value.trim();
                         input.value = '';
-                        const res = await api.put(`/api/objectives/${selectedObjective._id}/note`, { note: val });
+                        const res = await api.put(`/objectives/${selectedObjective._id}/note`, { note: val });
                         toast.success('Note added!');
                         setSelectedObjective(res.data.objective);
                         fetchObjectives();

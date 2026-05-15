@@ -14,7 +14,7 @@ function HRValidation() {
   async function fetchPendingEvaluations() {
     setLoading(true);
     try {
-      const res = await api.get('/api/final-evaluations/hr/pending');
+      const res = await api.get('/final-evaluations/hr/pending');
       setEvaluations(res.data.evaluations || []);
     } catch (err) {
       toast.error('Failed to load pending evaluations');
@@ -29,7 +29,7 @@ function HRValidation() {
     }
     
     try {
-      await api.put(`/api/final-evaluations/${evaluation._id}/hr-validate`, { action });
+      await api.put(`/final-evaluations/${evaluation._id}/hr-validate`, { action });
       toast.success(action === 'validate' ? 'Evaluation Validated' : 'Evaluation Sent Back to Manager');
       fetchPendingEvaluations();
     } catch (err) {

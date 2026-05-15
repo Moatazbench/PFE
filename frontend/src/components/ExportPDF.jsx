@@ -5,7 +5,7 @@ function ExportPDF({ type, id, label }) {
   async function handleExport() {
     try {
       const res = await api.get(
-        '/api/pdf/' + type + '/' + id,
+        '/pdf/' + type + '/' + id,
         { responseType: 'blob' }
       );
 

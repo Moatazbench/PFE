@@ -21,7 +21,7 @@ function EvaluateGoalModal({ goal, onClose, onEvaluated }) {
         if (!rating) { toast.error('Please select an evaluation rating.'); return; }
         setLoading(true);
         try {
-            await api.post('/api/objectives/' + goal._id + '/evaluate', {
+            await api.post('/objectives/' + goal._id + '/evaluate', {
                 evaluationRating: rating,
                 evaluationComment: comment,
                 managerAdjustedPercent: adjustedPercent,

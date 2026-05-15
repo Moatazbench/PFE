@@ -41,7 +41,8 @@ function ManagerReviewPage() {
 
   const getAttachmentUrl = (attachment) => {
     if (!attachment?.url) return '#';
-    return attachment.url.startsWith('http') ? attachment.url : `${API_BASE_URL}${attachment.url}`;
+    if (attachment.url.startsWith('http')) return attachment.url;
+    return attachment.url;
   };
 
   async function handleDownloadAttachment(attachment) {
@@ -90,7 +91,7 @@ function ManagerReviewPage() {
 
   async function fetchCycles() {
     try {
-      const res = await api.get('/api/cycles');
+      const res = await api.get('/cycles');
       const data = (Array.isArray(res.data) ? res.data : [])
         .filter(c => (c.currentPhase === 'phase2' || c.currentPhase === 'phase3') && c.status !== 'draft');
       setCycles(data);
@@ -107,7 +108,7 @@ function ManagerReviewPage() {
   async function fetchGoals() {
     setLoading(true);
     try {
-      const res = await api.get('/api/objectives/team-goals', { params: { cycle_id: selectedCycleId } });
+      const res = await api.get('/objectives/team-goals', { params: { cycle_id: selectedCycleId } });
       setGoals(res.data.goals || []);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load team goals');
@@ -134,7 +135,7 @@ function ManagerReviewPage() {
     if (!text) { toast.error('Please enter a note.'); return; }
     setSavingNote(prev => ({ ...prev, [goalId]: true }));
     try {
-      await api.put('/api/objectives/' + goalId + '/note', { note: text });
+      await api.put('/objectives/' + goalId + '/note', { note: text });
       toast.success('Note saved');
       setNoteTexts(prev => ({ ...prev, [goalId]: '' }));
       fetchGoals(); // refresh to show new note
@@ -155,7 +156,7 @@ function ManagerReviewPage() {
     if (checkInsData[goalId]) return; // already loaded
     setLoadingCheckIns(prev => ({ ...prev, [goalId]: true }));
     try {
-      const res = await api.get('/api/checkins/by-objective', { params: { objective_id: goalId } });
+      const res = await api.get('/checkins/by-objective', { params: { objective_id: goalId } });
       setCheckInsData(prev => ({ ...prev, [goalId]: res.data.checkIns || [] }));
     } catch {
       toast.error('Failed to load check-ins');

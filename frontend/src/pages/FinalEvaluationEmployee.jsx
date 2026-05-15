@@ -24,6 +24,8 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
   const [assessmentForms, setAssessmentForms] = useState({});
   const [savingObjectiveId, setSavingObjectiveId] = useState('');
   const [loading, setLoading] = useState(true);
+  const [attachments, setAttachments] = useState({});
+  const [uploading, setUploading] = useState({});
   const canEditCycle = activeCycle?.currentPhase === 'phase3';
 
   useEffect(() => {
@@ -105,17 +107,38 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
 
     try {
       setSavingObjectiveId(objectiveId);
-      await api.post(`/objectives/${objectiveId}/final-self-assessment`, {
+      const payload = {
         progressPercentage: Number(form.progressPercentage),
         rating: form.rating === '' ? null : Number(form.rating),
         comment: form.comment
-      });
+      };
+      if (attachments[objectiveId]) {
+        payload.attachment = attachments[objectiveId];
+      }
+      await api.post(`/objectives/${objectiveId}/final-self-assessment`, payload);
       toast.success('Final self-assessment saved.');
       await fetchData();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to save final self-assessment');
     } finally {
       setSavingObjectiveId('');
+    }
+  }
+
+  async function handleFileUpload(objectiveId, e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(prev => ({ ...prev, [objectiveId]: true }));
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await api.post('/checkins/upload', fd);
+      setAttachments(prev => ({ ...prev, [objectiveId]: res.data.attachment }));
+      toast.success('File uploaded: ' + file.name);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to upload file');
+    } finally {
+      setUploading(prev => ({ ...prev, [objectiveId]: false }));
     }
   }
 
@@ -227,6 +250,34 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
                     }))}
                     placeholder="Summarize what you delivered, the impact, and any end-of-cycle context."
                   />
+                </div>
+
+                <div style={{ marginBottom: '1rem' }}>
+                  <label className="ent-label">Evidence / Attachment</label>
+                  <div style={{ border: '2px dashed var(--shell-border, #d1d5db)', borderRadius: '8px', padding: '1rem', textAlign: 'center', background: 'var(--shell-bg-inset, #f9fafb)' }}>
+                    {uploading[objective._id] ? (
+                      <div style={{ color: 'var(--primary)', fontWeight: 600 }}>⏳ Uploading...</div>
+                    ) : attachments[objective._id] ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
+                        <span>📎</span>
+                        <span style={{ fontWeight: 600 }}>{attachments[objective._id].name}</span>
+                        {canEditCycle && <button type="button" onClick={() => setAttachments(prev => { const next = { ...prev }; delete next[objective._id]; return next; })} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.1rem' }} title="Remove">✕</button>}
+                      </div>
+                    ) : objective.finalSelfAttachment ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
+                        <span>📎</span>
+                        <a href={objective.finalSelfAttachment.url} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>{objective.finalSelfAttachment.name || 'Attachment'}</a>
+                      </div>
+                    ) : (
+                      <div>
+                        <input type="file" id={`final-file-${objective._id}`} style={{ display: 'none' }} onChange={(e) => handleFileUpload(objective._id, e)} disabled={!canEditCycle} accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.txt,.csv,.zip" />
+                        <label htmlFor={`final-file-${objective._id}`} style={{ cursor: canEditCycle ? 'pointer' : 'not-allowed', color: 'var(--primary)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                          📂 Choose file to upload
+                        </label>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Max 10MB — PDF, Word, Excel, Images, etc.</div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>

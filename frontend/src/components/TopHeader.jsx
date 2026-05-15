@@ -130,7 +130,7 @@ function TopHeader({ onMobileToggle }) {
 
                 <div className="ent-header__profile" ref={profileRef}>
                     <button className="ent-header__profile-trigger" onClick={function () { setProfileOpen(!profileOpen); }}>
-                        <UserAvatar user={user} size={40} />
+                        <UserAvatar user={user} size={48} />
                         <div className="ent-header__profile-meta">
                             <span className="ent-header__profile-name">{user?.name || 'User'}</span>
                             <span className="ent-header__profile-role">{formatRole(user?.role)}</span>

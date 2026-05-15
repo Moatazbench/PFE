@@ -36,7 +36,7 @@ function CheckInModal({ goal, onClose, onCheckInComplete }) {
             // Extract just what the backend needs
             const payloadKpis = kpiUpdates.map(k => ({ _id: k._id, currentValue: k.currentValue }));
             
-            await api.post(`/api/objectives/${goal._id}/progress`, {
+            await api.post(`/objectives/${goal._id}/progress`, {
                 message,
                 kpiUpdates: payloadKpis
             });

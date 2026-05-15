@@ -18,7 +18,7 @@ function GoalNode({ goal, level = 0 }) {
     
     setLoading(true);
     try {
-      const res = await api.get(`/api/objectives/${goal._id}/children`);
+      const res = await api.get(`/objectives/${goal._id}/children`);
       setChildren(res.data.objectives || []);
       setExpanded(true);
     } catch (err) {
@@ -89,7 +89,7 @@ function GoalAlignmentTree({ rootGoal }) {
       }
       try {
         const parentId = typeof rootGoal.parentObjective === 'object' ? rootGoal.parentObjective._id : rootGoal.parentObjective;
-        const res = await api.get(`/api/objectives/${parentId}`);
+        const res = await api.get(`/objectives/${parentId}`);
         setParentGoal(res.data.objective || res.data);
       } catch (err) {
         console.error('Failed to fetch parent goal', err);

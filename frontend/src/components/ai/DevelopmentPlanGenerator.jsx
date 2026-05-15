@@ -16,7 +16,7 @@ function DevelopmentPlanGenerator({ userId, evaluationId = null }) {
     setEditingMap({});
 
     try {
-      const response = await api.post('/api/ai/development-plan', { userId, evaluationId });
+      const response = await api.post('/ai/development-plan', { userId, evaluationId });
       setPlan(response.data.plan || null);
     } catch (err) {
       setError(err.response?.data?.error || err.response?.data?.message || 'Something went wrong');

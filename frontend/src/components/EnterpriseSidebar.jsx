@@ -165,7 +165,7 @@ function EnterpriseSidebar({ collapsed, setCollapsed }) {
                 </button>
 
                 <div className="ent-sidebar__user-block">
-                    <UserAvatar user={user} size={34} className="ent-sidebar__avatar-media" />
+                    <UserAvatar user={user} size={44} className="ent-sidebar__avatar-media" />
                     <div className="ent-sidebar__user-info">
                         <span className="ent-sidebar__user-name">{user.name}</span>
                         <span className="ent-sidebar__user-role">{String(user.role || '').replace(/_/g, ' ')}</span>

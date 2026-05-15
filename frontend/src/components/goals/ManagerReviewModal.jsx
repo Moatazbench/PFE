@@ -17,7 +17,7 @@ function ManagerReviewModal({ goal, onClose, onReviewed }) {
         }
         setLoading(true);
         try {
-            await api.post('/api/objectives/' + goal._id + '/validate', {
+            await api.post('/objectives/' + goal._id + '/validate', {
                 status: action,
                 managerComments: managerComments,
                 rejectionReason: action === 'rejected' ? managerComments : undefined,

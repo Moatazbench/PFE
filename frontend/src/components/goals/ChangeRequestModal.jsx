@@ -23,7 +23,7 @@ function ChangeRequestModal({ goal, onClose, onRequested }) {
         if (!requestType || !reason.trim()) { toast.error('Please fill in all required fields.'); return; }
         setLoading(true);
         try {
-            await api.post('/api/objectives/' + goal._id + '/change-requests', {
+            await api.post('/objectives/' + goal._id + '/change-requests', {
                 requestType, reason,
                 newDeadline: requestType === 'due_date_extension' ? newDeadline : undefined,
                 newTitle: requestType === 'scope_change' ? newTitle : undefined,

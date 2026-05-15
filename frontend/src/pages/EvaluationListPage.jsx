@@ -64,11 +64,11 @@ function EvaluationListPage() {
       if (filterCycle) params.append('cycleId', filterCycle);
       if (filterStatus) params.append('status', filterStatus);
 
-      let url = '/api/evaluations';
+      let url = '/evaluations';
       if (viewMode === 'evaluator' && isManager) {
-        url = `/api/evaluations/evaluator/${user.id}`;
+        url = `/evaluations/evaluator/${user.id}`;
       } else if (viewMode === 'employee') {
-        url = `/api/evaluations/employee/${user.id}`;
+        url = `/evaluations/employee/${user.id}`;
       }
 
       const res = await api.get(`${url}?${params.toString()}`);
@@ -89,7 +89,7 @@ function EvaluationListPage() {
 
     setCreating(true);
     try {
-      const res = await api.post('/api/evaluations', createForm);
+      const res = await api.post('/evaluations', createForm);
       setShowCreateModal(false);
       setCreateForm({ employeeId: '', cycleId: '', period: '' });
       toast.success('Evaluation created.');

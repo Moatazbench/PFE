@@ -52,6 +52,11 @@ router.get('/', rateLimiter, auth, async function (req, res) {
     if (qStatus) filter.status = qStatus;
     if (qYear) filter.year = Number(qYear);
 
+    // Non-admin users only see non-draft cycles
+    if (req.user.role !== 'ADMIN') {
+      filter.status = { $ne: 'draft' };
+    }
+
     var cycles = await Cycle.find(filter)
       .populate('createdBy', 'name email')
       .sort({ createdAt: -1 });
