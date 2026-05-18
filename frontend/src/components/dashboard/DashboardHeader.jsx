@@ -1,48 +1,73 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../AuthContext';
 import UserAvatar from '../UserAvatar';
+import { getScopeLabel } from './dashboardUtils';
 
-function DashboardHeader({ activeTab, onTabChange }) {
-    const { user } = useAuth();
+function DashboardHeader({ activeTab, onTabChange, activeCycle, summary, onRefresh, loading }) {
+  var auth = useAuth();
+  var user = auth.user;
 
-    const tabs = [
-        { key: 'me', label: 'Me' },
-        { key: 'team', label: 'My Team' },
-        ...(user && (user.role === 'ADMIN' || user.role === 'HR') ? [{ key: 'org', label: 'My Organization' }] : []),
-    ];
+  var tabs = [
+    { key: 'me', label: 'Me' },
+    { key: 'team', label: 'My team' },
+  ];
 
-    return (
-        <div className="ds-page-header" style={{ marginBottom: '32px' }}>
-            <div className="ds-page-header__left" style={{ flexDirection: 'row', alignItems: 'center', gap: '16px' }}>
-                <UserAvatar user={user} size={56} />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <h1 className="ds-page-header__title">Hello, {user?.name || 'User'}</h1>
-                    <p className="ds-page-header__subtitle">Welcome back! Here's your performance overview.</p>
-                </div>
-            </div>
-            <div style={{ display: 'flex', background: 'var(--ds-bg-card)', padding: '4px', borderRadius: 'var(--ds-radius-md)', border: '1px solid var(--ds-border)' }}>
-                {tabs.map(tab => (
-                    <button
-                        key={tab.key}
-                        style={{
-                            background: activeTab === tab.key ? 'var(--ds-bg-hover)' : 'transparent',
-                            color: activeTab === tab.key ? 'var(--ds-text)' : 'var(--ds-text-secondary)',
-                            fontWeight: activeTab === tab.key ? '600' : '500',
-                            border: 'none',
-                            padding: '6px 16px',
-                            borderRadius: 'var(--ds-radius-sm)',
-                            cursor: 'pointer',
-                            fontSize: '13px',
-                            transition: 'all var(--ds-transition)'
-                        }}
-                        onClick={() => onTabChange(tab.key)}
-                    >
-                        {tab.label}
-                    </button>
-                ))}
-            </div>
+  if (user && (user.role === 'ADMIN' || user.role === 'HR')) {
+    tabs.push({ key: 'org', label: 'Organization' });
+  }
+
+  return (
+    <motion.div
+      className="dash-hero"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28, ease: 'easeOut' }}
+    >
+      <div className="dash-hero__left">
+        <UserAvatar user={user} size={58} />
+        <div className="dash-hero__copy">
+          <div className="dash-hero__eyebrow">{getScopeLabel(activeTab)} workspace</div>
+          <h1>{user?.name || 'User'} dashboard</h1>
+          <p>
+            {activeCycle?.name ? activeCycle.name : 'Current cycle'}{' '}
+            {activeCycle?.currentPhase ? '- ' + String(activeCycle.currentPhase).replace('phase', 'Phase ') : ''}
+          </p>
         </div>
-    );
+      </div>
+
+      <div className="dash-hero__right">
+        <div className="dash-hero__tabs">
+          {tabs.map(function (tab) {
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                className={'dash-hero__tab' + (activeTab === tab.key ? ' dash-hero__tab--active' : '')}
+                onClick={function () { onTabChange(tab.key); }}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="dash-hero__meta">
+          <div className="dash-hero__meta-item">
+            <span>Progress</span>
+            <strong>{summary?.averageProgress || 0}%</strong>
+          </div>
+          <div className="dash-hero__meta-item">
+            <span>Completed</span>
+            <strong>{summary?.completed || 0}</strong>
+          </div>
+          <button type="button" className="dash-hero__refresh" onClick={onRefresh} disabled={loading}>
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
 }
 
-export default DashboardHeader;
+export default React.memo(DashboardHeader);

@@ -98,12 +98,12 @@ exports.deleteUser = async (req, res) => {
 // ========== AVATAR ==========
 exports.updateAvatar = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ message: 'No image provided' });
-    const imageUrl = `/uploads/avatars/${req.file.filename}`;
+    const uploadedAsset = req.uploadedAsset;
+    if (!uploadedAsset?.url) return res.status(400).json({ message: 'No image provided' });
     
     const user = await User.findByIdAndUpdate(
       req.params.id, 
-      { profileImage: imageUrl }, 
+      { profileImage: uploadedAsset.url }, 
       { new: true }
     ).select('-password').populate('team', 'name');
     

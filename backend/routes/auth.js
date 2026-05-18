@@ -4,6 +4,9 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
 
+const ACCESS_TOKEN_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN || (process.env.NODE_ENV === 'production' ? '8h' : '365d');
+const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || (process.env.NODE_ENV === 'production' ? '30d' : '365d');
+
 const generateTokens = (user) => {
   const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_key';
   const refreshSecret = process.env.JWT_REFRESH_SECRET || 'fallback_refresh_key';
@@ -11,13 +14,13 @@ const generateTokens = (user) => {
   const accessToken = jwt.sign(
     { id: user._id, role: user.role },
     jwtSecret,
-    { expiresIn: '1h' }
+    { expiresIn: ACCESS_TOKEN_EXPIRES_IN }
   );
 
   const refreshToken = jwt.sign(
     { id: user._id },
     refreshSecret,
-    { expiresIn: '7d' }
+    { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
   );
 
   return { accessToken, refreshToken };

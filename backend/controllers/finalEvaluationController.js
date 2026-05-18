@@ -5,6 +5,8 @@ const User = require('../models/User');
 const Cycle = require('../models/Cycle');
 const Team = require('../models/Team');
 const { calculateAutoScore, determineRatingLabel } = require('../services/scoreCalculationService');
+const aiService = require('../services/aiService');
+const reviewContextService = require('../services/reviewContextService');
 const auditLogger = require('../utils/auditLogger');
 
 async function getManagedEmployeeIds(actor) {
@@ -59,6 +61,90 @@ async function enforceEvaluationView(cycleId) {
   }
 
   return { error: false, cycle };
+}
+
+function normalizeDraftList(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => String(item || '').trim())
+      .filter(Boolean);
+  }
+
+  const normalized = String(value || '').trim();
+  if (!normalized) return [];
+
+  return normalized
+    .split(/\r?\n|(?:\s*[•\u2022]\s*)|(?:\s*;\s*)/)
+    .map((item) => item.replace(/^[-*]\s*/, '').trim())
+    .filter(Boolean);
+}
+
+function humanizeRatingLabel(label) {
+  return String(label || '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function buildManagerComments(summary, rationale, warning) {
+  return [summary, rationale ? `Rating rationale: ${rationale}` : '', warning ? `Note: ${warning}` : '']
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+function buildManagerReviewFallback(context, autoScore, ratingLabel) {
+  const employeeName = context?.employee?.name || 'This employee';
+  const objectives = Array.isArray(context?.objectives) ? context.objectives : [];
+  const feedbacks = Array.isArray(context?.feedbacks) ? context.feedbacks : [];
+  const meetings = Array.isArray(context?.meetings) ? context.meetings : [];
+  const completedObjectives = objectives.filter((objective) => Number(objective.achievementPercent || 0) >= 80);
+  const atRiskObjectives = objectives.filter((objective) => Number(objective.achievementPercent || 0) < 60);
+  const averageAchievement = objectives.length
+    ? Math.round(objectives.reduce((sum, objective) => sum + Number(objective.achievementPercent || 0), 0) / objectives.length)
+    : 0;
+
+  return {
+    performance_summary: `${employeeName} finished the cycle with an auto-calculated score of ${Number(autoScore || 0).toFixed(1)}% and an average objective achievement of ${averageAchievement}%. ${completedObjectives.length > 0 ? `Top delivery came from ${completedObjectives.slice(0, 2).map((objective) => objective.title).join(' and ')}.` : 'Objective completion data shows mixed delivery across the cycle.'}`,
+    strengths: completedObjectives.length > 0
+      ? completedObjectives.slice(0, 3).map((objective) => `${objective.title} showed strong execution (${Number(objective.achievementPercent || 0)}% achievement).`)
+      : ['Maintained participation across assigned objectives during the cycle.'],
+    areas_for_improvement: atRiskObjectives.length > 0
+      ? atRiskObjectives.slice(0, 3).map((objective) => `${objective.title} needs stronger follow-through (${Number(objective.achievementPercent || 0)}% achievement).`)
+      : ['Continue improving consistency and documenting impact across key objectives.'],
+    recommended_rating_rationale: `The current draft rating is ${humanizeRatingLabel(ratingLabel)} based on the auto-score, objective completion pattern, ${feedbacks.length} recent feedback item(s), and ${meetings.length} recent review/check-in meeting(s).`,
+    development_actions: atRiskObjectives.length > 0
+      ? atRiskObjectives.slice(0, 3).map((objective) => `Create a focused action plan for ${objective.title} with clear milestones and manager checkpoints next cycle.`)
+      : ['Set 2-3 measurable growth goals for the next cycle and review progress monthly.'],
+    warning: aiService.isConfigured() ? '' : 'AI provider unavailable. This report was generated from existing performance data using the built-in fallback summary.',
+  };
+}
+
+async function generateManagerDraft(employeeId, cycleId, autoScore, ratingLabel) {
+  const context = await reviewContextService.buildReviewContext({ employeeId, cycleId });
+  const fallbackReview = buildManagerReviewFallback(context, autoScore, ratingLabel);
+
+  if (aiService.isConfigured()) {
+    const aiDraft = await aiService.generateManagerReview(context);
+
+    if (aiDraft?.warning) {
+      return {
+        review: {
+          ...fallbackReview,
+          warning: 'AI provider unavailable. This report was generated from existing performance data using the built-in fallback summary.',
+        },
+        usedFallback: true,
+      };
+    }
+
+    return {
+      review: aiDraft,
+      usedFallback: false,
+    };
+  }
+
+  return {
+    review: fallbackReview,
+    usedFallback: true,
+  };
 }
 
 exports.getEvaluation = async (req, res) => {
@@ -163,11 +249,23 @@ exports.generateEvaluation = async (req, res) => {
 
     const auto_score = await calculateAutoScore(employee_id, cycle_id);
     const rating_label = determineRatingLabel(auto_score);
+    const { review, usedFallback } = await generateManagerDraft(employee_id, cycle_id, auto_score, rating_label);
 
     if (evaluation) {
       evaluation.auto_score = auto_score;
       evaluation.final_score = auto_score;
       evaluation.rating_label = rating_label;
+      evaluation.evaluator_id = req.user.id || req.user._id;
+      evaluation.evaluator_role = req.user.role;
+      evaluation.evaluated_at = new Date();
+      evaluation.strengths = normalizeDraftList(review?.strengths);
+      evaluation.weaknesses = normalizeDraftList(review?.areas_for_improvement);
+      evaluation.improvement_suggestions = normalizeDraftList(review?.development_actions);
+      evaluation.manager_comments = buildManagerComments(
+        review?.performance_summary,
+        review?.recommended_rating_rationale,
+        review?.warning
+      );
       await evaluation.save();
     } else {
       evaluation = new FinalEvaluation({
@@ -176,6 +274,17 @@ exports.generateEvaluation = async (req, res) => {
         auto_score,
         final_score: auto_score,
         rating_label,
+        evaluator_id: req.user.id || req.user._id,
+        evaluator_role: req.user.role,
+        evaluated_at: new Date(),
+        strengths: normalizeDraftList(review?.strengths),
+        weaknesses: normalizeDraftList(review?.areas_for_improvement),
+        improvement_suggestions: normalizeDraftList(review?.development_actions),
+        manager_comments: buildManagerComments(
+          review?.performance_summary,
+          review?.recommended_rating_rationale,
+          review?.warning
+        ),
         status: 'draft'
       });
       await evaluation.save();
@@ -184,11 +293,21 @@ exports.generateEvaluation = async (req, res) => {
     await auditLogger.log(req.user.id, 'evaluation.generated', 'FinalEvaluation', evaluation._id, {
       employee_id,
       cycle_id,
-      auto_score
+      auto_score,
+      aiDraftGenerated: !usedFallback,
+      usedFallback
     });
 
     const populated = await FinalEvaluation.findById(evaluation._id).populate('employee_id', 'name');
-    res.json({ success: true, evaluation: populated });
+    res.json({
+      success: true,
+      evaluation: populated,
+      aiGenerated: !usedFallback,
+      usedFallback,
+      message: usedFallback
+        ? 'Final evaluation draft generated using the built-in fallback summary.'
+        : 'AI final evaluation draft generated successfully.'
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

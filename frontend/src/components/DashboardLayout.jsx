@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import EnterpriseSidebar from './EnterpriseSidebar';
 import TopHeader from './TopHeader';
@@ -7,6 +8,7 @@ function DashboardLayout({ children }) {
     var { user } = useAuth();
     var [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     var [mobileOpen, setMobileOpen] = useState(false);
+    var location = useLocation();
 
     if (!user) {
         return <>{children}</>;
@@ -28,7 +30,9 @@ function DashboardLayout({ children }) {
             <div className="ent-shell__content-wrapper">
                 <TopHeader onMobileToggle={function(){ setMobileOpen(!mobileOpen); }} />
                 <main className="ent-main">
-                    {children}
+                    <div key={location.pathname} className="page-enter">
+                        {children}
+                    </div>
                 </main>
             </div>
         </div>

@@ -24,6 +24,9 @@ router.get('/all', role('ADMIN', 'HR'), ctrl.getAllTasks);
 // Get team tasks
 router.get('/team/:teamId', ctrl.getTeamTasks);
 
+// Append tracked time
+router.post('/:id/time-entries', ctrl.appendTimeEntry);
+
 // Update task
 router.put('/:id', ctrl.updateTask);
 

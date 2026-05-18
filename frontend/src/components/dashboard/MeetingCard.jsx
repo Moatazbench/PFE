@@ -1,72 +1,70 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import api from '../../services/api';
 import LoadingSkeleton from '../common/LoadingSkeleton';
 
-function MeetingCard() {
-    var [meetings, setMeetings] = useState([]);
-    var [loading, setLoading] = useState(true);
-
-    useEffect(function () {
-        async function fetch() {
-            try {
-                var res = await api.get('/meetings', { params: { upcoming: 'true' } });
-                setMeetings((res.data.meetings || []).slice(0, 3));
-            } catch (err) { console.error(err); }
-            finally { setLoading(false); }
-        }
-        fetch();
-    }, []);
-
-    function formatDate(d) {
-        return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    }
-
-    function getTypeIcon(type) {
-        return { one_on_one: '👤', team: '👥', all_hands: '🏢', check_in: '✅', review: '📊', planning: '📋' }[type] || '📌';
-    }
-
-    return (
-        <div className="dash-card dash-card--meetings">
-            <div className="dash-card__header">
-                <span className="dash-card__icon">📅</span>
-                <h3>Upcoming Meetings</h3>
-            </div>
-            <div className="dash-card__body">
-                {loading ? (
-                    <LoadingSkeleton rows={3} height={60} />
-                ) : meetings.length === 0 ? (
-                    <div className="dash-card__empty-state">
-                        <div className="dash-card__empty-icon">📅</div>
-                        <p>No upcoming meetings</p>
-                        <Link to="/meetings" className="dash-card__link">Schedule a meeting →</Link>
-                    </div>
-                ) : (
-                    <div className="dash-card__list">
-                        {meetings.map(function (m) {
-                            return (
-                                <div key={m._id} className="goal-item">
-                                    <div className="goal-item__info">
-                                        <span className="goal-item__title">{getTypeIcon(m.type)} {m.title}</span>
-                                        <div className="goal-item__meta">
-                                            <span>{formatDate(m.date)}</span>
-                                            <span>{m.startTime} – {m.endTime}</span>
-                                        </div>
-                                    </div>
-                                    <div className="goal-item__progress">
-                                        <span style={{ fontSize: '12px', color: '#6c5ce7', fontWeight: 600 }}>
-                                            {(m.attendees || []).length} attendees
-                                        </span>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                        <Link to="/meetings" className="dash-card__link" style={{ display: 'block', textAlign: 'center', marginTop: '8px', fontSize: '13px', color: '#6c5ce7' }}>View all meetings →</Link>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
+function getMeetingTypeLabel(type) {
+  return {
+    one_on_one: '1:1',
+    team: 'Team',
+    all_hands: 'All hands',
+    check_in: 'Check-in',
+    review: 'Review',
+    planning: 'Planning',
+    other: 'Other',
+  }[type] || 'Meeting';
 }
 
-export default MeetingCard;
+function MeetingCard({ meetings, loading, error }) {
+  var upcomingMeetings = (meetings || []).slice().sort(function (left, right) {
+    return new Date(left?.date || 0) - new Date(right?.date || 0);
+  }).slice(0, 4);
+
+  return (
+    <div className="dash-card dash-card--meetings">
+      <div className="dash-card__header">
+        <div>
+          <h3>Upcoming meetings</h3>
+          <p className="dash-card__subtitle">Next scheduled conversations and reviews</p>
+        </div>
+        <span className="dash-card__count">{meetings?.length || 0}</span>
+      </div>
+
+      <div className="dash-card__body">
+        {loading ? (
+          <LoadingSkeleton rows={3} height={62} />
+        ) : error ? (
+          <div className="dash-card__empty-state">
+            <p>Meetings could not be loaded.</p>
+            <span className="dash-card__empty-hint">{error}</span>
+          </div>
+        ) : upcomingMeetings.length === 0 ? (
+          <div className="dash-card__empty-state">
+            <p>No upcoming meetings</p>
+            <Link to="/meetings" className="dash-card__link">Open meetings</Link>
+          </div>
+        ) : (
+          <div className="dash-card__list">
+            {upcomingMeetings.map(function (meeting) {
+              return (
+                <div key={meeting._id} className="dash-meeting-row">
+                  <div className="dash-meeting-row__top">
+                    <span className="dash-meeting-row__title">{meeting.title}</span>
+                    <span className="dash-meeting-row__badge">{getMeetingTypeLabel(meeting.type)}</span>
+                  </div>
+                  <div className="dash-meeting-row__meta">
+                    <span>{new Date(meeting.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                    <span>{meeting.startTime} - {meeting.endTime}</span>
+                    <span>{(meeting.attendees || meeting.participants || []).length} attendees</span>
+                  </div>
+                </div>
+              );
+            })}
+            <Link to="/meetings" className="dash-card__link">View all meetings</Link>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default React.memo(MeetingCard);

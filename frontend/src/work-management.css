@@ -1,0 +1,527 @@
+.wm-page {
+  --wm-surface: #ffffff;
+  --wm-surface-soft: #f8fafc;
+  --wm-border: #e2e8f0;
+  --wm-text: #0f172a;
+  --wm-text-soft: #64748b;
+  --wm-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+}
+
+.wm-page__header,
+.wm-page__actions,
+.wm-layout,
+.wm-calendar-shell,
+.wm-provider-grid,
+.wm-stats-grid,
+.wm-mini-stats,
+.wm-productivity-bars,
+.wm-timer-widget__actions,
+.wm-segmented,
+.wm-calendar-toolbar,
+.wm-calendar-toolbar__controls,
+.wm-kanban-board {
+  display: flex;
+}
+
+.wm-page__header,
+.wm-calendar-toolbar,
+.wm-panel-card__header,
+.wm-task-item__top,
+.wm-task-item__actions,
+.wm-kanban-card__top,
+.wm-kanban-card__footer,
+.wm-provider-card,
+.wm-timesheet-row,
+.wm-timesheet-row__meta,
+.wm-mini-stats,
+.wm-productivity-bars,
+.wm-calendar-toolbar,
+.wm-agenda-column header {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wm-page__actions,
+.wm-segmented,
+.wm-timer-widget__actions,
+.wm-calendar-toolbar__controls,
+.wm-task-item__actions,
+.wm-timesheet-row__meta {
+  gap: 0.5rem;
+}
+
+.wm-layout,
+.wm-calendar-shell {
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.wm-main-panel,
+.wm-calendar-main {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.wm-side-panel {
+  width: 360px;
+  display: grid;
+  gap: 1rem;
+}
+
+.wm-stats-grid {
+  gap: 0.9rem;
+  margin: 0 0 1rem;
+}
+
+.wm-stat-card,
+.wm-panel-card,
+.wm-kanban-column,
+.wm-provider-card,
+.wm-timer-widget {
+  background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+  border: 1px solid var(--wm-border);
+  border-radius: 18px;
+  box-shadow: var(--wm-shadow);
+}
+
+.wm-stat-card {
+  flex: 1 1 0;
+  padding: 1rem 1.1rem;
+  min-width: 0;
+}
+
+.wm-stat-card span,
+.wm-panel-card__header p,
+.wm-calendar-grid__cell small,
+.wm-provider-card p,
+.wm-empty-inline,
+.wm-calendar-grid__events,
+.wm-agenda-item span,
+.wm-timesheet-row span,
+.wm-mini-stats span,
+.wm-calendar-grid__day {
+  color: var(--wm-text-soft);
+}
+
+.wm-stat-card strong,
+.wm-calendar-toolbar__title,
+.wm-timer-widget__clock {
+  color: var(--wm-text);
+  display: block;
+}
+
+.wm-stat-card strong {
+  font-size: 1.55rem;
+  margin: 0.2rem 0;
+}
+
+.wm-form-card,
+.wm-panel-card {
+  padding: 1rem 1.1rem;
+}
+
+.wm-segmented {
+  padding: 0.2rem;
+  border-radius: 999px;
+  border: 1px solid var(--wm-border);
+  background: rgba(248, 250, 252, 0.92);
+}
+
+.wm-segmented button {
+  border: 0;
+  background: transparent;
+  color: var(--wm-text-soft);
+  padding: 0.55rem 0.85rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.wm-segmented button.is-active {
+  background: #0f172a;
+  color: #fff;
+}
+
+.wm-slider-value,
+.wm-stage-pill,
+.wm-provider-card strong,
+.wm-timer-widget__eyebrow {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.wm-stage-pill {
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+}
+
+.wm-task-list {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.wm-task-item {
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  border: 1px solid var(--wm-border);
+  background: #fff;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
+}
+
+.wm-task-item__top,
+.wm-task-item__timer,
+.wm-provider-grid,
+.wm-mini-stats {
+  display: flex;
+}
+
+.wm-task-item__timer {
+  gap: 0.35rem;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.wm-mini-stats {
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
+.wm-mini-stats div {
+  flex: 1 1 30%;
+  min-width: 96px;
+  padding: 0.8rem;
+  border-radius: 14px;
+  background: var(--wm-surface-soft);
+  border: 1px solid var(--wm-border);
+}
+
+.wm-mini-stats strong {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 1.1rem;
+}
+
+.wm-productivity-bars {
+  align-items: flex-end;
+  gap: 0.75rem;
+  min-height: 180px;
+}
+
+.wm-productivity-bars__item {
+  flex: 1 1 0;
+  text-align: center;
+}
+
+.wm-productivity-bars__bar-wrap {
+  height: 118px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+.wm-productivity-bars__bar {
+  width: 100%;
+  max-width: 38px;
+  border-radius: 999px 999px 10px 10px;
+  background: linear-gradient(180deg, #0ea5e9 0%, #2563eb 100%);
+  transition: height 0.25s ease;
+}
+
+.wm-timesheet-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.wm-timesheet-row {
+  padding: 0.8rem 0.9rem;
+  border-radius: 14px;
+  background: var(--wm-surface-soft);
+  border: 1px solid var(--wm-border);
+}
+
+.wm-timesheet-row strong {
+  display: block;
+  color: var(--wm-text);
+}
+
+.wm-empty-inline {
+  padding: 0.95rem 0;
+}
+
+.wm-view-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: linear-gradient(135deg, rgba(255,255,255,0.98), rgba(241,245,249,0.92));
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
+}
+
+.wm-view-banner strong {
+  display: block;
+  color: var(--wm-text);
+}
+
+.wm-view-banner p {
+  margin: 0.25rem 0 0;
+  color: var(--wm-text-soft);
+  font-size: 0.9rem;
+}
+
+.wm-timer-widget {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 90;
+  width: 310px;
+  padding: 1rem;
+}
+
+.wm-timer-widget__eyebrow {
+  color: #2563eb;
+}
+
+.wm-timer-widget p {
+  margin: 0.2rem 0 0.8rem;
+  color: var(--wm-text-soft);
+}
+
+.wm-timer-widget__clock {
+  font-size: 2rem;
+  margin-bottom: 0.8rem;
+}
+
+.wm-kanban-board {
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: 0.35rem;
+}
+
+.wm-kanban-column {
+  min-width: 280px;
+  max-width: 320px;
+  padding: 0.9rem;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.wm-kanban-column--over {
+  border-color: rgba(37, 99, 235, 0.28);
+  background: linear-gradient(180deg, rgba(239,246,255,0.98), rgba(248,250,252,0.98));
+  box-shadow: 0 18px 36px rgba(37, 99, 235, 0.12);
+  transform: translateY(-2px);
+}
+
+.wm-kanban-column__header h3,
+.wm-panel-card__header h3 {
+  margin: 0;
+  color: var(--wm-text);
+}
+
+.wm-kanban-column__header p,
+.wm-panel-card__header p {
+  margin: 0.2rem 0 0;
+}
+
+.wm-kanban-column__body {
+  display: grid;
+  gap: 0.75rem;
+  min-height: 420px;
+  margin-top: 0.9rem;
+}
+
+.wm-kanban-column__empty {
+  padding: 1rem;
+  border: 1px dashed var(--wm-border);
+  border-radius: 14px;
+  color: var(--wm-text-soft);
+  text-align: center;
+}
+
+.wm-kanban-card {
+  padding: 0.9rem;
+  border-radius: 14px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: #fff;
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.06);
+  cursor: grab;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.wm-kanban-card p {
+  margin: 0.55rem 0;
+  color: var(--wm-text-soft);
+  font-size: 0.9rem;
+}
+
+.wm-kanban-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 28px rgba(15, 23, 42, 0.1);
+}
+
+.wm-kanban-card--dragging {
+  box-shadow: 0 18px 28px rgba(15, 23, 42, 0.14);
+}
+
+.wm-kanban-card--overlay {
+  transform: rotate(1deg);
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.16);
+  border-color: rgba(37, 99, 235, 0.25);
+}
+
+.wm-kanban-card__meta,
+.wm-calendar-grid__events {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.wm-kanban-card__footer {
+  margin-top: 0.6rem;
+}
+
+.wm-kanban-card__actions {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin-top: 0.8rem;
+}
+
+.wm-priority-pill {
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.wm-priority-pill--low { background: rgba(100, 116, 139, 0.14); color: #475569; }
+.wm-priority-pill--medium { background: rgba(59, 130, 246, 0.14); color: #1d4ed8; }
+.wm-priority-pill--high { background: rgba(245, 158, 11, 0.16); color: #b45309; }
+.wm-priority-pill--urgent { background: rgba(239, 68, 68, 0.14); color: #b91c1c; }
+
+.wm-calendar-toolbar {
+  margin-bottom: 0.9rem;
+}
+
+.wm-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.wm-calendar-grid__cell {
+  min-height: 132px;
+  padding: 0.85rem;
+  border-radius: 16px;
+  border: 1px solid var(--wm-border);
+  background: var(--wm-surface-soft);
+}
+
+.wm-calendar-grid__cell.is-muted {
+  opacity: 0.55;
+}
+
+.wm-calendar-grid__day {
+  font-weight: 700;
+  margin-bottom: 0.65rem;
+}
+
+.wm-calendar-event,
+.wm-agenda-item {
+  border-left: 3px solid var(--event-accent);
+  padding: 0.5rem 0.65rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.wm-calendar-event span,
+.wm-agenda-item strong {
+  color: var(--wm-text);
+}
+
+.wm-agenda-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.85rem;
+}
+
+.wm-agenda-column {
+  padding: 0.8rem;
+  border-radius: 16px;
+  border: 1px solid var(--wm-border);
+  background: var(--wm-surface-soft);
+  display: grid;
+  gap: 0.65rem;
+}
+
+.wm-provider-grid {
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.wm-provider-card {
+  flex: 1 1 260px;
+  padding: 0.9rem 1rem;
+}
+
+.wm-empty-state {
+  padding: 2rem 1rem;
+}
+
+.wm-layout--kanban {
+  flex-direction: column;
+}
+
+.wm-layout--kanban .wm-side-panel {
+  width: 100%;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+@media (max-width: 1180px) {
+  .wm-layout,
+  .wm-calendar-shell {
+    flex-direction: column;
+  }
+
+  .wm-side-panel {
+    width: 100%;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+}
+
+@media (max-width: 840px) {
+  .wm-stats-grid,
+  .wm-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .wm-timer-widget {
+    left: 1rem;
+    right: 1rem;
+    width: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .wm-stats-grid,
+  .wm-calendar-grid,
+  .wm-agenda-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wm-page__header,
+  .wm-page__actions,
+  .wm-calendar-toolbar,
+  .wm-view-banner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

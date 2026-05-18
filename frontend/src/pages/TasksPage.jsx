@@ -1,18 +1,77 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
-import { useToast } from '../components/common/Toast';
+import { ToastContainer, useToast } from '../components/common/Toast';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
+import KanbanBoard from '../components/tasks/KanbanBoard';
+import ProductivityTimerWidget from '../components/tasks/ProductivityTimerWidget';
+import usePersistentTimer from '../hooks/usePersistentTimer';
+import {
+  buildDailyProductivity,
+  buildProductivitySummary,
+  buildTimesheetEntries,
+  formatDuration,
+  getStatusForStage,
+  getTrackedSeconds,
+  getWorkflowStage,
+} from '../utils/workManagement';
 
 var priorityColors = { low: '#6b7280', medium: '#3b82f6', high: '#f59e0b', urgent: '#ef4444' };
 var statusLabels = { todo: 'To Do', in_progress: 'In Progress', done: 'Done', cancelled: 'Cancelled' };
 var statusColors = { todo: '#6b7280', in_progress: '#3b82f6', done: '#10b981', cancelled: '#ef4444' };
 
+function buildLocalStats(taskList) {
+  var now = new Date();
+  var summary = {
+    total: 0,
+    todo: 0,
+    inProgress: 0,
+    done: 0,
+    cancelled: 0,
+    overdue: 0,
+    completionRate: 0,
+  };
+
+  (taskList || []).forEach(function (task) {
+    summary.total += 1;
+    if (task.status === 'done') summary.done += 1;
+    else if (task.status === 'in_progress') summary.inProgress += 1;
+    else if (task.status === 'cancelled') summary.cancelled += 1;
+    else summary.todo += 1;
+
+    if (task.dueDate && !['done', 'cancelled'].includes(task.status) && new Date(task.dueDate) < now) {
+      summary.overdue += 1;
+    }
+  });
+
+  summary.completionRate = summary.total > 0 ? Math.round((summary.done / summary.total) * 100) : 0;
+  return summary;
+}
+
+function mergeSessionIntoTask(task, session) {
+  var existingTracking = task?.timeTracking || {};
+  var existingSessions = Array.isArray(existingTracking.sessions) ? existingTracking.sessions : [];
+  var nextSessions = [session].concat(existingSessions);
+  var nextTotal = getTrackedSeconds(task) + session.durationSeconds;
+
+  return Object.assign({}, task, {
+    timeTracking: {
+      totalSeconds: nextTotal,
+      lastTrackedAt: session.endedAt,
+      sessions: nextSessions.slice(0, 120),
+    },
+  });
+}
+
 function TasksPage() {
-  var { user } = useAuth();
+  var auth = useAuth();
+  var user = auth.user;
   var toast = useToast();
+  var timer = usePersistentTimer();
+
   var [tab, setTab] = useState('my');
+  var [viewMode, setViewMode] = useState('list');
   var [tasks, setTasks] = useState([]);
   var [objectives, setObjectives] = useState([]);
   var [stats, setStats] = useState(null);
@@ -20,13 +79,20 @@ function TasksPage() {
   var [showForm, setShowForm] = useState(false);
   var [editingTask, setEditingTask] = useState(null);
   var [confirmDelete, setConfirmDelete] = useState(null);
-  var [form, setForm] = useState({ title: '', description: '', priority: 'medium', dueDate: '', labels: '', linkedGoal: '', notes: '' });
-  var [sending, setSending] = useState(false);
-
-  var hasFetchedRef = React.useRef(false);
+  var [savingTimer, setSavingTimer] = useState(false);
+  var [form, setForm] = useState({
+    title: '',
+    description: '',
+    priority: 'medium',
+    dueDate: '',
+    labels: '',
+    linkedGoal: '',
+    notes: '',
+    workflowStage: 'todo',
+    progress: 0,
+  });
 
   useEffect(function () {
-    hasFetchedRef.current = false;
     loadData();
   }, [tab]);
 
@@ -65,52 +131,80 @@ function TasksPage() {
         deduped.push(objective);
       });
 
-      deduped.sort(function (a, b) {
-        return String(a.title || '').localeCompare(String(b.title || ''));
+      deduped.sort(function (left, right) {
+        return String(left.title || '').localeCompare(String(right.title || ''));
       });
 
       setObjectives(deduped);
-    } catch (err) {
+    } catch (error) {
       setObjectives([]);
     }
   }
 
   function loadData() {
-    // Only show loading for initial load to prevent flickering
-    if (!hasFetchedRef.current) setLoading(true);
+    setLoading(true);
     var url = tab === 'my' ? '/tasks/my' : tab === 'assigned' ? '/tasks/assigned' : '/tasks/all';
     Promise.all([
       api.get(url),
       api.get('/tasks/stats'),
-    ]).then(function (res) {
-      setTasks(res[0].data.tasks || []);
-      setStats(res[1].data.stats || null);
-      hasFetchedRef.current = true;
-    }).catch(function (err) {
+      fetchLinkableObjectives(),
+    ]).then(function (responses) {
+      setTasks(responses[0].data.tasks || []);
+      setStats(responses[1].data.stats || null);
+    }).catch(function () {
       toast.error('Failed to load tasks');
     }).finally(function () {
       setLoading(false);
-      fetchLinkableObjectives();
     });
+  }
+
+  function resetForm() {
+    setEditingTask(null);
+    setForm({
+      title: '',
+      description: '',
+      priority: 'medium',
+      dueDate: '',
+      labels: '',
+      linkedGoal: '',
+      notes: '',
+      workflowStage: 'todo',
+      progress: 0,
+    });
+  }
+
+  function closeForm() {
+    setShowForm(false);
+    resetForm();
+  }
+
+  function buildTaskPayload() {
+    return {
+      title: form.title,
+      description: form.description,
+      priority: form.priority,
+      labels: form.labels ? form.labels.split(',').map(function (label) { return label.trim(); }).filter(Boolean) : [],
+      linkedGoal: form.linkedGoal || null,
+      dueDate: form.dueDate || null,
+      notes: form.notes || '',
+      workflowStage: form.workflowStage,
+      status: getStatusForStage(form.workflowStage),
+      progress: Number(form.progress || 0),
+    };
   }
 
   function handleCreate() {
     if (!form.title.trim()) return;
-    setSending(true);
-    var data = Object.assign({}, form, { 
-        labels: form.labels ? form.labels.split(',').map(function (l) { return l.trim(); }) : [],
-        linkedGoal: form.linkedGoal || null,
-        dueDate: form.dueDate || null 
-    });
-    api.post('/tasks', data)
-      .then(function (res) { 
-        setShowForm(false); 
-        resetForm(); 
-        setTimeout(loadData, 500); 
-        toast.success('Task created!'); 
+
+    api.post('/tasks', buildTaskPayload())
+      .then(function () {
+        closeForm();
+        loadData();
+        toast.success('Task created');
       })
-      .catch(function (e) { toast.error(e.response?.data?.message || 'Error creating task'); })
-      .finally(function () { setSending(false); });
+      .catch(function (error) {
+        toast.error(error.response?.data?.message || 'Error creating task');
+      });
   }
 
   function handleEdit(task) {
@@ -123,94 +217,219 @@ function TasksPage() {
       labels: (task.labels || []).join(', '),
       linkedGoal: task.linkedGoal?._id || '',
       notes: task.notes || '',
+      workflowStage: getWorkflowStage(task),
+      progress: Number(task.progress || (task.status === 'done' ? 100 : 0)),
     });
     setShowForm(true);
   }
 
   function handleUpdate() {
-    if (!form.title.trim()) return;
-    setSending(true);
-    var data = Object.assign({}, form, { 
-        labels: form.labels ? form.labels.split(',').map(function (l) { return l.trim(); }) : [],
-        linkedGoal: form.linkedGoal || null,
-        dueDate: form.dueDate || null
-    });
-    api.put('/tasks/' + editingTask, data)
-      .then(function () { 
-        setShowForm(false); 
-        setEditingTask(null); 
-        resetForm(); 
-        setTimeout(loadData, 500); 
-        toast.success('Task updated!'); 
+    if (!form.title.trim() || !editingTask) return;
+
+    api.put('/tasks/' + editingTask, buildTaskPayload())
+      .then(function () {
+        closeForm();
+        loadData();
+        toast.success('Task updated');
       })
-      .catch(function (e) { toast.error(e.response?.data?.message || 'Error updating task'); })
-      .finally(function () { setSending(false); });
+      .catch(function (error) {
+        toast.error(error.response?.data?.message || 'Error updating task');
+      });
   }
 
   function handleStatusChange(id, status) {
-    api.put('/tasks/' + id, { status: status })
-      .then(function () { loadData(); if (status === 'done') toast.success('Task marked as done! 🎉'); })
-      .catch(function () { toast.error('Failed to update status'); });
+    var workflowStage = status === 'done' ? 'completed' : status === 'in_progress' ? 'in_progress' : 'todo';
+    setTasks(function (currentTasks) {
+      var nextTasks = currentTasks.map(function (task) {
+        return task._id === id ? Object.assign({}, task, { status: status, workflowStage: workflowStage, progress: status === 'done' ? 100 : task.progress }) : task;
+      });
+      setStats(buildLocalStats(nextTasks));
+      return nextTasks;
+    });
+
+    api.put('/tasks/' + id, { status: status, workflowStage: workflowStage })
+      .then(function () {
+        if (status === 'done') toast.success('Task marked as done');
+      })
+      .catch(function () {
+        toast.error('Failed to update task');
+        loadData();
+      });
+  }
+
+  function handleMoveTask(taskId, workflowStage) {
+    var status = getStatusForStage(workflowStage);
+    var nextProgress = workflowStage === 'completed' ? 100 : undefined;
+
+    setTasks(function (currentTasks) {
+      var nextTasks = currentTasks.map(function (task) {
+        if (task._id !== taskId) return task;
+        return Object.assign({}, task, {
+          workflowStage: workflowStage,
+          status: status,
+          progress: workflowStage === 'completed' ? 100 : task.progress,
+        });
+      });
+      setStats(buildLocalStats(nextTasks));
+      return nextTasks;
+    });
+
+    api.put('/tasks/' + taskId, { workflowStage: workflowStage, status: status, progress: nextProgress })
+      .catch(function () {
+        toast.error('Could not move task');
+        loadData();
+      });
   }
 
   function handleDelete(id) {
     api.delete('/tasks/' + id)
-      .then(function () { loadData(); toast.success('Task deleted'); })
-      .catch(function () { toast.error('Failed to delete task'); });
-    setConfirmDelete(null);
+      .then(function () {
+        loadData();
+        toast.success('Task deleted');
+      })
+      .catch(function () {
+        toast.error('Failed to delete task');
+      })
+      .finally(function () {
+        setConfirmDelete(null);
+      });
   }
 
-  function resetForm() {
-    setEditingTask(null);
-    setForm({ title: '', description: '', priority: 'medium', dueDate: '', labels: '', linkedGoal: '', notes: '' });
+  function startTimerForTask(task, focusMode) {
+    if (timer.timerState?.taskId && timer.timerState.taskId !== task._id) {
+      toast.warning('Stop the active timer before starting another one');
+      return;
+    }
+
+    if (timer.timerState?.taskId === task._id) {
+      toast.info('This task is already being tracked');
+      return;
+    }
+
+    timer.startTimer({
+      taskId: task._id,
+      taskTitle: task.title,
+      linkedGoal: task?.linkedGoal?.title || '',
+      taskSnapshot: task,
+      focusMode: focusMode,
+    });
+    toast.success(focusMode ? 'Focus session started' : 'Timer started');
   }
 
-  function cancelForm() {
-    setShowForm(false);
-    resetForm();
+  function stopAndPersistTimer() {
+    var session = timer.stopTimer();
+    if (!session) return;
+
+    var trackedTask = tasks.find(function (task) { return task._id === session.taskId; }) || session.taskSnapshot;
+    if (!trackedTask) {
+      toast.error('Unable to locate task for this session');
+      return;
+    }
+
+    var updatedTask = mergeSessionIntoTask(trackedTask, session);
+    setSavingTimer(true);
+    setTasks(function (currentTasks) {
+      return currentTasks.map(function (task) {
+        return task._id === session.taskId ? updatedTask : task;
+      });
+    });
+
+    api.post('/tasks/' + session.taskId + '/time-entries', {
+      startedAt: session.startedAt,
+      endedAt: session.endedAt,
+      durationSeconds: session.durationSeconds,
+      focusMode: session.focusMode,
+      source: session.source,
+    }).then(function () {
+      toast.success('Tracked ' + formatDuration(session.durationSeconds));
+      loadData();
+    }).catch(function (error) {
+      toast.error(error.response?.data?.message || 'Failed to save tracked time');
+      loadData();
+    }).finally(function () {
+      setSavingTimer(false);
+    });
   }
 
   var tabs = [{ key: 'my', label: 'My Tasks' }, { key: 'assigned', label: 'Assigned by Me' }];
   if (user.role === 'ADMIN' || user.role === 'HR') tabs.push({ key: 'all', label: 'All Tasks' });
 
+  var productivity = useMemo(function () {
+    return buildProductivitySummary(tasks);
+  }, [tasks]);
+
+  var dailyProductivity = useMemo(function () {
+    return buildDailyProductivity(tasks, 7);
+  }, [tasks]);
+
+  var timesheetEntries = useMemo(function () {
+    return buildTimesheetEntries(tasks).slice(0, 10);
+  }, [tasks]);
+
+  var visibleTasks = useMemo(function () {
+    return tasks.slice().sort(function (left, right) {
+      var leftDue = left?.dueDate ? new Date(left.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+      var rightDue = right?.dueDate ? new Date(right.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+      return leftDue - rightDue;
+    });
+  }, [tasks]);
+
   return (
-    <div className="page-container">
-      <div className="page-header">
+    <div className="page-container wm-page">
+      <div className="page-header wm-page__header">
         <div className="page-header__left">
-          <h1 className="page-title">✅ Tasks</h1>
-          <p className="page-subtitle">Manage and track your tasks</p>
+          <h1 className="page-title">Tasks Workspace</h1>
+          <p className="page-subtitle">Track delivery, focus time, and execution flow in one place.</p>
         </div>
-        <button className="btn btn--primary" onClick={function () { setShowForm(!showForm); if (showForm) resetForm(); }}>
-          {showForm ? 'Cancel' : '+ New Task'}
-        </button>
+        <div className="wm-page__actions">
+          <div className="wm-segmented">
+            <button type="button" className={viewMode === 'list' ? 'is-active' : ''} onClick={function () { setViewMode('list'); }}>List</button>
+            <button type="button" className={viewMode === 'kanban' ? 'is-active' : ''} onClick={function () { setViewMode('kanban'); }}>Kanban</button>
+          </div>
+          <button className="btn btn--primary" onClick={function () { setShowForm(!showForm); if (showForm) resetForm(); }}>
+            {showForm ? 'Cancel' : 'New Task'}
+          </button>
+        </div>
       </div>
 
-      {stats && (
-        <div className="stats-row">
-          <div className="mini-stat"><span className="mini-stat__value">{stats.total}</span><span className="mini-stat__label">Total</span></div>
-          <div className="mini-stat"><span className="mini-stat__value" style={{ color: '#6b7280' }}>{stats.todo}</span><span className="mini-stat__label">To Do</span></div>
-          <div className="mini-stat"><span className="mini-stat__value" style={{ color: '#3b82f6' }}>{stats.inProgress}</span><span className="mini-stat__label">In Progress</span></div>
-          <div className="mini-stat"><span className="mini-stat__value" style={{ color: '#10b981' }}>{stats.done}</span><span className="mini-stat__label">Done</span></div>
-          <div className="mini-stat"><span className="mini-stat__value" style={{ color: '#ef4444' }}>{stats.overdue}</span><span className="mini-stat__label">Overdue</span></div>
-          <div className="mini-stat"><span className="mini-stat__value">{stats.completionRate}%</span><span className="mini-stat__label">Completion</span></div>
+      <div className="wm-stats-grid">
+        <div className="wm-stat-card">
+          <span>Total tracked</span>
+          <strong>{formatDuration(productivity.totalSeconds)}</strong>
+          <small>{productivity.activeDays} active days</small>
         </div>
-      )}
+        <div className="wm-stat-card">
+          <span>Today</span>
+          <strong>{formatDuration(productivity.todaySeconds)}</strong>
+          <small>Across completed sessions</small>
+        </div>
+        <div className="wm-stat-card">
+          <span>This week</span>
+          <strong>{formatDuration(productivity.weekSeconds)}</strong>
+          <small>{productivity.entries.length} logged sessions</small>
+        </div>
+        <div className="wm-stat-card">
+          <span>Focus mode</span>
+          <strong>{formatDuration(productivity.focusSeconds)}</strong>
+          <small>{stats?.completionRate || 0}% task completion</small>
+        </div>
+      </div>
 
-      {showForm && (
-        <div className="form-card">
+      {showForm ? (
+        <div className="form-card wm-form-card">
           <h3 className="form-card__title">{editingTask ? 'Edit Task' : 'Create Task'}</h3>
           <div className="form-grid">
             <div className="form-group form-group--full">
               <label>Title *</label>
-              <input className="form-input" placeholder="Task title..." value={form.title} onChange={function (e) { setForm(Object.assign({}, form, { title: e.target.value })); }} />
+              <input className="form-input" value={form.title} onChange={function (event) { setForm(Object.assign({}, form, { title: event.target.value })); }} />
             </div>
             <div className="form-group form-group--full">
               <label>Description</label>
-              <textarea className="form-textarea" rows={2} placeholder="Description..." value={form.description} onChange={function (e) { setForm(Object.assign({}, form, { description: e.target.value })); }} />
+              <textarea className="form-textarea" rows={3} value={form.description} onChange={function (event) { setForm(Object.assign({}, form, { description: event.target.value })); }} />
             </div>
             <div className="form-group">
               <label>Priority</label>
-              <select className="form-select" value={form.priority} onChange={function (e) { setForm(Object.assign({}, form, { priority: e.target.value })); }}>
+              <select className="form-select" value={form.priority} onChange={function (event) { setForm(Object.assign({}, form, { priority: event.target.value })); }}>
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
@@ -218,93 +437,237 @@ function TasksPage() {
               </select>
             </div>
             <div className="form-group">
-              <label>Due Date</label>
-              <input type="date" className="form-input" value={form.dueDate} onChange={function (e) { setForm(Object.assign({}, form, { dueDate: e.target.value })); }} />
+              <label>Workflow stage</label>
+              <select className="form-select" value={form.workflowStage} onChange={function (event) { setForm(Object.assign({}, form, { workflowStage: event.target.value })); }}>
+                <option value="backlog">Backlog</option>
+                <option value="todo">Todo</option>
+                <option value="in_progress">In Progress</option>
+                <option value="review">Review</option>
+                <option value="completed">Completed</option>
+              </select>
             </div>
             <div className="form-group">
-              <label>Linked Goal</label>
-              <select className="form-select" value={form.linkedGoal} onChange={function (e) { setForm(Object.assign({}, form, { linkedGoal: e.target.value })); }}>
+              <label>Due date</label>
+              <input type="date" className="form-input" value={form.dueDate} onChange={function (event) { setForm(Object.assign({}, form, { dueDate: event.target.value })); }} />
+            </div>
+            <div className="form-group">
+              <label>Progress</label>
+              <input type="range" min="0" max="100" step="5" value={form.progress} onChange={function (event) { setForm(Object.assign({}, form, { progress: event.target.value })); }} />
+              <div className="wm-slider-value">{form.progress}%</div>
+            </div>
+            <div className="form-group">
+              <label>Linked goal</label>
+              <select className="form-select" value={form.linkedGoal} onChange={function (event) { setForm(Object.assign({}, form, { linkedGoal: event.target.value })); }}>
                 <option value="">No linked goal</option>
-                {objectives.map(function (o) {
-                  var cycleName = o.cycle?.name ? ' - ' + o.cycle.name : '';
-                  return <option key={o._id} value={o._id}>{o.title + cycleName}</option>;
+                {objectives.map(function (objective) {
+                  return <option key={objective._id} value={objective._id}>{objective.title}</option>;
                 })}
               </select>
-              {objectives.length === 0 && (
-                <div style={{ marginTop: '0.4rem', fontSize: '0.82rem', color: '#b45309' }}>
-                  No goals loaded yet. Reopen the form or refresh if you recently created goals.
-                </div>
-              )}
             </div>
             <div className="form-group">
-              <label>Labels (comma-separated)</label>
-              <input className="form-input" placeholder="e.g. urgent, review" value={form.labels} onChange={function (e) { setForm(Object.assign({}, form, { labels: e.target.value })); }} />
+              <label>Labels</label>
+              <input className="form-input" value={form.labels} onChange={function (event) { setForm(Object.assign({}, form, { labels: event.target.value })); }} />
             </div>
           </div>
           <div className="form-actions">
-            <button className="btn btn--secondary" onClick={cancelForm}>Cancel</button>
-            <button className="btn btn--primary" onClick={editingTask ? handleUpdate : handleCreate} disabled={sending || !form.title.trim()}>
-              {sending ? (editingTask ? 'Saving...' : 'Creating...') : (editingTask ? 'Save Changes' : 'Create Task')}
+            <button className="btn btn--secondary" onClick={closeForm}>Cancel</button>
+            <button className="btn btn--primary" onClick={editingTask ? handleUpdate : handleCreate} disabled={!form.title.trim()}>
+              {editingTask ? 'Save Changes' : 'Create Task'}
             </button>
           </div>
         </div>
-      )}
+      ) : null}
 
       <div className="tab-bar">
-        {tabs.map(function (t) { return <button key={t.key} className={'tab-btn' + (tab === t.key ? ' tab-btn--active' : '')} onClick={function () { setTab(t.key); }}>{t.label}</button>; })}
+        {tabs.map(function (item) {
+          return (
+            <button key={item.key} className={'tab-btn' + (tab === item.key ? ' tab-btn--active' : '')} onClick={function () { setTab(item.key); }}>
+              {item.label}
+            </button>
+          );
+        })}
       </div>
 
-      {loading ? (
-        <LoadingSkeleton rows={4} height={80} />
-      ) : tasks.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state__icon">✅</div>
-          <h3>No tasks yet</h3>
-          <p>{tab === 'my' ? "You're all caught up!" : 'No tasks found.'}</p>
-          <button className="btn btn--primary" onClick={function () { setShowForm(true); }}>+ Create Task</button>
+      <div className="wm-view-banner">
+        <div>
+          <strong>{viewMode === 'kanban' ? 'Kanban board active' : 'List view active'}</strong>
+          <p>
+            {viewMode === 'kanban'
+              ? 'Drag tasks between columns. Use the timer buttons inside each Kanban card.'
+              : 'Use Start Timer or Focus Session on any task row to begin tracking time.'}
+          </p>
         </div>
-      ) : (
-        <div className="task-list">
-          {tasks.map(function (t) {
-            var isOverdue = t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done' && t.status !== 'cancelled';
-            return (
-              <div key={t._id} className={'task-item' + (isOverdue ? ' task-item--overdue' : '')}>
-                <div className="task-item__left">
-                  <span className="task-item__status-dot" style={{ background: statusColors[t.status] }} />
-                  <div className="task-item__info">
-                    <span className="task-item__title">{t.title}</span>
-                    {t.description && <p className="task-item__desc">{t.description}</p>}
-                    <div className="task-item__meta">
-                      <span className="status-chip" style={{ background: priorityColors[t.priority] + '18', color: priorityColors[t.priority] }}>{t.priority}</span>
-                      {t.assignee && <span className="meta-tag">👤 {t.assignee.name}</span>}
-                      {t.dueDate && <span className={'meta-tag' + (isOverdue ? ' meta-tag--danger' : '')}>{isOverdue ? '⚠️' : '📅'} {new Date(t.dueDate).toLocaleDateString()}</span>}
-                      {t.linkedGoal && <span className="meta-tag">🎯 {t.linkedGoal.title || 'Goal'}</span>}
-                      {(t.labels || []).map(function (l) { return <span key={l} className="meta-tag">{l}</span>; })}
+        <span className="wm-stage-pill">{viewMode === 'kanban' ? 'Board View' : 'List View'}</span>
+      </div>
+
+      <div className={'wm-layout' + (viewMode === 'kanban' ? ' wm-layout--kanban' : '')}>
+        <section className="wm-main-panel">
+          {loading ? (
+            <LoadingSkeleton rows={5} height={88} />
+          ) : visibleTasks.length === 0 ? (
+            <div className="empty-state wm-empty-state">
+              <div className="empty-state__icon">Tasks</div>
+              <h3>No tasks in this view</h3>
+              <p>Create a task to start tracking execution and focus time.</p>
+              <button className="btn btn--primary" onClick={function () { setShowForm(true); }}>Create Task</button>
+            </div>
+          ) : viewMode === 'kanban' ? (
+            <KanbanBoard
+              tasks={visibleTasks}
+              onMoveTask={handleMoveTask}
+              activeTimerTaskId={timer.timerState?.taskId || ''}
+              savingTimer={savingTimer}
+              onStartTimer={startTimerForTask}
+              onStopTimer={stopAndPersistTimer}
+            />
+          ) : (
+            <div className="task-list wm-task-list">
+              {visibleTasks.map(function (task) {
+                var isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !['done', 'cancelled'].includes(task.status);
+                var trackedSeconds = getTrackedSeconds(task);
+                var isActiveTimer = timer.timerState?.taskId === task._id;
+                return (
+                  <article key={task._id} className={'task-item wm-task-item' + (isOverdue ? ' task-item--overdue' : '')}>
+                    <div className="task-item__left">
+                      <span className="task-item__status-dot" style={{ background: statusColors[task.status] || '#6b7280' }} />
+                      <div className="task-item__info">
+                        <div className="wm-task-item__top">
+                          <span className="task-item__title">{task.title}</span>
+                          <span className="wm-stage-pill">{String(getWorkflowStage(task)).replace(/_/g, ' ')}</span>
+                        </div>
+                        {task.description ? <p className="task-item__desc">{task.description}</p> : null}
+                        <div className="task-item__meta">
+                          <span className="status-chip" style={{ background: priorityColors[task.priority] + '18', color: priorityColors[task.priority] }}>{task.priority}</span>
+                          {task.assignee ? <span className="meta-tag">{task.assignee.name}</span> : null}
+                          {task.dueDate ? <span className={'meta-tag' + (isOverdue ? ' meta-tag--danger' : '')}>{new Date(task.dueDate).toLocaleDateString()}</span> : null}
+                          {task.linkedGoal ? <span className="meta-tag">{task.linkedGoal.title}</span> : null}
+                          <span className="meta-tag">Tracked {formatDuration(trackedSeconds)}</span>
+                          <span className="meta-tag">Progress {Number(task.progress || (task.status === 'done' ? 100 : 0))}%</span>
+                        </div>
+                      </div>
                     </div>
+
+                    <div className="task-item__right wm-task-item__actions">
+                      <div className="wm-task-item__timer">
+                        {isActiveTimer ? (
+                          <button className="btn btn--primary btn--sm" onClick={stopAndPersistTimer} disabled={savingTimer}>
+                            {savingTimer ? 'Saving...' : 'Stop Timer'}
+                          </button>
+                        ) : (
+                          <>
+                            <button className="btn btn--secondary btn--sm" onClick={function () { startTimerForTask(task, false); }}>Start Timer</button>
+                            <button className="btn btn--ghost btn--sm" onClick={function () { startTimerForTask(task, true); }}>Focus Session</button>
+                          </>
+                        )}
+                      </div>
+                      <select className="form-select form-select--sm" value={task.status} onChange={function (event) { handleStatusChange(task._id, event.target.value); }}>
+                        {Object.entries(statusLabels).map(function (entry) {
+                          return <option key={entry[0]} value={entry[0]}>{entry[1]}</option>;
+                        })}
+                      </select>
+                      <button className="btn btn--ghost btn--sm" onClick={function () { handleEdit(task); }}>Edit</button>
+                      <button className="btn btn--ghost btn--sm" style={{ color: '#ef4444' }} onClick={function () { setConfirmDelete(task._id); }}>Delete</button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <aside className="wm-side-panel">
+          <div className="wm-panel-card">
+            <div className="wm-panel-card__header">
+              <div>
+                <h3>Daily productivity</h3>
+                <p>Last 7 days of tracked output.</p>
+              </div>
+            </div>
+            <div className="wm-productivity-bars">
+              {dailyProductivity.map(function (day) {
+                var barHeight = productivity.weekSeconds > 0 ? Math.max(12, Math.round((day.trackedSeconds / Math.max.apply(null, dailyProductivity.map(function (entry) { return entry.trackedSeconds; }).concat([1]))) * 100)) : 12;
+                return (
+                  <div key={day.key} className="wm-productivity-bars__item">
+                    <div className="wm-productivity-bars__bar-wrap">
+                      <div className="wm-productivity-bars__bar" style={{ height: barHeight + '%' }}></div>
+                    </div>
+                    <strong>{formatDuration(day.trackedSeconds)}</strong>
+                    <span>{day.label}</span>
                   </div>
-                </div>
-                <div className="task-item__right">
-                  <select className="form-select form-select--sm" value={t.status} onChange={function (e) { handleStatusChange(t._id, e.target.value); }}>
-                    {Object.entries(statusLabels).map(function (entry) { return <option key={entry[0]} value={entry[0]}>{entry[1]}</option>; })}
-                  </select>
-                  <button className="btn btn--ghost btn--sm" onClick={function () { handleEdit(t); }}>✏️</button>
-                  <button className="btn btn--ghost btn--sm" style={{ color: '#ef4444' }} onClick={function () { setConfirmDelete(t._id); }}>🗑️</button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="wm-panel-card">
+            <div className="wm-panel-card__header">
+              <div>
+                <h3>Timesheet history</h3>
+                <p>Recent tracked sessions across current tasks.</p>
+              </div>
+            </div>
+            {timesheetEntries.length === 0 ? (
+              <div className="wm-empty-inline">No tracked sessions yet.</div>
+            ) : (
+              <div className="wm-timesheet-list">
+                {timesheetEntries.map(function (entry) {
+                  return (
+                    <div key={entry.id} className="wm-timesheet-row">
+                      <div>
+                        <strong>{entry.taskTitle}</strong>
+                        <span>{new Date(entry.endedAt).toLocaleString()}</span>
+                      </div>
+                      <div className="wm-timesheet-row__meta">
+                        {entry.focusMode ? <span className="wm-stage-pill">Focus</span> : null}
+                        <strong>{formatDuration(entry.durationSeconds)}</strong>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {stats ? (
+            <div className="wm-panel-card">
+              <div className="wm-panel-card__header">
+                <div>
+                  <h3>Execution snapshot</h3>
+                  <p>Current task health in this workspace.</p>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
+              <div className="wm-mini-stats">
+                <div><span>Total</span><strong>{stats.total}</strong></div>
+                <div><span>To do</span><strong>{stats.todo}</strong></div>
+                <div><span>In progress</span><strong>{stats.inProgress}</strong></div>
+                <div><span>Done</span><strong>{stats.done}</strong></div>
+                <div><span>Overdue</span><strong>{stats.overdue}</strong></div>
+                <div><span>Completion</span><strong>{stats.completionRate}%</strong></div>
+              </div>
+            </div>
+          ) : null}
+        </aside>
+      </div>
+
+      <ProductivityTimerWidget
+        timerState={timer.timerState}
+        elapsedSeconds={timer.elapsedSeconds}
+        onPause={timer.pauseTimer}
+        onResume={timer.resumeTimer}
+        onStop={stopAndPersistTimer}
+      />
 
       <ConfirmDialog
         open={!!confirmDelete}
-        title="Delete Task?"
+        title="Delete task?"
         message="This action cannot be undone."
         confirmLabel="Delete"
         danger={true}
         onConfirm={function () { handleDelete(confirmDelete); }}
         onCancel={function () { setConfirmDelete(null); }}
       />
+
+      <ToastContainer toasts={toast.toasts} removeToast={toast.removeToast} />
     </div>
   );
 }

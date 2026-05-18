@@ -1,15 +1,138 @@
+html {
+  scroll-behavior: smooth;
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --ui-focus-ring-color: var(--primary-color, var(--primary, var(--apple-button-primary, #3498db)));
+  --page-gutter: clamp(12px, 2vw, 24px);
+  --page-max-width: 1400px;
+}
+
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
 body {
   font-family: Arial, sans-serif;
   background-color: #f5f5f5;
   color: #333;
+  min-width: 320px;
 }
 
 #root {
   min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  isolation: isolate;
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: fadeSlideIn 280ms ease-out both;
+}
+
+a,
+button,
+input,
+textarea,
+select,
+[role="button"] {
+  transition: all 0.2s ease;
+}
+
+a {
+  transition: color 150ms ease, opacity 150ms ease;
+}
+
+a:hover {
+  opacity: 0.75;
+}
+
+button,
+[role="button"] {
+  transition: transform 150ms ease, background 200ms ease, opacity 200ms ease, filter 200ms ease, box-shadow 200ms ease;
+}
+
+button:not(:disabled),
+[role="button"] {
+  cursor: pointer;
+}
+
+button:not(:disabled):hover,
+[role="button"]:hover {
+  filter: brightness(0.92);
+}
+
+button:not(:disabled):active,
+[role="button"]:active {
+  transform: scale(0.96);
+  transition: transform 100ms ease;
+}
+
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+input,
+textarea,
+select {
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-focus-ring-color) 18%, transparent);
+}
+
+img {
+  transition: opacity 300ms ease;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 400ms ease-out both;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none; /* prevent scale on active when disabled */
+  filter: none; /* prevent hover brightness when disabled */
 }

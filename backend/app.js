@@ -89,6 +89,7 @@ const routes = {
   '/api/ai': './routes/ai',
   '/api/feedback': './routes/feedback',
   '/api/tasks': './routes/tasks',
+  '/api/calendar': './routes/calendar',
   '/api/career': './routes/career',
   '/api/performance': './routes/performance',
   '/api/reports': './routes/reports',

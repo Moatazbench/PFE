@@ -23,6 +23,7 @@ function EnterpriseSidebar({ collapsed, setCollapsed }) {
                 { path: '/dashboard', label: 'Dashboard', icon: 'grid' },
                 { path: '/goals', label: 'Objectives', icon: 'target' },
                 { path: '/tasks', label: 'Tasks', icon: 'check-square' },
+                { path: '/calendar', label: 'Calendar', icon: 'calendar' },
                 { path: '/meetings', label: 'Meetings', icon: 'calendar' },
                 { path: '/feed', label: 'Feed', icon: 'activity' },
             ],

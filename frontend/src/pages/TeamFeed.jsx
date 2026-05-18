@@ -16,7 +16,7 @@ function TeamFeed() {
         try {
             setLoading(true);
             const res = await axios.get('/feed');
-            setActivities(res.data);
+            setActivities(Array.isArray(res.data) ? res.data : res.data?.data ?? []);
         } catch (err) {
             console.error('Error fetching feed:', err);
         } finally {
@@ -33,7 +33,8 @@ function TeamFeed() {
         }
     };
 
-    const filteredActivities = activities.filter(a => {
+    console.log("activities value:", activities, typeof activities);
+    const filteredActivities = (Array.isArray(activities) ? activities : []).filter(a => {
         if (filter === 'all') return true;
         if (filter === 'goals') return a.type === 'GOAL_UPDATE';
         if (filter === 'progress') return a.type === 'PROGRESS_UPDATE';
@@ -50,7 +51,7 @@ function TeamFeed() {
                 </div>
                 <div className="feed-filters" style={{ display: 'flex', gap: '0.5rem' }}>
                     {['all', 'goals', 'progress', 'comments'].map(f => (
-                        <button 
+                        <button
                             key={f}
                             onClick={() => setFilter(f)}
                             className={`btn btn--sm ${filter === f ? 'btn--primary' : 'btn--outline'}`}

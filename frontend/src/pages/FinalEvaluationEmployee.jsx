@@ -13,6 +13,18 @@ function isEvaluationObjectiveStatus(status) {
   return !['draft', 'rejected', 'cancelled', 'archived'].includes(status);
 }
 
+function getFinalObjectiveAttachments(objective) {
+  if (Array.isArray(objective?.finalSelfAttachments) && objective.finalSelfAttachments.length > 0) {
+    return objective.finalSelfAttachments;
+  }
+
+  if (objective?.finalSelfAttachment) {
+    return [objective.finalSelfAttachment];
+  }
+
+  return [];
+}
+
 function FinalEvaluationEmployee({ cycleId, activeCycle }) {
   const { user } = useAuth();
   const toast = useToast();
@@ -112,8 +124,8 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
         rating: form.rating === '' ? null : Number(form.rating),
         comment: form.comment
       };
-      if (attachments[objectiveId]) {
-        payload.attachment = attachments[objectiveId];
+      if (attachments[objectiveId]?.length) {
+        payload.attachments = attachments[objectiveId];
       }
       await api.post(`/objectives/${objectiveId}/final-self-assessment`, payload);
       toast.success('Final self-assessment saved.');
@@ -126,19 +138,32 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
   }
 
   async function handleFileUpload(objectiveId, e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    setUploading(prev => ({ ...prev, [objectiveId]: true }));
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    setUploading((prev) => ({ ...prev, [objectiveId]: true }));
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const res = await api.post('/checkins/upload', fd);
-      setAttachments(prev => ({ ...prev, [objectiveId]: res.data.attachment }));
-      toast.success('File uploaded: ' + file.name);
+      const uploaded = [];
+
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await api.post('/checkins/upload', fd);
+        uploaded.push(res.data.attachment);
+      }
+
+      setAttachments((prev) => ({
+        ...prev,
+        [objectiveId]: (prev[objectiveId] || []).concat(uploaded),
+      }));
+      toast.success(`${uploaded.length} file(s) uploaded successfully.`);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to upload file');
     } finally {
-      setUploading(prev => ({ ...prev, [objectiveId]: false }));
+      setUploading((prev) => ({ ...prev, [objectiveId]: false }));
+      if (e.target) {
+        e.target.value = '';
+      }
     }
   }
 
@@ -184,6 +209,10 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
           objectives.map((objective) => {
             const form = assessmentForms[objective._id] || { progressPercentage: 0, rating: '', comment: '' };
             const isSaving = savingObjectiveId === objective._id;
+            const pendingAttachments = attachments[objective._id] || [];
+            const visibleAttachments = pendingAttachments.length > 0
+              ? pendingAttachments
+              : getFinalObjectiveAttachments(objective);
 
             return (
               <div key={objective._id} className="card shadow-sm" style={{ padding: '1.5rem' }}>
@@ -253,28 +282,71 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
                 </div>
 
                 <div style={{ marginBottom: '1rem' }}>
-                  <label className="ent-label">Evidence / Attachment</label>
+                  <label className="ent-label">Evidence / Attachments</label>
                   <div style={{ border: '2px dashed var(--shell-border, #d1d5db)', borderRadius: '8px', padding: '1rem', textAlign: 'center', background: 'var(--shell-bg-inset, #f9fafb)' }}>
                     {uploading[objective._id] ? (
-                      <div style={{ color: 'var(--primary)', fontWeight: 600 }}>⏳ Uploading...</div>
-                    ) : attachments[objective._id] ? (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
-                        <span>📎</span>
-                        <span style={{ fontWeight: 600 }}>{attachments[objective._id].name}</span>
-                        {canEditCycle && <button type="button" onClick={() => setAttachments(prev => { const next = { ...prev }; delete next[objective._id]; return next; })} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.1rem' }} title="Remove">✕</button>}
-                      </div>
-                    ) : objective.finalSelfAttachment ? (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
-                        <span>📎</span>
-                        <a href={objective.finalSelfAttachment.url} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>{objective.finalSelfAttachment.name || 'Attachment'}</a>
+                      <div style={{ color: 'var(--primary)', fontWeight: 600 }}>Uploading...</div>
+                    ) : visibleAttachments.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'stretch', textAlign: 'left' }}>
+                        {visibleAttachments.map((attachment, index) => (
+                          <div
+                            key={`${attachment.url || attachment.name || 'attachment'}-${index}`}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem' }}
+                          >
+                            <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                              <a
+                                href={attachment.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline', wordBreak: 'break-word' }}
+                              >
+                                {attachment.name || `Attachment ${index + 1}`}
+                              </a>
+                              {attachment.size && (
+                                <span className="text-muted" style={{ fontSize: '0.8rem' }}>
+                                  {(attachment.size / (1024 * 1024)).toFixed(2)} MB
+                                </span>
+                              )}
+                            </div>
+                            {canEditCycle && pendingAttachments.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setAttachments((prev) => ({
+                                  ...prev,
+                                  [objective._id]: (prev[objective._id] || []).filter((_, attachmentIndex) => attachmentIndex !== index),
+                                }))}
+                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.95rem', fontWeight: 700 }}
+                                title="Remove"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        {canEditCycle && (
+                          <div>
+                            <input
+                              type="file"
+                              id={`final-file-${objective._id}`}
+                              style={{ display: 'none' }}
+                              onChange={(e) => handleFileUpload(objective._id, e)}
+                              disabled={!canEditCycle}
+                              multiple
+                              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.txt,.csv,.zip"
+                            />
+                            <label htmlFor={`final-file-${objective._id}`} style={{ cursor: canEditCycle ? 'pointer' : 'not-allowed', color: 'var(--primary)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                              Add more files
+                            </label>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div>
-                        <input type="file" id={`final-file-${objective._id}`} style={{ display: 'none' }} onChange={(e) => handleFileUpload(objective._id, e)} disabled={!canEditCycle} accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.txt,.csv,.zip" />
+                        <input type="file" id={`final-file-${objective._id}`} style={{ display: 'none' }} onChange={(e) => handleFileUpload(objective._id, e)} disabled={!canEditCycle} multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.txt,.csv,.zip" />
                         <label htmlFor={`final-file-${objective._id}`} style={{ cursor: canEditCycle ? 'pointer' : 'not-allowed', color: 'var(--primary)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                          📂 Choose file to upload
+                          Choose file(s) to upload
                         </label>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Max 10MB — PDF, Word, Excel, Images, etc.</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Max 10MB each - PDF, Word, Excel, Images, etc.</div>
                       </div>
                     )}
                   </div>
@@ -519,7 +591,7 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
         <p style={{ margin: 0, lineHeight: 1.7 }}>
           You finished this cycle with a <strong>{renderRatingLabel(evaluation.rating_label)}</strong> rating and a final performance score of <strong>{evaluation.final_score}%</strong>.
           You completed <strong>{completedObjectives.length}</strong> out of <strong>{objectives.length}</strong> planned objectives, while the main improvement focus for the next cycle is
-          {` `}
+          {' '}
           <strong>{(evaluation.weaknesses || []).slice(0, 2).join(', ') || 'continued consistency and growth'}</strong>.
         </p>
       </div>

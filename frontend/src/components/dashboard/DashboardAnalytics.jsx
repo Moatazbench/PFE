@@ -1,20 +1,40 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
-  Chart as ChartJS,
-  ArcElement,
-  BarElement,
-  CategoryScale,
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
   Legend,
-  LineElement,
-  LinearScale,
-  PointElement,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
   Tooltip,
-} from 'chart.js';
-import { Bar, Doughnut, Line } from 'react-chartjs-2';
-import api from '../../services/api';
+  XAxis,
+  YAxis,
+} from 'recharts';
+import { motion } from 'framer-motion';
 import LoadingSkeleton from '../common/LoadingSkeleton';
+import {
+  buildComparisonChart,
+  buildLeaderboard,
+  buildObjectiveStatusChart,
+  buildTaskStatusChart,
+  buildWeeklyActivity,
+  collectKpis,
+  getCheckInSummary,
+  getObjectiveSummary,
+  getTaskSummary,
+} from './dashboardUtils';
+import { buildDailyProductivity, buildProductivitySummary, formatDuration } from '../../utils/workManagement';
 
-ChartJS.register(ArcElement, BarElement, CategoryScale, Legend, LineElement, LinearScale, PointElement, Tooltip);
+var cardTransition = {
+  duration: 0.32,
+  ease: 'easeOut',
+};
 
 function EmptyChartState({ title, text }) {
   return (
@@ -26,361 +46,429 @@ function EmptyChartState({ title, text }) {
   );
 }
 
-function DashboardAnalytics({ activeTab, objectives, teams, user }) {
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
+function ChartTooltip({ active, payload, label }) {
+  if (!active || !payload || payload.length === 0) return null;
 
-  useEffect(function () {
-    var cancelled = false;
+  return (
+    <div className="dash-chart-tooltip">
+      <strong>{label}</strong>
+      {payload.map(function (entry, index) {
+        return (
+          <div key={(entry.name || entry.dataKey || 'metric') + '-' + index} className="dash-chart-tooltip__row">
+            <span style={{ color: entry.color }}>{entry.name || entry.dataKey}</span>
+            <strong>{entry.value}</strong>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
-    async function loadTasks() {
-      setLoading(true);
-      try {
-        var loadedTasks = [];
+function KPIChip({ item }) {
+  return (
+    <div className="dash-kpi-chip">
+      <div className="dash-kpi-chip__top">
+        <span>{item.title}</span>
+        <strong>{item.progress}%</strong>
+      </div>
+      <div className="dash-kpi-chip__meta">
+        <span>{item.objectiveTitle}</span>
+        <span>
+          {item.currentValue}
+          {item.unit}
+          {' / '}
+          {item.targetValue}
+          {item.unit}
+        </span>
+      </div>
+      <div className="dash-kpi-chip__bar">
+        <div className="dash-kpi-chip__fill" style={{ width: item.progress + '%' }}></div>
+      </div>
+    </div>
+  );
+}
 
-        if (activeTab === 'me') {
-          var myTasksRes = await api.get('/tasks/my', { params: { limit: 100 } });
-          loadedTasks = myTasksRes.data?.tasks || [];
-        } else if (activeTab === 'org' && (user.role === 'ADMIN' || user.role === 'HR')) {
-          var allTasksRes = await api.get('/tasks/all', { params: { limit: 200 } });
-          loadedTasks = allTasksRes.data?.tasks || [];
-        } else {
-          var accessibleTeams = Array.isArray(teams) ? teams : [];
-          if (accessibleTeams.length > 0) {
-            var taskResponses = await Promise.all(
-              accessibleTeams.map(function (team) {
-                return api.get('/tasks/team/' + team._id).catch(function () {
-                  return { data: { tasks: [] } };
-                });
-              })
-            );
-            loadedTasks = taskResponses.flatMap(function (response) {
-              return response.data?.tasks || [];
-            });
-          }
-        }
+function StatStrip({ items }) {
+  return (
+    <div className="dash-analytics-strip">
+      {items.map(function (item) {
+        return (
+          <div key={item.label} className="dash-analytics-strip__item">
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+            <small>{item.hint}</small>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
-        if (!cancelled) {
-          var seen = new Set();
-          setTasks(loadedTasks.filter(function (task) {
-            if (!task || seen.has(task._id)) return false;
-            seen.add(task._id);
-            return true;
-          }));
-        }
-      } catch (err) {
-        console.error('Failed to load dashboard analytics tasks', err);
-        if (!cancelled) setTasks([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    loadTasks();
-    return function () {
-      cancelled = true;
-    };
-  }, [activeTab, teams, user.role]);
-
-  const objectiveStatusData = useMemo(function () {
-    var labels = ['Draft', 'Pending', 'Approved', 'Completed'];
-    var counts = { draft: 0, pending: 0, approved: 0, completed: 0 };
-
-    (objectives || []).forEach(function (objective) {
-      var status = objective.status || 'draft';
-      if (status === 'draft') counts.draft += 1;
-      else if (['pending', 'submitted', 'pending_approval', 'revision_requested'].includes(status)) counts.pending += 1;
-      else if (['approved', 'validated', 'assigned', 'acknowledged'].includes(status)) counts.approved += 1;
-      else if (['evaluated', 'locked', 'archived'].includes(status) || (objective.achievementPercent || 0) >= 100) counts.completed += 1;
-    });
-
-    return {
-      labels: labels,
-      datasets: [{
-        data: [counts.draft, counts.pending, counts.approved, counts.completed],
-        backgroundColor: ['#94a3b8', '#f59e0b', '#3b82f6', '#10b981'],
-        borderWidth: 0,
-        hoverOffset: 6,
-      }]
-    };
+function DashboardAnalytics({ activeTab, objectives, tasks, teams, user, checkIns, loading }) {
+  var objectiveStatusChart = useMemo(function () {
+    return buildObjectiveStatusChart(objectives);
   }, [objectives]);
 
-  const taskStatusData = useMemo(function () {
-    var counts = { todo: 0, in_progress: 0, done: 0, cancelled: 0 };
-    (tasks || []).forEach(function (task) {
-      counts[task.status] = (counts[task.status] || 0) + 1;
-    });
-
-    return {
-      labels: ['To Do', 'In Progress', 'Done', 'Cancelled'],
-      datasets: [{
-        label: 'Tasks',
-        data: [counts.todo, counts.in_progress, counts.done, counts.cancelled],
-        backgroundColor: '#4f46e5',
-        borderRadius: 10,
-        maxBarThickness: 32,
-      }]
-    };
+  var taskStatusChart = useMemo(function () {
+    return buildTaskStatusChart(tasks);
   }, [tasks]);
 
-  const progressTrendData = useMemo(function () {
-    var buckets = {};
-    (objectives || []).forEach(function (objective) {
-      var stamp = objective.updatedAt || objective.createdAt;
-      if (!stamp) return;
-      var date = new Date(stamp);
-      if (Number.isNaN(date.getTime())) return;
-      var key = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
-      if (!buckets[key]) buckets[key] = { total: 0, count: 0 };
-      buckets[key].total += Number(objective.achievementPercent || 0);
-      buckets[key].count += 1;
-    });
+  var weeklyActivity = useMemo(function () {
+    return buildWeeklyActivity(objectives, tasks, checkIns);
+  }, [objectives, tasks, checkIns]);
 
-    var sortedKeys = Object.keys(buckets).sort().slice(-6);
-    return {
-      labels: sortedKeys.map(function (key) {
-        var parts = key.split('-');
-        return new Date(Number(parts[0]), Number(parts[1]) - 1, 1).toLocaleDateString('en-US', { month: 'short' });
-      }),
-      datasets: [{
-        label: 'Average progress',
-        data: sortedKeys.map(function (key) {
-          return buckets[key].count > 0 ? Math.round(buckets[key].total / buckets[key].count) : 0;
-        }),
-        borderColor: '#0f766e',
-        backgroundColor: 'rgba(15, 118, 110, 0.14)',
-        fill: true,
-        tension: 0.35,
-        pointRadius: 4,
-        pointHoverRadius: 5,
-      }]
-    };
+  var comparisonChart = useMemo(function () {
+    return buildComparisonChart(activeTab, objectives, teams, user);
+  }, [activeTab, objectives, teams, user]);
+
+  var leaderboard = useMemo(function () {
+    return buildLeaderboard(objectives, activeTab, user);
+  }, [activeTab, objectives, user]);
+
+  var kpis = useMemo(function () {
+    return collectKpis(objectives).slice(0, 6);
   }, [objectives]);
 
-  const teamPerformanceData = useMemo(function () {
-    if (activeTab === 'me') {
-      var personalObjectives = (objectives || []).slice(0, 6);
+  var objectiveSummary = useMemo(function () {
+    return getObjectiveSummary(objectives);
+  }, [objectives]);
+
+  var taskSummary = useMemo(function () {
+    return getTaskSummary(tasks);
+  }, [tasks]);
+
+  var checkInSummary = useMemo(function () {
+    return getCheckInSummary(checkIns);
+  }, [checkIns]);
+
+  var productivitySummary = useMemo(function () {
+    return buildProductivitySummary(tasks);
+  }, [tasks]);
+
+  var trackedTimeTrend = useMemo(function () {
+    return buildDailyProductivity(tasks, 7).map(function (entry) {
       return {
-        labels: personalObjectives.map(function (objective) {
-          return objective.title.length > 16 ? objective.title.slice(0, 16) + '…' : objective.title;
-        }),
-        datasets: [{
-          label: 'Progress',
-          data: personalObjectives.map(function (objective) { return Number(objective.achievementPercent || 0); }),
-          backgroundColor: '#14b8a6',
-          borderRadius: 10,
-          maxBarThickness: 30,
-        }]
+        label: entry.label,
+        hours: Number((entry.trackedSeconds / 3600).toFixed(1)),
       };
-    }
-
-    var performanceByTeam = (teams || []).map(function (team) {
-      var ownerIds = [team.leader?._id || team.leader].concat((team.members || []).map(function (member) { return member._id || member; }))
-        .filter(Boolean)
-        .map(String);
-      var teamObjectives = (objectives || []).filter(function (objective) {
-        return ownerIds.includes(String(objective.owner?._id || objective.owner || ''));
-      });
-      var avg = teamObjectives.length > 0
-        ? Math.round(teamObjectives.reduce(function (sum, objective) {
-            return sum + Number(objective.achievementPercent || 0);
-          }, 0) / teamObjectives.length)
-        : 0;
-
-      return {
-        label: team.name,
-        score: avg,
-      };
-    }).slice(0, 6);
-
-    return {
-      labels: performanceByTeam.map(function (entry) { return entry.label; }),
-      datasets: [{
-        label: 'Average progress',
-        data: performanceByTeam.map(function (entry) { return entry.score; }),
-        backgroundColor: ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
-        borderRadius: 12,
-        maxBarThickness: 30,
-      }]
-    };
-  }, [activeTab, objectives, teams]);
-
-  const employeeProgress = useMemo(function () {
-    var progressMap = {};
-    (objectives || []).forEach(function (objective) {
-      var owner = objective.owner;
-      var ownerId = owner?._id || owner || 'unknown';
-      if (!progressMap[ownerId]) {
-        progressMap[ownerId] = {
-          name: owner?.name || (activeTab === 'me' ? (user.name || 'You') : 'Unknown'),
-          total: 0,
-          count: 0,
-        };
-      }
-      progressMap[ownerId].total += Number(objective.achievementPercent || 0);
-      progressMap[ownerId].count += 1;
     });
-
-    return Object.values(progressMap)
-      .map(function (entry) {
-        return {
-          name: entry.name,
-          progress: entry.count > 0 ? Math.round(entry.total / entry.count) : 0,
-        };
-      })
-      .sort(function (a, b) { return b.progress - a.progress; })
-      .slice(0, 5);
-  }, [activeTab, objectives, user.name]);
+  }, [tasks]);
 
   if (loading) {
     return (
       <div className="dash-analytics-grid">
         <div className="dash-card dash-analytics-card"><LoadingSkeleton rows={3} height={88} /></div>
         <div className="dash-card dash-analytics-card"><LoadingSkeleton rows={3} height={88} /></div>
-        <div className="dash-card dash-analytics-card"><LoadingSkeleton rows={3} height={88} /></div>
+        <div className="dash-card dash-analytics-card dash-analytics-card--wide"><LoadingSkeleton rows={3} height={88} /></div>
         <div className="dash-card dash-analytics-card"><LoadingSkeleton rows={3} height={88} /></div>
       </div>
     );
   }
 
-  var chartOptionsBase = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        labels: {
-          usePointStyle: true,
-          boxWidth: 10,
-          color: '#64748b',
-          font: { size: 11, weight: 600 }
-        }
-      }
-    },
-    scales: {
-      x: {
-        grid: { display: false },
-        ticks: { color: '#64748b', font: { size: 11 } }
-      },
-      y: {
-        beginAtZero: true,
-        grid: { color: 'rgba(148, 163, 184, 0.15)' },
-        ticks: { color: '#64748b', font: { size: 11 } }
-      }
-    }
-  };
-
   return (
-    <div className="dash-analytics-grid">
-      <div className="dash-card dash-analytics-card">
-        <div className="dash-analytics-card__header">
-          <div>
-            <h3>Objective Status</h3>
-            <p>Live breakdown of current objective states</p>
-          </div>
-        </div>
-        <div className="dash-analytics-card__body dash-analytics-card__body--donut">
-          {objectiveStatusData.datasets[0].data.every(function (value) { return value === 0; }) ? (
-            <EmptyChartState title="No objectives yet" text="Create or assign objectives to start tracking status." />
-          ) : (
-            <Doughnut
-              data={objectiveStatusData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '72%',
-                plugins: chartOptionsBase.plugins
-              }}
-            />
-          )}
-        </div>
-      </div>
+    <div className="dash-analytics-stack">
+      <StatStrip
+        items={[
+          {
+            label: 'Completion',
+            value: objectiveSummary.completionRate + '%',
+            hint: 'Objectives finished',
+          },
+          {
+            label: 'Task throughput',
+            value: taskSummary.completionRate + '%',
+            hint: 'Tasks completed',
+          },
+          {
+            label: 'Check-in health',
+            value: checkInSummary.averageProgress + '%',
+            hint: 'Average submitted progress',
+          },
+          {
+            label: 'Active KPIs',
+            value: kpis.length,
+            hint: 'Tracked metrics',
+          },
+          {
+            label: 'Tracked this week',
+            value: formatDuration(productivitySummary.weekSeconds),
+            hint: formatDuration(productivitySummary.todaySeconds) + ' today',
+          },
+        ]}
+      />
 
-      <div className="dash-card dash-analytics-card">
-        <div className="dash-analytics-card__header">
-          <div>
-            <h3>Tasks by Status</h3>
-            <p>Workload split from real task records</p>
+      <div className="dash-analytics-grid">
+        <motion.div
+          className="dash-card dash-analytics-card dash-analytics-card--wide"
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={cardTransition}
+        >
+          <div className="dash-analytics-card__header">
+            <div>
+              <h3>Progress and activity trend</h3>
+              <p>Weekly objective momentum, completed work, and check-ins</p>
+            </div>
           </div>
-        </div>
-        <div className="dash-analytics-card__body">
-          {taskStatusData.datasets[0].data.every(function (value) { return value === 0; }) ? (
-            <EmptyChartState title="No tasks yet" text="Tasks will appear here once work is assigned." />
-          ) : (
-            <Bar
-              data={taskStatusData}
-              options={chartOptionsBase}
-            />
-          )}
-        </div>
-      </div>
+          <div className="dash-analytics-card__body">
+            {weeklyActivity.every(function (point) { return point.activity === 0; }) ? (
+              <EmptyChartState
+                title="No activity yet"
+                text="Recent updates, completed tasks, and check-ins will appear here automatically."
+              />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={weeklyActivity}>
+                  <defs>
+                    <linearGradient id="dashProgressFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#4f46e5" stopOpacity="0.24" />
+                      <stop offset="100%" stopColor="#4f46e5" stopOpacity="0.02" />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="rgba(148, 163, 184, 0.14)" vertical={false} />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                  <YAxis yAxisId="left" tickLine={false} axisLine={false} />
+                  <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Legend />
+                  <Area
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="progress"
+                    stroke="#4f46e5"
+                    fill="url(#dashProgressFill)"
+                    strokeWidth={2.4}
+                    name="Avg progress"
+                  />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="completedTasks"
+                    stroke="#0ea5e9"
+                    strokeWidth={2.2}
+                    dot={{ r: 3 }}
+                    name="Completed tasks"
+                  />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="checkIns"
+                    stroke="#14b8a6"
+                    strokeWidth={2.2}
+                    dot={{ r: 3 }}
+                    name="Check-ins"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </motion.div>
 
-      <div className="dash-card dash-analytics-card dash-analytics-card--wide">
-        <div className="dash-analytics-card__header">
-          <div>
-            <h3>Progress Trend</h3>
-            <p>Average objective progress over recent months</p>
+        <motion.div
+          className="dash-card dash-analytics-card"
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={cardTransition}
+        >
+          <div className="dash-analytics-card__header">
+            <div>
+              <h3>Tracked focus time</h3>
+              <p>Daily timer output from the integrated productivity tracker</p>
+            </div>
           </div>
-        </div>
-        <div className="dash-analytics-card__body">
-          {progressTrendData.labels.length === 0 ? (
-            <EmptyChartState title="No trend data yet" text="Progress updates will build this trend automatically." />
-          ) : (
-            <Line
-              data={progressTrendData}
-              options={chartOptionsBase}
-            />
-          )}
-        </div>
-      </div>
+          <div className="dash-analytics-card__body">
+            {trackedTimeTrend.every(function (entry) { return entry.hours === 0; }) ? (
+              <EmptyChartState
+                title="No tracked time yet"
+                text="Tracked sessions will start populating this chart as soon as time is logged on tasks."
+              />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trackedTimeTrend}>
+                  <CartesianGrid stroke="rgba(148, 163, 184, 0.14)" vertical={false} />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                  <YAxis tickLine={false} axisLine={false} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Line type="monotone" dataKey="hours" stroke="#ec4899" strokeWidth={2.4} dot={{ r: 3 }} name="Hours" />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </motion.div>
 
-      <div className="dash-card dash-analytics-card">
-        <div className="dash-analytics-card__header">
-          <div>
-            <h3>{activeTab === 'me' ? 'Objective Progress' : 'Team Performance'}</h3>
-            <p>{activeTab === 'me' ? 'Current progress across your objectives' : 'Average completion by team'}</p>
+        <motion.div
+          className="dash-card dash-analytics-card"
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={cardTransition}
+        >
+          <div className="dash-analytics-card__header">
+            <div>
+              <h3>Objective distribution</h3>
+              <p>Live status split from current dashboard objectives</p>
+            </div>
           </div>
-        </div>
-        <div className="dash-analytics-card__body">
-          {teamPerformanceData.labels.length === 0 ? (
-            <EmptyChartState title="Nothing to compare yet" text="Progress will appear once objectives are active." />
-          ) : (
-            <Bar
-              data={teamPerformanceData}
-              options={chartOptionsBase}
-            />
-          )}
-        </div>
-      </div>
+          <div className="dash-analytics-card__body dash-analytics-card__body--donut">
+            {objectiveStatusChart.every(function (entry) { return entry.value === 0; }) ? (
+              <EmptyChartState
+                title="No objectives found"
+                text="Objectives in the active scope will appear here once available."
+              />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={objectiveStatusChart}
+                    innerRadius={68}
+                    outerRadius={100}
+                    paddingAngle={3}
+                    dataKey="value"
+                    nameKey="name"
+                  >
+                    {objectiveStatusChart.map(function (entry) {
+                      return <Cell key={entry.name} fill={entry.color} />;
+                    })}
+                  </Pie>
+                  <Tooltip content={<ChartTooltip />} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </motion.div>
 
-      <div className="dash-card dash-analytics-card">
-        <div className="dash-analytics-card__header">
-          <div>
-            <h3>{activeTab === 'me' ? 'My Progress' : 'People Progress'}</h3>
-            <p>{activeTab === 'me' ? 'Your current average completion' : 'Top average completion levels'}</p>
+        <motion.div
+          className="dash-card dash-analytics-card"
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={cardTransition}
+        >
+          <div className="dash-analytics-card__header">
+            <div>
+              <h3>Task flow</h3>
+              <p>Task status distribution in the active dashboard scope</p>
+            </div>
           </div>
-        </div>
-        <div className="dash-analytics-progress-list">
-          {employeeProgress.length === 0 ? (
-            <EmptyChartState title="No people data yet" text="People progress will appear here once objectives exist." />
-          ) : (
-            employeeProgress.map(function (entry) {
-              return (
-                <div key={entry.name} className="dash-analytics-progress-item">
-                  <div className="dash-analytics-progress-item__top">
-                    <span>{entry.name}</span>
-                    <strong>{entry.progress}%</strong>
+          <div className="dash-analytics-card__body">
+            {taskStatusChart.every(function (entry) { return entry.value === 0; }) ? (
+              <EmptyChartState
+                title="No tasks available"
+                text="Assigned tasks will populate this chart once work is in motion."
+              />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={taskStatusChart}>
+                  <CartesianGrid stroke="rgba(148, 163, 184, 0.14)" vertical={false} />
+                  <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                  <YAxis tickLine={false} axisLine={false} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Bar dataKey="value" radius={[10, 10, 0, 0]}>
+                    {taskStatusChart.map(function (entry) {
+                      return <Cell key={entry.name} fill={entry.color} />;
+                    })}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="dash-card dash-analytics-card"
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={cardTransition}
+        >
+          <div className="dash-analytics-card__header">
+            <div>
+              <h3>{activeTab === 'me' ? 'Objective comparison' : 'Team comparison'}</h3>
+              <p>{activeTab === 'me' ? 'Current progress by objective' : 'Average progress by team'}</p>
+            </div>
+          </div>
+          <div className="dash-analytics-card__body">
+            {comparisonChart.length === 0 ? (
+              <EmptyChartState
+                title="Not enough data to compare"
+                text="The dashboard will compare objectives or teams as soon as they are active."
+              />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={comparisonChart} layout="vertical" margin={{ left: 18 }}>
+                  <CartesianGrid stroke="rgba(148, 163, 184, 0.14)" horizontal={false} />
+                  <XAxis type="number" tickLine={false} axisLine={false} domain={[0, 100]} />
+                  <YAxis type="category" dataKey="label" tickLine={false} axisLine={false} width={108} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Bar dataKey="value" fill="#6366f1" radius={[0, 10, 10, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="dash-card dash-analytics-card"
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={cardTransition}
+        >
+          <div className="dash-analytics-card__header">
+            <div>
+              <h3>{activeTab === 'me' ? 'Progress snapshot' : 'Top contributors'}</h3>
+              <p>{activeTab === 'me' ? 'Your current objective averages' : 'Highest average objective progress'}</p>
+            </div>
+          </div>
+          <div className="dash-analytics-progress-list">
+            {leaderboard.length === 0 ? (
+              <EmptyChartState
+                title="No contributor data"
+                text="Owner-level progress will appear after objectives are assigned."
+              />
+            ) : (
+              leaderboard.map(function (entry) {
+                return (
+                  <div key={entry.label} className="dash-analytics-progress-item">
+                    <div className="dash-analytics-progress-item__top">
+                      <span>{entry.label}</span>
+                      <strong>{entry.value}%</strong>
+                    </div>
+                    <div className="dash-analytics-progress-item__bar">
+                      <div className="dash-analytics-progress-item__fill" style={{ width: entry.value + '%' }}></div>
+                    </div>
                   </div>
-                  <div className="dash-analytics-progress-item__bar">
-                    <div className="dash-analytics-progress-item__fill" style={{ width: entry.progress + '%' }}></div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
+                );
+              })
+            )}
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="dash-card dash-analytics-card dash-analytics-card--wide"
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={cardTransition}
+        >
+          <div className="dash-analytics-card__header">
+            <div>
+              <h3>KPI delivery board</h3>
+              <p>Real KPI entries mapped from live objective data</p>
+            </div>
+          </div>
+          <div className="dash-kpi-grid">
+            {kpis.length === 0 ? (
+              <EmptyChartState
+                title="No tracked KPIs yet"
+                text="This board now reads the existing KPI schema correctly and will populate when objectives include KPI entries."
+              />
+            ) : (
+              kpis.map(function (item) {
+                return <KPIChip key={item._id} item={item} />;
+              })
+            )}
+          </div>
+        </motion.div>
       </div>
     </div>
   );
 }
 
-export default DashboardAnalytics;
+export default React.memo(DashboardAnalytics);

@@ -1,9 +1,9 @@
-import apiClient from './apiClient';
+import api from '../services/api';
 
-export const fetchManagers = () => apiClient.get('/users/managers');
-export const fetchCollaborators = () => apiClient.get('/users/collaborators');
-export const fetchUsersByRole = (roles) => {
+export const fetchManagers = async () => (await api.get('/users/managers')).data;
+export const fetchCollaborators = async () => (await api.get('/users/collaborators')).data;
+export const fetchUsersByRole = async (roles) => {
   const roleParam = Array.isArray(roles) ? roles.join(',') : roles;
-  return apiClient.get(`/users?role=${roleParam}`);
+  return (await api.get(`/users/filter/list?role=${encodeURIComponent(roleParam)}`)).data;
 };
-export const fetchAllUsers = () => apiClient.get('/users');
+export const fetchAllUsers = async () => (await api.get('/users')).data;

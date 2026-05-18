@@ -51,7 +51,7 @@ function Login() {
   }
 
   return (
-    <div className="auth-page">
+    <div className="auth-page page-enter">
       <button 
         onClick={toggleDarkMode} 
         style={{

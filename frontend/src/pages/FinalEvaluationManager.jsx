@@ -10,6 +10,18 @@ function isEvaluationObjectiveStatus(status) {
   return !['draft', 'rejected', 'cancelled', 'archived'].includes(status);
 }
 
+function getFinalObjectiveAttachments(objective) {
+  if (Array.isArray(objective?.finalSelfAttachments) && objective.finalSelfAttachments.length > 0) {
+    return objective.finalSelfAttachments;
+  }
+
+  if (objective?.finalSelfAttachment) {
+    return [objective.finalSelfAttachment];
+  }
+
+  return [];
+}
+
 function FinalEvaluationManager({ cycleId, activeCycle }) {
   const toast = useToast();
   const canEditCycle = activeCycle?.currentPhase === 'phase3';
@@ -53,9 +65,20 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
 
   async function handleGenerateEvaluation(employee) {
     try {
-      await api.post(`/final-evaluations/generate/${cycleId}/${employee._id}`);
-      toast.success('Evaluation drafted and auto-scored successfully.');
-      fetchTeamData();
+      const res = await api.post(`/final-evaluations/generate/${cycleId}/${employee._id}`);
+      const generatedEvaluation = res.data?.evaluation;
+
+      if (res.data?.aiGenerated) {
+        toast.success(res.data?.message || 'AI final report generated successfully.');
+      } else {
+        toast.success(res.data?.message || 'Final report draft generated successfully.');
+      }
+
+      await fetchTeamData();
+
+      if (generatedEvaluation) {
+        await openEditor(employee, generatedEvaluation);
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to generate evaluation');
     }
@@ -153,6 +176,24 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
       link.remove();
     } catch (err) {
       toast.error('Failed to export PDF');
+    }
+  }
+
+  async function handleDownloadAttachment(attachment) {
+    try {
+      const response = await fetch(attachment.url);
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = attachment.name || 'attachment';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch {
+      toast.error('Failed to download attachment');
     }
   }
 
@@ -285,7 +326,7 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
         <div className="card shadow-sm" style={{ padding: '1.25rem' }}>
           <h3 style={{ margin: '0 0 1rem 0' }}>Team Performance Summary</h3>
           <div style={{ display: 'grid', gap: '1rem' }}>
-            {processedTeam.map(({ employee, evaluation, score }, index) => (
+            {processedTeam.map(({ employee, evaluation }, index) => (
               <div key={employee._id} className="hover-lift" style={{ borderLeft: evaluation?.status === 'validated' ? '4px solid #22c55e' : '4px solid #6366f1', background: '#fff', borderRadius: '10px', padding: '1rem 1.25rem', borderTop: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                   <div>
@@ -418,50 +459,43 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
           <div className="card shadow-sm" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
             <h4 style={{ margin: '0 0 1rem 0' }}>Employee Self-Assessment Details</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {employeeObjectives.map((obj) => (
-                <div key={obj._id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    <span style={{ fontWeight: 700 }}>{obj.title}</span>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                      Weight: {obj.weight}% | Progress: {obj.finalSelfPercent ?? obj.achievementPercent ?? 0}%
-                      {obj.finalSelfRating ? ` | Self-Rating: ${obj.finalSelfRating}/5` : ''}
-                    </span>
-                  </div>
-                  {obj.finalSelfAssessment && (
-                    <p style={{ margin: '0.25rem 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--text-dark)', lineHeight: '1.5', fontStyle: 'italic' }}>
-                      "{obj.finalSelfAssessment}"
-                    </p>
-                  )}
-                  {obj.finalSelfAttachment && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-                      <span>📎</span>
-                      <a href={obj.finalSelfAttachment.url} target="_blank" rel="noreferrer" style={{ color: '#1d4ed8', fontWeight: 600, textDecoration: 'underline', fontSize: '0.88rem' }}>
-                        {obj.finalSelfAttachment.name || 'View Attachment'}
-                      </a>
-                      <button type="button" onClick={async () => {
-                        try {
-                          const response = await fetch(obj.finalSelfAttachment.url);
-                          if (!response.ok) throw new Error('Download failed');
-                          const blob = await response.blob();
-                          const blobUrl = window.URL.createObjectURL(blob);
-                          const link = document.createElement('a');
-                          link.href = blobUrl;
-                          link.download = obj.finalSelfAttachment.name || 'attachment';
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-                          window.URL.revokeObjectURL(blobUrl);
-                        } catch { toast.error('Failed to download attachment'); }
-                      }} style={{ background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
-                        Download
-                      </button>
+              {employeeObjectives.map((obj) => {
+                const objectiveAttachments = getFinalObjectiveAttachments(obj);
+
+                return (
+                  <div key={obj._id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <span style={{ fontWeight: 700 }}>{obj.title}</span>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                        Weight: {obj.weight}% | Progress: {obj.finalSelfPercent ?? obj.achievementPercent ?? 0}%
+                        {obj.finalSelfRating ? ` | Self-Rating: ${obj.finalSelfRating}/5` : ''}
+                      </span>
                     </div>
-                  )}
-                  {!obj.finalSelfSubmittedAt && (
-                    <div className="text-muted" style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>Self-assessment not submitted yet.</div>
-                  )}
-                </div>
-              ))}
+                    {obj.finalSelfAssessment && (
+                      <p style={{ margin: '0.25rem 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--text-dark)', lineHeight: '1.5', fontStyle: 'italic' }}>
+                        "{obj.finalSelfAssessment}"
+                      </p>
+                    )}
+                    {objectiveAttachments.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                        {objectiveAttachments.map((attachment, index) => (
+                          <div key={`${attachment.url || attachment.name || 'attachment'}-${index}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', background: '#fff', border: '1px solid #dbe4ef', borderRadius: '8px', padding: '0.6rem 0.75rem', flexWrap: 'wrap' }}>
+                            <a href={attachment.url} target="_blank" rel="noreferrer" style={{ color: '#1d4ed8', fontWeight: 600, textDecoration: 'underline', fontSize: '0.88rem', wordBreak: 'break-word' }}>
+                              {attachment.name || `View Attachment ${index + 1}`}
+                            </a>
+                            <button type="button" onClick={() => handleDownloadAttachment(attachment)} style={{ background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+                              Download
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {!obj.finalSelfSubmittedAt && (
+                      <div className="text-muted" style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>Self-assessment not submitted yet.</div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

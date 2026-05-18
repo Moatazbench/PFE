@@ -21,4 +21,127 @@ images:
   - name: moatazbench/pfe-backend
     newTag: 2681edfded11fce73d834651de602046bac13b38
   - name: moatazbench/pfe-frontend
-    newTag: 2681edfded11fce73d834651de602046bac13b38
+    newTag: 2681edfded11fce73d834651de602046bac13b38You are helping improve the UI/UX of an existing MERN stack web application.
+Your job is ONLY to enhance the frontend visually and interactively.
+DO NOT touch any backend code, API routes, database logic, or server files.
+DO NOT refactor or restructure any existing component logic.
+DO NOT rename, move, or delete any existing files.
+DO NOT change any existing class names, IDs, or data attributes unless you are
+ONLY adding to them.
+Make ONE change at a time. Do not bundle multiple unrelated changes together.
+
+---
+
+HERE IS WHAT YOU MUST DO, in this exact order:
+
+1. PAGE TRANSITIONS
+   - Add smooth fade-in transitions when any page/route mounts.
+   - Use CSS keyframes or Framer Motion if already installed. If not, pure CSS only.
+   - Transition duration: 200ms–400ms. Nothing slower.
+
+2. BUTTON INTERACTIONS
+   - Every clickable button must have:
+     a. A scale-down effect on click (transform: scale(0.96))
+     b. A hover state with a slight brightness or color shift
+     c. A smooth transition property (transition: all 0.2s ease)
+   - Apply globally via CSS class or global stylesheet. NOT inline styles.
+   - DO NOT change button colors, sizes, or layout.
+
+3. LOADING STATES
+   - Any button triggering an async action must show a spinner or disable itself
+     with reduced opacity while waiting. Re-enable once response is received.
+   - DO NOT change the async logic — only add the visual state on top.
+
+4. SCROLL ANIMATIONS
+   - Add a fade-up animation when sections or cards scroll into view.
+   - Use Intersection Observer API — no new libraries.
+   - opacity 0→1, translateY 20px→0, over 300ms.
+
+5. INPUT FOCUS STATES
+   - All text inputs and textareas must have a visible smooth focus ring on click.
+   - Duration: 150ms ease.
+
+6. NAVBAR BEHAVIOR
+   - The navbar must change appearance on scroll: add a background blur
+     (backdrop-filter: blur(12px)) and a subtle box-shadow once the user
+     scrolls past 60px.
+   - Add a smooth transition so it does not snap (transition: all 0.3s ease).
+   - On mobile, the hamburger menu must slide in from the side, not just appear.
+   - DO NOT change the navbar layout or links.
+
+7. CARD HOVER EFFECTS
+   - Every card component must lift on hover:
+     a. transform: translateY(-6px)
+     b. box-shadow increases to feel elevated
+     c. transition: all 0.25s ease
+   - If the card contains an image, the image must zoom in slightly on hover
+     (transform: scale(1.05) with overflow: hidden on the container).
+   - DO NOT change card content, colors, or dimensions.
+
+8. SKELETON LOADING SCREENS
+   - Anywhere data is fetched from the API, replace the blank white space or
+     spinner with a skeleton loader that matches the shape of the content.
+   - Use animated shimmer effect (CSS gradient animation, no library needed).
+   - Remove the skeleton and show real content once data arrives.
+
+9. TOAST NOTIFICATIONS
+   - Replace any alert() calls or plain text error/success messages with
+     toast notifications that slide in from the top-right corner.
+   - Success toasts: green. Error toasts: red. Info: blue.
+   - Auto-dismiss after 3 seconds with a fade-out.
+   - If a toast library is already installed (like react-toastify), use it.
+     If not, build a minimal one with CSS and React state — DO NOT install
+     anything new without asking.
+
+10. MODAL ANIMATIONS
+    - Any modal or dialog that opens must animate in:
+      a. Backdrop fades in (opacity 0→1, 200ms)
+      b. Modal itself scales up (transform: scale(0.92)→scale(1), 250ms ease-out)
+    - On close, reverse the animation before unmounting.
+    - DO NOT change modal content or logic.
+
+11. FORM VALIDATION FEEDBACK
+    - When a field has an error, shake it horizontally (keyframe animation,
+      subtle — 4–6px, 3 times, 300ms total).
+    - The error message must fade in, not just appear.
+    - When a field becomes valid, show a small green checkmark icon on the right.
+    - DO NOT change validation logic — only the visual feedback layer.
+
+12. CURSOR & INTERACTIVE ELEMENT POLISH
+    - Every clickable element that is not a native button or link must have
+      cursor: pointer explicitly set.
+    - Add a ripple effect on button clicks: a circle that expands and fades out
+      from where the user clicked. Implement in pure CSS/JS — no libraries.
+
+13. IMAGE LOADING
+    - Every image must load with a blur-up effect: show a blurred placeholder
+      first, then transition to the sharp image once loaded.
+    - Use the onLoad event and CSS filter: blur() transition.
+
+14. EMPTY STATES
+    - Anywhere a list or grid can be empty (no results, no data), add a
+      centered illustration placeholder with a short message like
+      "Nothing here yet" and a relevant action button.
+    - Style it to match the existing design. DO NOT use external icon libraries
+      unless one is already installed.
+
+15. SCROLL TO TOP BUTTON
+    - Add a floating circular button in the bottom-right corner that appears
+      once the user scrolls past 300px.
+    - It must fade in/out smoothly and scroll the page back to top with smooth
+      behavior on click.
+    - Style it to match the site's color scheme.
+
+---
+
+RULES YOU MUST FOLLOW AT ALL TIMES:
+
+- After every single change, tell me exactly what file you modified and what
+  you changed. Nothing else.
+- If something is already working, DO NOT touch it.
+- If you are unsure whether a change might break something, STOP and ask me.
+- Do not "improve" anything I did not ask for.
+- Do not add any new components, pages, or dependencies unless I explicitly
+  approve it first.
+- If you break something, revert it immediately and tell me what went wrong.
+- Do not combine multiple tasks into one response. One task, one reply.

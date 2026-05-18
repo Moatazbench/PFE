@@ -1,16 +1,16 @@
-import apiClient from './apiClient';
+import api from '../services/api';
 
-export const fetchHRDecisions = (filters = {}) => {
+export const fetchHRDecisions = async (filters = {}) => {
   const params = new URLSearchParams();
   if (filters.cycle) params.append('cycle', filters.cycle);
   if (filters.user) params.append('user', filters.user);
   if (filters.action) params.append('action', filters.action);
 
-  return apiClient.get(`/hr-decisions?${params.toString()}`);
+  return (await api.get(`/hr-decisions?${params.toString()}`)).data;
 };
 
-export const fetchHRDecisionById = (id) => apiClient.get(`/hr-decisions/${id}`);
-export const createHRDecision = (decisionData) => apiClient.post('/hr-decisions', decisionData);
-export const updateHRDecision = (id, decisionData) => apiClient.put(`/hr-decisions/${id}`, decisionData);
-export const deleteHRDecision = (id) => apiClient.delete(`/hr-decisions/${id}`);
-export const fetchHRStats = (cycleId) => apiClient.get(`/hr-decisions/stats${cycleId ? `?cycle=${cycleId}` : ''}`);
+export const fetchHRDecisionById = async (id) => (await api.get(`/hr-decisions/${id}`)).data;
+export const createHRDecision = async (decisionData) => (await api.post('/hr-decisions', decisionData)).data;
+export const updateHRDecision = async (id, decisionData) => (await api.put(`/hr-decisions/${id}`, decisionData)).data;
+export const deleteHRDecision = async (id) => (await api.delete(`/hr-decisions/${id}`)).data;
+export const fetchHRStats = async (cycleId) => (await api.get(`/hr-decisions/stats${cycleId ? `?cycle=${cycleId}` : ''}`)).data;

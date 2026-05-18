@@ -1043,8 +1043,24 @@ exports.finalSelfAssessmentObjective = async (req, res) => {
     objective.finalSelfRating = rating !== undefined && rating !== null ? Number(rating) : null;
     objective.finalSelfAssessment = String(comment).trim();
     objective.finalSelfSubmittedAt = new Date();
-    if (req.body.attachment) {
-      objective.finalSelfAttachment = req.body.attachment;
+    const attachmentList = Array.isArray(req.body.attachments)
+      ? req.body.attachments
+      : req.body.attachment
+        ? [req.body.attachment]
+        : [];
+    if (attachmentList.length > 0) {
+      objective.finalSelfAttachments = attachmentList.map((item) => ({
+        name: String(item?.name || ''),
+        url: String(item?.url || ''),
+        type: String(item?.type || 'file'),
+        size: Number(item?.size || 0),
+        mimetype: String(item?.mimetype || ''),
+        storageProvider: String(item?.storageProvider || 'local'),
+        publicId: item?.publicId ? String(item.publicId) : null,
+      }));
+      objective.finalSelfAttachment = objective.finalSelfAttachments[0];
+    } else if (!objective.finalSelfAttachments || objective.finalSelfAttachments.length === 0) {
+      objective.finalSelfAttachment = null;
     }
     objective.achievementPercent = normalizedProgress;
     objective.weightedScore = (objective.weight * normalizedProgress) / 100;

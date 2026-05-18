@@ -5,18 +5,10 @@ const auth = require('../middleware/auth');
 const role = require('../middleware/role');
 const rateLimiter = require('../middleware/rateLimiter');
 const multer = require('multer');
-const path = require('path');
+const { storeUploadedFile } = require('../utils/fileStorage');
 
-// Storage config for avatars
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) { cb(null, 'uploads/avatars/'); },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, req.user.id + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
 const upload = multer({ 
-  storage: storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) cb(null, true);
@@ -36,6 +28,18 @@ router.get('/', rateLimiter, auth, role('ADMIN'), userController.getAllUsers);
 router.get('/:id', rateLimiter, auth, role('ADMIN'), userController.getUserById);
 router.delete('/:id', rateLimiter, auth, role('ADMIN'), userController.deleteUser);
 router.put('/:id', rateLimiter, auth, userController.updateUser);
-router.put('/:id/avatar', rateLimiter, auth, upload.single('avatar'), userController.updateAvatar);
+router.put('/:id/avatar', rateLimiter, auth, upload.single('avatar'), async function (req, res, next) {
+  try {
+    if (req.file) {
+      req.uploadedAsset = await storeUploadedFile(req.file, {
+        folder: 'avatars',
+        userId: req.user.id || req.user._id,
+      });
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+}, userController.updateAvatar);
 
 module.exports = router;

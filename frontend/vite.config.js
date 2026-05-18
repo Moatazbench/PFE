@@ -1,23 +1,33 @@
 // frontend/vite.config.js
-import { defineConfig } from 'vite';
+import dns from 'node:dns';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    proxy: {
-      // Any request starting with /api from the frontend
-      // will be proxied to your Node backend on port 5000
-      '/api': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/uploads': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-        secure: false,
+// Keep local API traffic on localhost while avoiding flaky IPv6 loopback resolution on Windows.
+dns.setDefaultResultOrder('ipv4first');
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const backendTarget = env.VITE_DEV_PROXY_TARGET || 'http://localhost:5009';
+
+  return {
+    plugins: [react()],
+    server: {
+      host: 'localhost',
+      proxy: {
+        // Any request starting with /api from the frontend
+        // will be proxied to your local Node backend on port 5000 by default.
+        '/api': {
+          target: backendTarget,
+          changeOrigin: true,
+          secure: false,
+        },
+        '/uploads': {
+          target: backendTarget,
+          changeOrigin: true,
+          secure: false,
+        },
       },
     },
-  },
+  };
 });
