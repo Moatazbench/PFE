@@ -19,9 +19,9 @@ patches:
 
 images:
   - name: moatazbench/pfe-backend
-    newTag: 2681edfded11fce73d834651de602046bac13b38
+    newTag: e72dcb4549eb0724d0cc67562d35bbfe97f3a221
   - name: moatazbench/pfe-frontend
-    newTag: 2681edfded11fce73d834651de602046bac13b38You are helping improve the UI/UX of an existing MERN stack web application.
+    newTag: e72dcb4549eb0724d0cc67562d35bbfe97f3a221
 Your job is ONLY to enhance the frontend visually and interactively.
 DO NOT touch any backend code, API routes, database logic, or server files.
 DO NOT refactor or restructure any existing component logic.
