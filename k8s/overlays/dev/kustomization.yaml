@@ -19,9 +19,9 @@ patches:
 
 images:
   - name: moatazbench/pfe-backend
-    newTag: e72dcb4549eb0724d0cc67562d35bbfe97f3a221
+    newTag: 6010a708259e5a23b6cfbfa2919e389cdacc7332
   - name: moatazbench/pfe-frontend
-    newTag: e72dcb4549eb0724d0cc67562d35bbfe97f3a221
+    newTag: 6010a708259e5a23b6cfbfa2919e389cdacc7332
 Your job is ONLY to enhance the frontend visually and interactively.
 DO NOT touch any backend code, API routes, database logic, or server files.
 DO NOT refactor or restructure any existing component logic.
