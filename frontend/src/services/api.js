@@ -7,6 +7,41 @@ const api = axios.create({
 });
 
 let refreshPromise = null;
+const pendingGetRequests = new Map();
+const responseCache = new Map();
+
+function normalizeParams(params) {
+  if (!params || typeof params !== 'object' || Array.isArray(params)) {
+    return params || null;
+  }
+
+  return Object.keys(params).sort().reduce(function (result, key) {
+    result[key] = normalizeParams(params[key]);
+    return result;
+  }, {});
+}
+
+function buildGetCacheKey(url, config) {
+  return JSON.stringify({
+    url: url,
+    params: normalizeParams(config?.params || null),
+  });
+}
+
+function cloneCachedResponse(response) {
+  return {
+    data: response.data,
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+    config: response.config,
+    request: response.request,
+  };
+}
+
+function clearCachedGets() {
+  responseCache.clear();
+}
 
 function applyAccessToken(token) {
   if (token) {
@@ -65,6 +100,9 @@ api.interceptors.request.use(function (config) {
 
 api.interceptors.response.use(
   function (response) {
+    if (String(response.config?.method || 'get').toLowerCase() !== 'get') {
+      clearCachedGets();
+    }
     return response;
   },
   async function (error) {
@@ -88,5 +126,48 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+api.getCached = function getCached(url, config, options) {
+  var settings = options || {};
+  var ttl = Number(settings.ttl || 0);
+  var force = Boolean(settings.force);
+  var cacheKey = settings.cacheKey || buildGetCacheKey(url, config);
+  var cached = responseCache.get(cacheKey);
+  var now = Date.now();
+
+  if (!force && ttl > 0 && cached && cached.expiresAt > now) {
+    return Promise.resolve(cloneCachedResponse(cached.response));
+  }
+
+  if (!force && pendingGetRequests.has(cacheKey)) {
+    return pendingGetRequests.get(cacheKey);
+  }
+
+  var request = api.get(url, config).then(function (response) {
+    if (ttl > 0) {
+      responseCache.set(cacheKey, {
+        expiresAt: Date.now() + ttl,
+        response: response,
+      });
+    }
+
+    return response;
+  }).finally(function () {
+    pendingGetRequests.delete(cacheKey);
+  });
+
+  pendingGetRequests.set(cacheKey, request);
+  return request;
+};
+
+api.prefetch = function prefetch(url, config, options) {
+  return api.getCached(url, config, options).then(function () {
+    return null;
+  }).catch(function () {
+    return null;
+  });
+};
+
+api.clearCachedGets = clearCachedGets;
 
 export default api;

@@ -22,12 +22,23 @@ const finalEvaluationSchema = new mongoose.Schema({
   status: { type: String, enum: ['draft','pending_hr','validated','closed'], default: 'draft' },
   hr_validated_by: { type: ObjectId, ref: 'User' },
   hr_validated_at: Date,
+  performance_status: {
+    type: String,
+    enum: ['excellent_performance', 'satisfactory', 'needs_improvement', 'critical_attention'],
+    default: null
+  },
   exported_at: Date,
   hr_decision: {
     action: { type: String, enum: ['promotion','bonus','pip','transfer','no_action'] },
     notes: String,
     decided_by: { type: ObjectId, ref: 'User' },
     decided_at: Date
+  },
+  employee_feedback: {
+    acknowledged: { type: Boolean, default: false },
+    comment: { type: String, default: '' },
+    acknowledged_at: { type: Date, default: null },
+    updated_at: { type: Date, default: null }
   }
 }, { timestamps: true });
 

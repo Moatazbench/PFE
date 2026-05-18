@@ -1,150 +1,172 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import api from '../services/api';
-import { useAuth } from '../components/AuthContext';
-import { useToast } from '../components/common/Toast';
+import { ToastContainer, useToast } from '../components/common/Toast';
 
 function AuditLogsPage() {
-  const { user } = useAuth();
-  const toast = useToast();
-  
-  const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  
-  // Filters
-  const [filterEntity, setFilterEntity] = useState('all');
-  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  var toast = useToast();
+  var [logs, setLogs] = useState([]);
+  var [loading, setLoading] = useState(true);
+  var [filterEntity, setFilterEntity] = useState('all');
+  var [dateRange, setDateRange] = useState({ start: '', end: '' });
 
-  useEffect(() => { fetchLogs(); }, []);
+  useEffect(function () {
+    fetchLogs();
+  }, []);
 
   async function fetchLogs() {
     setLoading(true);
-    try {
-      let url = '/audit-logs?limit=100';
-      if (filterEntity !== 'all') url += `&entityType=${filterEntity}`;
-      if (dateRange.start) url += `&startDate=${dateRange.start}`;
-      if (dateRange.end) url += `&endDate=${dateRange.end}`;
 
-      const res = await api.get(url);
-      setLogs(res.data.logs || []);
-    } catch (err) {
+    try {
+      var url = '/audit-logs?limit=100';
+      if (filterEntity !== 'all') url += '&entityType=' + filterEntity;
+      if (dateRange.start) url += '&startDate=' + dateRange.start;
+      if (dateRange.end) url += '&endDate=' + dateRange.end;
+
+      var response = await api.get(url);
+      setLogs(response.data.logs || []);
+    } catch (error) {
       toast.error('Failed to load audit logs');
     } finally {
       setLoading(false);
     }
   }
 
-  function handleFilterSubmit(e) {
-    e.preventDefault();
+  function handleFilterSubmit(event) {
+    event.preventDefault();
     fetchLogs();
   }
 
-  const getActionBadge = (action) => {
-    const actMap = {
-      'create': { c: '#0f172a', bg: '#f1f5f9' },
-      'update': { c: '#0f172a', bg: '#e2e8f0' },
-      'delete': { c: '#ef4444', bg: '#fef2f2' },
-      'submitted': { c: '#3b82f6', bg: '#eff6ff' },
-      'approved': { c: '#22c55e', bg: '#f0fdf4' },
-      'rejected': { c: '#ef4444', bg: '#fef2f2' },
-      'revision_requested': { c: '#f97316', bg: '#fff7ed' },
-      'midyear_assessed': { c: '#8b5cf6', bg: '#f5f3ff' },
-      'final_evaluated': { c: '#6366f1', bg: '#eef2ff' },
-      'locked': { c: '#1e293b', bg: '#f8fafc' },
-      'unlocked': { c: '#f59e0b', bg: '#fffbeb' },
-      'phase_changed': { c: '#0ea5e9', bg: '#e0f2fe' }
+  function getActionBadge(action) {
+    var toneMap = {
+      create: 'success',
+      update: 'neutral',
+      delete: 'danger',
+      submitted: 'info',
+      approved: 'success',
+      rejected: 'danger',
+      revision_requested: 'warning',
+      midyear_assessed: 'info',
+      final_evaluated: 'info',
+      locked: 'neutral',
+      unlocked: 'warning',
+      phase_changed: 'info',
     };
-    const s = actMap[action] || { c: '#64748b', bg: '#f8fafc' };
-    return <span style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', color: s.c, backgroundColor: s.bg, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{action.replace('_', ' ')}</span>;
-  };
 
-  const getEntityIcon = (entity) => {
-    const map = {
-      'goal': '🎯', 'review': '📝', 'goal_review': '📝', 'cycle': '🔄',
-      'user': '👤', 'team': '👥', 'notification': '🔔'
-    };
-    return map[entity] || '📄';
-  };
+    return (
+      <span className={'ui-badge ui-badge--' + (toneMap[action] || 'neutral')}>
+        {String(action || 'unknown').replace(/_/g, ' ')}
+      </span>
+    );
+  }
+
+  function getEntityLabel(entity) {
+    return String(entity || 'record').replace(/_/g, ' ');
+  }
 
   return (
-    <div className="page" style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '2.2rem', color: 'var(--text-dark)' }}>🛡️ System Audit Logs</h1>
-          <p className="text-muted" style={{ margin: '0.5rem 0 0 0' }}>Security, activity, and administrative trace.</p>
+    <div className="audit-logs-page">
+      <div className="ds-page-header">
+        <div className="ds-page-header__left">
+          <h1 className="ds-page-header__title">System Audit Logs</h1>
+          <p className="ds-page-header__subtitle">Security, workflow, and administrative activity across the platform.</p>
         </div>
       </div>
 
-      <div className="card shadow-sm" style={{ padding: '1.5rem', marginBottom: '2rem', background: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
-        <form onSubmit={handleFilterSubmit} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Entity Type</label>
-            <select className="form-control hover-lift" value={filterEntity} onChange={e => setFilterEntity(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-              <option value="all">All Entities</option>
-              <option value="goal">Annual Goals</option>
+      <div className="ui-surface">
+        <form className="audit-logs__filters" onSubmit={handleFilterSubmit}>
+          <div className="audit-logs__field">
+            <label htmlFor="audit-entity">Entity type</label>
+            <select id="audit-entity" value={filterEntity} onChange={function (event) { setFilterEntity(event.target.value); }}>
+              <option value="all">All entities</option>
+              <option value="goal">Annual goals</option>
               <option value="goal_review">Assessments</option>
               <option value="cycle">Cycles</option>
               <option value="user">Users</option>
             </select>
           </div>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Start Date</label>
-            <input type="date" className="form-control" value={dateRange.start} onChange={e => setDateRange({...dateRange, start: e.target.value})} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+
+          <div className="audit-logs__field">
+            <label htmlFor="audit-start">Start date</label>
+            <input
+              id="audit-start"
+              type="date"
+              value={dateRange.start}
+              onChange={function (event) { setDateRange(Object.assign({}, dateRange, { start: event.target.value })); }}
+            />
           </div>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>End Date</label>
-            <input type="date" className="form-control" value={dateRange.end} onChange={e => setDateRange({...dateRange, end: e.target.value})} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+
+          <div className="audit-logs__field">
+            <label htmlFor="audit-end">End date</label>
+            <input
+              id="audit-end"
+              type="date"
+              value={dateRange.end}
+              onChange={function (event) { setDateRange(Object.assign({}, dateRange, { end: event.target.value })); }}
+            />
           </div>
-          <button type="submit" className="btn btn--primary" style={{ padding: '0.75rem 2rem', fontWeight: 'bold', height: '44px' }}>Filter Logs</button>
+
+          <button type="submit" className="btn btn--primary">Filter logs</button>
         </form>
       </div>
 
       {loading ? (
-        <div className="page-loading"><div className="spinner"></div><p>Searching logs...</p></div>
+        <div className="page-loading">
+          <div className="spinner"></div>
+          <p>Searching logs...</p>
+        </div>
       ) : logs.length === 0 ? (
-        <div className="empty-state">No audit logs match your criteria.</div>
+        <div className="empty-state">
+          <h3>No matching logs</h3>
+          <p>Adjust the filters to broaden the activity window.</p>
+        </div>
       ) : (
-        <div style={{ background: '#fff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-          <table style={{ minWidth: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+        <div className="ui-surface audit-logs__table-wrap">
+          <table className="audit-logs__table">
             <thead>
-              <tr style={{ background: '#0f172a', color: '#fff', textAlign: 'left' }}>
-                <th style={{ padding: '1rem', width: '200px' }}>Timestamp (Local)</th>
-                <th style={{ padding: '1rem', width: '180px' }}>Performed By</th>
-                <th style={{ padding: '1rem', width: '250px' }}>Entity & Action</th>
-                <th style={{ padding: '1rem' }}>Description / Changes</th>
+              <tr>
+                <th>Timestamp</th>
+                <th>Performed by</th>
+                <th>Entity and action</th>
+                <th>Description and changes</th>
               </tr>
             </thead>
             <tbody>
-              {logs.map((log) => (
-                <tr key={log._id} style={{ borderBottom: '1px solid #f1f5f9', background: log.action === 'delete' ? '#fff1f2' : 'transparent' }}>
-                  <td style={{ padding: '1rem', color: '#64748b' }}>
-                    {new Date(log.timestamp).toLocaleString()}
-                  </td>
-                  <td style={{ padding: '1rem' }}>
-                    <div><strong>{log.userName || 'System'}</strong></div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{log.ipAddress || 'Internal'}</div>
-                  </td>
-                  <td style={{ padding: '1rem' }}>
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <span title={log.entityType}>{getEntityIcon(log.entityType)}</span>
-                      <strong style={{ textTransform: 'capitalize' }}>{log.entityType.replace('_', ' ')}</strong>
-                    </div>
-                    {getActionBadge(log.action)}
-                  </td>
-                  <td style={{ padding: '1rem' }}>
-                     <div style={{ marginBottom: '0.5rem', color: '#0f172a' }}>{log.description}</div>
-                     {(log.changes?.before || log.changes?.after) && log.action !== 'create' && (
-                       <div style={{ fontSize: '0.8rem', background: '#f8fafc', padding: '0.5rem', borderRadius: '4px', fontFamily: 'monospace', color: '#475569' }}>
-                         {log.changes.before && <div><span style={{color: '#ef4444'}}>-</span> {JSON.stringify(log.changes.before).substring(0,60)}...</div>}
-                         {log.changes.after && <div><span style={{color: '#22c55e'}}>+</span> {JSON.stringify(log.changes.after).substring(0,60)}...</div>}
-                       </div>
-                     )}
-                  </td>
-                </tr>
-              ))}
+              {logs.map(function (log) {
+                return (
+                  <tr key={log._id} className={log.action === 'delete' ? 'audit-logs__row--destructive' : ''}>
+                    <td>{new Date(log.timestamp).toLocaleString()}</td>
+                    <td>
+                      <div className="audit-logs__meta">
+                        <strong>{log.userName || 'System'}</strong>
+                        <span className="audit-logs__ip">{log.ipAddress || 'Internal'}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="audit-logs__entity">
+                        <strong>{getEntityLabel(log.entityType)}</strong>
+                      </div>
+                      {getActionBadge(log.action)}
+                    </td>
+                    <td>
+                      <div className="audit-logs__meta">
+                        <span>{log.description}</span>
+                        {(log.changes?.before || log.changes?.after) && log.action !== 'create' ? (
+                          <div className="audit-logs__changes">
+                            {log.changes.before ? <div>- {JSON.stringify(log.changes.before).substring(0, 60)}...</div> : null}
+                            {log.changes.after ? <div>+ {JSON.stringify(log.changes.after).substring(0, 60)}...</div> : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
+
+      <ToastContainer toasts={toast.toasts} removeToast={toast.removeToast} />
     </div>
   );
 }

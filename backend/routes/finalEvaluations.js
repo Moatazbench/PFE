@@ -14,6 +14,7 @@ router.get('/export/:id', finalEvaluationController.exportEvaluation);
 
 // HR get pending evaluations
 router.get('/hr/pending', role('ADMIN', 'HR'), finalEvaluationController.getPendingEvaluations);
+router.get('/hr/reviewed', role('ADMIN', 'HR'), finalEvaluationController.getReviewedEvaluations);
 
 // Employee history
 router.get('/user/:employee_id/history', finalEvaluationController.getUserHistory);
@@ -26,6 +27,7 @@ router.put('/:id', role('ADMIN', 'HR', 'TEAM_LEADER'), finalEvaluationController
 
 // HR validate
 router.put('/:id/hr-validate', role('ADMIN', 'HR'), finalEvaluationController.validateEvaluation);
+router.put('/:id/employee-feedback', role('COLLABORATOR'), finalEvaluationController.submitEmployeeFeedback);
 
 // Get a specific evaluation
 router.get('/:cycle_id/:employee_id', finalEvaluationController.getEvaluation);

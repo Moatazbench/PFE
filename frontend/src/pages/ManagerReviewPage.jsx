@@ -91,7 +91,7 @@ function ManagerReviewPage() {
 
   async function fetchCycles() {
     try {
-      const res = await api.get('/cycles');
+      const res = await api.getCached('/cycles', undefined, { ttl: 60000, cacheKey: 'cycles:manager-review-list' });
       const data = (Array.isArray(res.data) ? res.data : [])
         .filter(c => (c.currentPhase === 'phase2' || c.currentPhase === 'phase3') && c.status !== 'draft');
       setCycles(data);

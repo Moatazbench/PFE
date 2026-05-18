@@ -1,162 +1,101 @@
-// src/components/common/Toast.jsx
-// Simple toast notification component
-
 import React, { useEffect } from 'react';
 
-const toastStyles = {
-  container: {
-    position: 'fixed',
-    top: '20px',
-    right: '20px',
-    zIndex: 10000,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '10px',
-  },
-  toast: {
-    padding: '12px 20px',
-    borderRadius: '6px',
-    color: 'white',
-    fontSize: '14px',
-    fontWeight: '500',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    minWidth: '280px',
-    maxWidth: '400px',
-    animation: 'slideIn 0.3s ease-out',
-  },
-  success: {
-    backgroundColor: '#10b981',
-  },
-  error: {
-    backgroundColor: '#ef4444',
-  },
-  warning: {
-    backgroundColor: '#f59e0b',
-  },
-  info: {
-    backgroundColor: '#3b82f6',
-  },
-  closeBtn: {
-    marginLeft: 'auto',
-    background: 'none',
-    border: 'none',
-    color: 'white',
-    cursor: 'pointer',
-    fontSize: '18px',
-    padding: '0 4px',
-  },
-};
-
-// Add keyframe animation via style tag
-const styleSheet = document.createElement('style');
-styleSheet.textContent = `
-  @keyframes slideIn {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-  @keyframes slideOut {
-    from {
-      transform: translateX(0);
-      opacity: 1;
-    }
-    to {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-  }
-`;
-if (!document.querySelector('#toast-styles')) {
-  styleSheet.id = 'toast-styles';
-  document.head.appendChild(styleSheet);
-}
-
-const Toast = ({ message, type = 'info', onClose, duration = 4000 }) => {
-  useEffect(() => {
+function ToastItem({ message, type, onClose, duration }) {
+  useEffect(function () {
     if (duration > 0) {
-      const timer = setTimeout(onClose, duration);
-      return () => clearTimeout(timer);
+      var timer = window.setTimeout(onClose, duration);
+      return function () {
+        window.clearTimeout(timer);
+      };
     }
+
+    return undefined;
   }, [duration, onClose]);
 
-  const icon = {
-    success: '✓',
-    error: '✕',
-    warning: '⚠',
-    info: 'ℹ',
-  }[type];
+  var icon = {
+    success: 'OK',
+    error: '!',
+    warning: '!',
+    info: 'i',
+  }[type] || 'i';
 
   return (
-    <div style={{ ...toastStyles.toast, ...toastStyles[type] }}>
-      <span>{icon}</span>
-      <span>{message}</span>
-      <button style={toastStyles.closeBtn} onClick={onClose}>
-        ×
+    <div className={'toast toast--' + type} role="status" aria-live="polite">
+      <span className="toast__icon" aria-hidden="true">{icon}</span>
+      <span className="toast__message">{message}</span>
+      <button type="button" className="toast__close" onClick={onClose} aria-label="Dismiss notification">
+        x
       </button>
     </div>
   );
-};
+}
 
-// Toast container that manages multiple toasts
-export const ToastContainer = ({ toasts, removeToast }) => {
+export function ToastContainer({ toasts, removeToast }) {
   if (!toasts || toasts.length === 0) return null;
 
   return (
-    <div style={toastStyles.container}>
-      {toasts.map((toast) => (
-        <Toast
-          key={toast.id}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => removeToast(toast.id)}
-          duration={toast.duration}
-        />
-      ))}
+    <div className="toast-container">
+      {toasts.map(function (toast) {
+        return (
+          <ToastItem
+            key={toast.id}
+            message={toast.message}
+            type={toast.type}
+            onClose={function () { removeToast(toast.id); }}
+            duration={toast.duration}
+          />
+        );
+      })}
     </div>
   );
-};
+}
 
-// Hook for managing toasts
-export const useToast = () => {
-  const [toasts, setToasts] = React.useState([]);
+export function useToast() {
+  var [toasts, setToasts] = React.useState([]);
 
-  const addToast = (message, type = 'info', duration = 4000) => {
-    const id = Date.now() + Math.random();
-    setToasts((prev) => [...prev, { id, message, type, duration }]);
+  function addToast(message, type, duration) {
+    var id = Date.now() + Math.random();
+    setToasts(function (currentToasts) {
+      return currentToasts.concat([{ id: id, message: message, type: type || 'info', duration: duration || 4000 }]);
+    });
     return id;
-  };
+  }
 
-  const removeToast = (id) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
+  function removeToast(id) {
+    setToasts(function (currentToasts) {
+      return currentToasts.filter(function (toast) { return toast.id !== id; });
+    });
+  }
 
-  const showSuccess = (message) => addToast(message, 'success');
-  const showError = (message) => addToast(message, 'error');
-  const showWarning = (message) => addToast(message, 'warning');
-  const showInfo = (message) => addToast(message, 'info');
+  function showSuccess(message) {
+    return addToast(message, 'success');
+  }
+
+  function showError(message) {
+    return addToast(message, 'error');
+  }
+
+  function showWarning(message) {
+    return addToast(message, 'warning');
+  }
+
+  function showInfo(message) {
+    return addToast(message, 'info');
+  }
 
   return {
-    toasts,
-    addToast,
-    removeToast,
-    showSuccess,
-    showError,
-    showWarning,
-    showInfo,
-    // Shorthand aliases (toast.success / toast.error / etc.)
+    toasts: toasts,
+    addToast: addToast,
+    removeToast: removeToast,
+    showSuccess: showSuccess,
+    showError: showError,
+    showWarning: showWarning,
+    showInfo: showInfo,
     success: showSuccess,
     error: showError,
     warning: showWarning,
     info: showInfo,
   };
-};
+}
 
-export default Toast;
+export default ToastContainer;

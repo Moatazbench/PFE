@@ -6,15 +6,16 @@ function GoalFilters({ activeTab, onTabChange, cycles, selectedCycle, onCycleCha
     var isManager = user && (user.role === 'TEAM_LEADER' || user.role === 'ADMIN' || user.role === 'HR');
 
     var tabs = [
-        { key: 'my', label: '📋 My Objectives' },
-        { key: 'team', label: '👥 My Team' },
+        { key: 'my', label: 'My Objectives' },
+        { key: 'team', label: 'My Team' },
     ];
-    if (isManager) {
-        tabs.push({ key: 'pending', label: '⏳ Pending Review' });
-        tabs.push({ key: 'awaiting_eval', label: '📊 Awaiting Evaluation' });
-    }
-    tabs.push({ key: 'all', label: '🌐 All Objectives' });
 
+    if (isManager) {
+        tabs.push({ key: 'pending', label: 'Pending Review' });
+        tabs.push({ key: 'awaiting_eval', label: 'Awaiting Evaluation' });
+    }
+
+    tabs.push({ key: 'all', label: 'All Objectives' });
 
     return (
         <div className="goals-filters">
@@ -33,24 +34,23 @@ function GoalFilters({ activeTab, onTabChange, cycles, selectedCycle, onCycleCha
                 })}
             </div>
 
-            <div className="goals-filters__controls" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <input 
-                    type="text" 
-                    placeholder="Search goals..." 
-                    value={searchTerm} 
-                    onChange={function (e) { onSearchChange(e.target.value); }}
+            <div className="goals-filters__controls">
+                <input
+                    type="text"
+                    placeholder="Search objectives..."
+                    value={searchTerm}
+                    onChange={function (event) { onSearchChange(event.target.value); }}
                     className="goals-filters__search"
-                    style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none' }}
                 />
 
                 <select
                     className="goals-filters__cycle-select"
                     value={selectedCycle}
-                    onChange={function (e) { onCycleChange(e.target.value); }}
+                    onChange={function (event) { onCycleChange(event.target.value); }}
                 >
                     <option value="">All Cycles</option>
-                    {cycles.map(function (c) {
-                        return <option key={c._id} value={c._id}>{c.name} ({c.year})</option>;
+                    {cycles.map(function (cycle) {
+                        return <option key={cycle._id} value={cycle._id}>{cycle.name} ({cycle.year})</option>;
                     })}
                 </select>
             </div>

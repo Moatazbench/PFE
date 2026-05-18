@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
 import { useToast } from '../components/common/Toast';
 import { Link } from 'react-router-dom';
-import FinalEvaluationEmployee from './FinalEvaluationEmployee';
-import FinalEvaluationManager from './FinalEvaluationManager';
+
+const FinalEvaluationEmployee = lazy(() => import('./FinalEvaluationEmployee'));
+const FinalEvaluationManager = lazy(() => import('./FinalEvaluationManager'));
 
 function FinalEvaluationPage() {
   const { user } = useAuth();
@@ -18,27 +19,45 @@ function FinalEvaluationPage() {
 
   const isManagerRole = ['TEAM_LEADER', 'ADMIN', 'HR'].includes(user?.role);
 
-  useEffect(() => { fetchCycles(); }, []);
-
-  async function fetchCycles() {
-    try {
-      const res = await api.get('/cycles');
-      const data = (Array.isArray(res.data) ? res.data : []).filter(c =>
-        (c.currentPhase === 'phase3' || c.currentPhase === 'closed') && c.status !== 'draft'
-      );
-      setCycles(data);
-      if (data.length > 0) {
-        const preferredCycle = data.find(c => c.currentPhase === 'phase3') || data[0];
-        setSelectedCycleId(preferredCycle._id);
-        setActiveCycle(preferredCycle);
-      } else {
-        setLoading(false);
-      }
-    } catch (err) {
-      toast.error('Failed to load cycles');
-      setLoading(false);
-    }
+  function renderLoadingSubview(text) {
+    return <div className="page-loading"><div className="spinner"></div><p>{text}</p></div>;
   }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCycles() {
+      try {
+        const res = await api.get('/cycles');
+        const data = (Array.isArray(res.data) ? res.data : []).filter(c =>
+          (c.currentPhase === 'phase3' || c.currentPhase === 'closed') && c.status !== 'draft'
+        );
+
+        if (cancelled) return;
+
+        setCycles(data);
+        if (data.length > 0) {
+          const preferredCycle = data.find(c => c.currentPhase === 'phase3') || data[0];
+          setSelectedCycleId(preferredCycle._id);
+          setActiveCycle(preferredCycle);
+        }
+      } catch {
+        if (!cancelled) {
+          toast.error('Failed to load cycles');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadCycles();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [toast]);
 
   if (loading && !selectedCycleId) {
     return <div className="page-loading"><div className="spinner"></div><p>Loading End-Year phase...</p></div>;
@@ -93,11 +112,13 @@ function FinalEvaluationPage() {
             </div>
           )}
 
-          {viewMode === 'self' ? (
-            <FinalEvaluationEmployee cycleId={selectedCycleId} activeCycle={activeCycle} />
-          ) : (
-            <FinalEvaluationManager cycleId={selectedCycleId} activeCycle={activeCycle} />
-          )}
+          <Suspense fallback={renderLoadingSubview(viewMode === 'self' ? 'Loading personal evaluation...' : 'Loading team evaluations...')}>
+            {viewMode === 'self' ? (
+              <FinalEvaluationEmployee cycleId={selectedCycleId} activeCycle={activeCycle} />
+            ) : (
+              <FinalEvaluationManager cycleId={selectedCycleId} activeCycle={activeCycle} />
+            )}
+          </Suspense>
         </>
       )}
     </div>

@@ -777,40 +777,43 @@ body.dark-mode .ent-alert--danger { background: rgba(239,68,68,0.1); border-colo
 .ent-modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(15,23,42,0.5);
-  backdrop-filter: blur(4px);
+  background: rgba(15,23,42,0.62);
+  backdrop-filter: blur(6px);
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: var(--page-gutter, 24px);
+  padding: clamp(16px, 3vw, 32px);
   overflow-x: hidden;
   overflow-y: auto;
-  z-index: 1000;
+  z-index: 1400;
   animation: ent-fadeIn 0.15s ease;
 }
 
 .ent-modal {
   background: var(--shell-bg-card);
-  border-radius: var(--shell-radius-xl);
-  width: min(100%, 600px);
-  max-width: 600px;
-  max-height: calc(100dvh - (var(--page-gutter, 24px) * 2));
-  overflow: auto;
+  border-radius: 20px;
+  width: min(100%, 860px);
+  max-width: 860px;
+  max-height: calc(100dvh - clamp(32px, 6vw, 64px));
+  overflow: hidden;
   border: 1px solid var(--shell-border);
   box-shadow: var(--shell-shadow-xl);
   animation: ent-slideUp 0.2s ease;
   margin: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .ent-modal__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
+  padding: 24px 32px 20px;
   border-bottom: 1px solid var(--shell-border);
+  gap: 16px;
 }
 
-.ent-modal__title { font-size: 16px; font-weight: 700; margin: 0; }
+.ent-modal__title { font-size: 24px; font-weight: 800; line-height: 1.2; margin: 0; }
 
 .ent-modal__close {
   background: none;
@@ -826,14 +829,19 @@ body.dark-mode .ent-alert--danger { background: rgba(239,68,68,0.1); border-colo
 
 .ent-modal__close:hover { background: var(--shell-bg-hover); color: var(--shell-text); }
 
-.ent-modal__body { padding: 24px; }
+.ent-modal__body {
+  padding: 28px 32px 32px;
+  overflow-y: auto;
+}
 
 .ent-modal__footer {
-  padding: 16px 24px;
+  padding: 20px 32px 24px;
   border-top: 1px solid var(--shell-border);
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  flex-wrap: wrap;
+  background: var(--shell-bg-card);
 }
 
 @keyframes ent-fadeIn { from { opacity: 0; } to { opacity: 1; } }

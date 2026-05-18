@@ -1,4 +1,5 @@
 const FinalEvaluation = require('../models/FinalEvaluation');
+const ImprovementPlan = require('../models/ImprovementPlan');
 const Objective = require('../models/Objective');
 const CheckIn = require('../models/CheckIn');
 const User = require('../models/User');
@@ -81,6 +82,12 @@ function normalizeDraftList(value) {
 
 function humanizeRatingLabel(label) {
   return String(label || '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function humanizePerformanceStatus(status) {
+  return String(status || '')
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
@@ -170,8 +177,15 @@ exports.getEvaluation = async (req, res) => {
       .populate('employee_id', 'name email profileImage')
       .populate('evaluator_id', 'name role')
       .populate('hr_validated_by', 'name');
-      
-    res.json({ success: true, evaluation });
+
+    const improvementPlans = evaluation
+      ? await ImprovementPlan.find({ evaluation_id: evaluation._id })
+        .populate('created_by', 'name')
+        .populate('updated_by', 'name')
+        .sort({ createdAt: -1 })
+      : [];
+
+    res.json({ success: true, evaluation, improvementPlans });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -378,7 +392,7 @@ exports.updateEvaluation = async (req, res) => {
 exports.validateEvaluation = async (req, res) => {
   try {
     const { id } = req.params;
-    const { action } = req.body; // 'validate' or 'send_back'
+    const { action, performance_status } = req.body; // 'validate' or 'send_back'
 
     const evaluation = await FinalEvaluation.findById(id);
     if (!evaluation) return res.status(404).json({ success: false, message: 'Evaluation not found' });
@@ -386,9 +400,12 @@ exports.validateEvaluation = async (req, res) => {
     if (phaseCheck.error) return res.status(phaseCheck.status).json({ success: false, message: phaseCheck.message });
 
     if (action === 'validate') {
-      evaluation.status = 'validated';
+      evaluation.status = evaluation.status === 'closed' ? 'closed' : 'validated';
       evaluation.hr_validated_by = req.user.id;
       evaluation.hr_validated_at = new Date();
+      if (performance_status !== undefined) {
+        evaluation.performance_status = performance_status || null;
+      }
     } else if (action === 'send_back') {
       evaluation.status = 'draft';
       // Notification logic would go here
@@ -398,10 +415,17 @@ exports.validateEvaluation = async (req, res) => {
 
     await auditLogger.log(req.user.id, `evaluation.${action}`, 'FinalEvaluation', evaluation._id, {
       action,
-      status: evaluation.status
+      status: evaluation.status,
+      performance_status: evaluation.performance_status || null
     });
 
-    res.json({ success: true, evaluation });
+    const populated = await FinalEvaluation.findById(evaluation._id)
+      .populate('employee_id', 'name email profileImage')
+      .populate('cycle_id', 'name year')
+      .populate('evaluator_id', 'name role')
+      .populate('hr_validated_by', 'name');
+
+    res.json({ success: true, evaluation: populated });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -420,6 +444,7 @@ exports.exportEvaluation = async (req, res) => {
       owner: evaluation.employee_id._id, 
       cycle: evaluation.cycle_id._id 
     });
+    const improvementPlans = await ImprovementPlan.find({ evaluation_id: evaluation._id }).sort({ deadline: 1 });
 
     const PDFDocument = require('pdfkit');
     const doc = new PDFDocument({ margin: 50 });
@@ -453,6 +478,9 @@ exports.exportEvaluation = async (req, res) => {
     doc.text(`Final Score: ${evaluation.final_score || 'N/A'}`);
     doc.text(`Rating Label: ${evaluation.rating_label || 'N/A'}`);
     doc.text(`Manager Recommendation: ${evaluation.recommendation || 'None'}`);
+    if (evaluation.performance_status) {
+      doc.text(`HR Performance Status: ${humanizePerformanceStatus(evaluation.performance_status)}`);
+    }
     doc.moveDown(2);
 
     // Manager Comments
@@ -475,6 +503,35 @@ exports.exportEvaluation = async (req, res) => {
       doc.fontSize(16).text('Areas for Improvement');
       doc.fontSize(12).moveDown(0.5);
       evaluation.weaknesses.forEach(w => doc.text(`• ${w}`));
+      doc.moveDown(2);
+    }
+
+    if (improvementPlans.length > 0) {
+      doc.fontSize(16).text('Improvement Plans');
+      doc.fontSize(12).moveDown(0.5);
+      improvementPlans.forEach((plan, index) => {
+        doc.text(`${index + 1}. Goal: ${plan.objective_goal}`);
+        doc.text(`Deadline: ${new Date(plan.deadline).toLocaleDateString()}`);
+        doc.text(`Expected Outcome: ${plan.expected_outcome}`);
+        doc.text(`Progress Status: ${humanizePerformanceStatus(plan.progress_status)}`);
+        if (plan.notes) {
+          doc.text(`Notes: ${plan.notes}`);
+        }
+        doc.moveDown(0.75);
+      });
+      doc.moveDown(1);
+    }
+
+    if (evaluation.employee_feedback?.acknowledged || evaluation.employee_feedback?.comment) {
+      doc.fontSize(16).text('Employee Feedback');
+      doc.fontSize(12).moveDown(0.5);
+      doc.text(`Acknowledged: ${evaluation.employee_feedback?.acknowledged ? 'Yes' : 'No'}`);
+      if (evaluation.employee_feedback?.acknowledged_at) {
+        doc.text(`Acknowledged At: ${new Date(evaluation.employee_feedback.acknowledged_at).toLocaleDateString()}`);
+      }
+      if (evaluation.employee_feedback?.comment) {
+        doc.text(`Comment: ${evaluation.employee_feedback.comment}`);
+      }
       doc.moveDown(2);
     }
 
@@ -517,6 +574,59 @@ exports.getPendingEvaluations = async (req, res) => {
       .populate('cycle_id', 'name')
       .populate('evaluator_id', 'name role');
     res.json({ success: true, evaluations });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.getReviewedEvaluations = async (req, res) => {
+  try {
+    const evaluations = await FinalEvaluation.find({ status: { $in: ['validated', 'closed'] } })
+      .populate('employee_id', 'name email profileImage')
+      .populate('cycle_id', 'name year')
+      .populate('evaluator_id', 'name role')
+      .populate('hr_validated_by', 'name')
+      .sort({ hr_validated_at: -1, updatedAt: -1 });
+
+    res.json({ success: true, evaluations });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.submitEmployeeFeedback = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { acknowledged, comment } = req.body;
+
+    const evaluation = await FinalEvaluation.findById(id)
+      .populate('employee_id', 'name email profileImage')
+      .populate('evaluator_id', 'name role')
+      .populate('hr_validated_by', 'name');
+
+    if (!evaluation) {
+      return res.status(404).json({ success: false, message: 'Evaluation not found' });
+    }
+
+    if (String(evaluation.employee_id?._id || evaluation.employee_id) !== String(req.user.id || req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Forbidden' });
+    }
+
+    evaluation.employee_feedback = {
+      acknowledged: Boolean(acknowledged),
+      comment: String(comment || '').trim(),
+      acknowledged_at: acknowledged ? new Date() : null,
+      updated_at: new Date()
+    };
+
+    await evaluation.save();
+
+    await auditLogger.log(req.user.id, 'evaluation.employee_feedback', 'FinalEvaluation', evaluation._id, {
+      acknowledged: evaluation.employee_feedback.acknowledged,
+      hasComment: Boolean(evaluation.employee_feedback.comment)
+    });
+
+    res.json({ success: true, evaluation });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

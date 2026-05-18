@@ -15,26 +15,32 @@ exports.getDashboardStats = async (req, res) => {
     }
 
     if (scope === 'me') {
-      const myObjectives = await Objective.countDocuments({ owner: userId });
-      const myTeam = await Team.findOne({ $or: [{ leader: userId }, { members: userId }] });
+      const [myObjectives, myTeam, activeCyclesCount] = await Promise.all([
+        Objective.countDocuments({ owner: userId }),
+        Team.findOne({ $or: [{ leader: userId }, { members: userId }] }).select('_id').lean(),
+        Cycle.countDocuments({ status: { $in: ['active', 'in_progress'] } }),
+      ]);
       return res.json({
         users: 1,
         teams: myTeam ? 1 : 0,
         objectives: myObjectives,
-        cycles: await Cycle.countDocuments({ status: { $in: ['active', 'in_progress'] } })
+        cycles: activeCyclesCount
       });
     }
 
     if (scope === 'team') {
-      const team = await Team.findOne({ $or: [{ leader: userId }, { members: userId }] });
+      const team = await Team.findOne({ $or: [{ leader: userId }, { members: userId }] }).select('leader members').lean();
       if (!team) return res.json({ users: 0, teams: 0, objectives: 0, cycles: 0 });
       const teamMembers = [team.leader, ...team.members].filter(Boolean);
-      const teamObjectives = await Objective.countDocuments({ owner: { $in: teamMembers } });
+      const [teamObjectives, activeCyclesCount] = await Promise.all([
+        Objective.countDocuments({ owner: { $in: teamMembers } }),
+        Cycle.countDocuments({ status: { $in: ['active', 'in_progress'] } }),
+      ]);
       return res.json({
         users: teamMembers.length,
         teams: 1,
         objectives: teamObjectives,
-        cycles: await Cycle.countDocuments({ status: { $in: ['active', 'in_progress'] } })
+        cycles: activeCyclesCount
       });
     }
 

@@ -4,6 +4,7 @@ import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
 import { useToast, ToastContainer } from '../components/common/Toast';
 import ConfirmDialog from '../components/common/ConfirmDialog';
+import '../evaluation.css';
 
 function EvaluationScoringPage() {
   const { user } = useAuth();
@@ -52,7 +53,7 @@ function EvaluationScoringPage() {
         nextSteps: record.nextSteps || '',
       });
       setFinalScoreInput(record.finalScore != null ? String(record.finalScore) : '');
-    } catch (err) {
+    } catch {
       toast.error('Failed to load evaluation.');
     } finally {
       setLoading(false);

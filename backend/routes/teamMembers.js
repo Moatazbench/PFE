@@ -51,33 +51,85 @@ router.get('/', rateLimiter, auth, async (req, res) => {
       return res.status(200).json([]);
     }
 
-    // 2. Fetch stats for each user asynchronously
+    const userIds = usersToProcess.map(user => user._id);
+    const [taskStats, objectiveStats, evaluationStats] = await Promise.all([
+      Task.aggregate([
+        { $match: { assignee: { $in: userIds } } },
+        {
+          $group: {
+            _id: '$assignee',
+            tasksCompletedCount: {
+              $sum: {
+                $cond: [{ $eq: ['$status', 'done'] }, 1, 0]
+              }
+            },
+            tasksActiveCount: {
+              $sum: {
+                $cond: [{ $in: ['$status', ['done', 'cancelled']] }, 0, 1]
+              }
+            }
+          }
+        }
+      ]),
+      Objective.aggregate([
+        {
+          $match: {
+            owner: { $in: userIds },
+            status: { $nin: ['draft', 'rejected', 'cancelled', 'archived', 'locked'] }
+          }
+        },
+        {
+          $group: {
+            _id: '$owner',
+            activeObjectivesCount: { $sum: 1 },
+            totalProgress: { $sum: { $ifNull: ['$achievementPercent', 0] } }
+          }
+        }
+      ]),
+      Evaluation.aggregate([
+        {
+          $match: {
+            evaluatorId: { $in: userIds },
+            status: { $in: ['draft', 'in_progress', 'rejected'] }
+          }
+        },
+        {
+          $group: {
+            _id: '$evaluatorId',
+            pendingReviewsCount: { $sum: 1 }
+          }
+        }
+      ]),
+    ]);
+
+    const taskStatsByUser = taskStats.reduce((acc, item) => {
+      acc[String(item._id)] = item;
+      return acc;
+    }, {});
+    const objectiveStatsByUser = objectiveStats.reduce((acc, item) => {
+      acc[String(item._id)] = item;
+      return acc;
+    }, {});
+    const evaluationStatsByUser = evaluationStats.reduce((acc, item) => {
+      acc[String(item._id)] = item;
+      return acc;
+    }, {});
+
     const aggregatedData = await Promise.all(usersToProcess.map(async (user) => {
       try {
         const uId = user._id;
+        const normalizedUserId = String(uId);
+        const userTaskStats = taskStatsByUser[normalizedUserId] || {};
+        const userObjectiveStats = objectiveStatsByUser[normalizedUserId] || {};
+        const userEvaluationStats = evaluationStatsByUser[normalizedUserId] || {};
+        const tasksCompletedCount = userTaskStats.tasksCompletedCount || 0;
+        const tasksActiveCount = userTaskStats.tasksActiveCount || 0;
+        const activeObjectivesCount = userObjectiveStats.activeObjectivesCount || 0;
+        const pendingReviewsCount = userEvaluationStats.pendingReviewsCount || 0;
 
-        const tasksCompletedCount = await Task.countDocuments({ assignee: uId, status: 'done' });
-        const tasksActiveCount = await Task.countDocuments({ assignee: uId, status: { $nin: ['done', 'cancelled'] } });
-
-        const activeObjectivesCount = await Objective.countDocuments({
-          owner: uId,
-          status: { $nin: ['draft', 'rejected', 'cancelled', 'archived', 'locked'] }
-        });
-
-        const pendingReviewsCount = await Evaluation.countDocuments({
-          evaluatorId: uId,
-          status: { $in: ['draft', 'in_progress', 'rejected'] }
-        });
-
-        const objectives = await Objective.find({
-          owner: uId,
-          status: { $nin: ['draft', 'rejected', 'cancelled', 'archived', 'locked'] }
-        });
-        
         let progress = 0;
-        if (objectives.length > 0) {
-          const totalProgress = objectives.reduce((sum, objective) => sum + (objective.achievementPercent || 0), 0);
-          progress = Math.round(totalProgress / objectives.length);
+        if (activeObjectivesCount > 0) {
+          progress = Math.round((userObjectiveStats.totalProgress || 0) / activeObjectivesCount);
         } else if (tasksActiveCount > 0 || tasksCompletedCount > 0) {
           progress = Math.round((tasksCompletedCount / (tasksActiveCount + tasksCompletedCount)) * 100);
         }

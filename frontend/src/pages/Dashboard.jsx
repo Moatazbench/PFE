@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import api from '../services/api';
@@ -8,7 +8,6 @@ import GoalCard from '../components/dashboard/GoalCard';
 import MeetingCard from '../components/dashboard/MeetingCard';
 import TaskCard from '../components/dashboard/TaskCard';
 import FeedbackCard from '../components/dashboard/FeedbackCard';
-import DashboardAnalytics from '../components/dashboard/DashboardAnalytics';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
 import { buildProductivitySummary, formatDuration } from '../utils/workManagement';
 import {
@@ -32,6 +31,9 @@ import {
   resolveScopeTeams,
   statusTone,
 } from '../components/dashboard/dashboardUtils';
+
+const DashboardAnalytics = lazy(() => import('../components/dashboard/DashboardAnalytics'));
+const MotionDiv = motion.div;
 
 var INITIAL_DATA = {
   stats: { users: 0, teams: 0, objectives: 0, cycles: 0 },
@@ -73,7 +75,7 @@ function Sparkline({ points, color }) {
 
 function MetricCard({ eyebrow, value, label, hint, points, accent }) {
   return (
-    <motion.div
+    <MotionDiv
       className="dash-metric-card dash-card"
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
@@ -84,7 +86,7 @@ function MetricCard({ eyebrow, value, label, hint, points, accent }) {
       <div className="dash-metric-card__label">{label}</div>
       <Sparkline points={points} color={accent} />
       <div className="dash-metric-card__hint">{hint}</div>
-    </motion.div>
+    </MotionDiv>
   );
 }
 
@@ -107,6 +109,7 @@ function Dashboard() {
   var [pageError, setPageError] = useState('');
   var [sectionErrors, setSectionErrors] = useState({});
   var [refreshTick, setRefreshTick] = useState(0);
+  var [showDeferredAnalytics, setShowDeferredAnalytics] = useState(false);
 
   var userId = getUserId(user);
   var isAdminOrHr = user?.role === 'ADMIN' || user?.role === 'HR';
@@ -132,8 +135,8 @@ function Dashboard() {
             : api.get('/objectives', { params: activeTab === 'team' ? { scope: 'team' } : {} }).catch(function () {
                 return { data: { objectives: [] } };
               }),
-          api.get('/cycles').catch(function () { return { data: [] }; }),
-          api.get('/teams').catch(function () { return { data: { teams: [] } }; }),
+          api.getCached('/cycles', undefined, { ttl: 60000, cacheKey: 'cycles:dashboard-list' }).catch(function () { return { data: [] }; }),
+          api.getCached('/teams', undefined, { ttl: 30000, cacheKey: 'teams:dashboard-list' }).catch(function () { return { data: { teams: [] } }; }),
           api.get('/meetings', { params: { upcoming: 'true' } }).catch(function () { return { data: { meetings: [] } }; }),
           api.get('/feedback/received').catch(function () { return { data: { feedbacks: [] } }; }),
           activeTab === 'org' && isAdminOrHr
@@ -189,7 +192,7 @@ function Dashboard() {
             } else if (activeTab !== 'me') {
               nextSectionErrors.checkIns = 'Check-ins are currently surfaced in personal and managed team views.';
             }
-          } catch (checkInError) {
+          } catch {
             nextSectionErrors.checkIns = 'Check-ins are unavailable in this view for the active cycle.';
           }
         }
@@ -226,6 +229,30 @@ function Dashboard() {
       cancelled = true;
     };
   }, [activeTab, isAdminOrHr, refreshTick, user, userId]);
+
+  useEffect(function () {
+    if (loading) return;
+
+    var cleanup;
+
+    function revealAnalytics() {
+      setShowDeferredAnalytics(true);
+    }
+
+    if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      var idleId = window.requestIdleCallback(revealAnalytics, { timeout: 900 });
+      cleanup = function () {
+        window.cancelIdleCallback(idleId);
+      };
+    } else {
+      var timeoutId = window.setTimeout(revealAnalytics, 180);
+      cleanup = function () {
+        window.clearTimeout(timeoutId);
+      };
+    }
+
+    return cleanup;
+  }, [loading]);
 
   var objectiveSummary = useMemo(function () {
     return getObjectiveSummary(dashboardData.objectives);
@@ -419,7 +446,7 @@ function Dashboard() {
       </div>
 
       <div className="dash-overview-grid">
-        <motion.div
+        <MotionDiv
           className="dash-card dash-overview-card"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -449,9 +476,9 @@ function Dashboard() {
               <strong>{dashboardData.stats.cycles || dashboardData.cycles.length}</strong>
             </div>
           </div>
-        </motion.div>
+        </MotionDiv>
 
-        <motion.div
+        <MotionDiv
           className="dash-card dash-overview-card"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -481,9 +508,9 @@ function Dashboard() {
               actionHref="/cycles"
             />
           )}
-        </motion.div>
+        </MotionDiv>
 
-        <motion.div
+        <MotionDiv
           className="dash-card dash-overview-card"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -515,18 +542,26 @@ function Dashboard() {
               })}
             </div>
           )}
-        </motion.div>
+        </MotionDiv>
       </div>
 
-      <DashboardAnalytics
-        activeTab={activeTab}
-        objectives={dashboardData.objectives}
-        tasks={dashboardData.tasks}
-        teams={activeTab === 'team' ? dashboardData.scopeTeams : dashboardData.teams}
-        user={user}
-        checkIns={dashboardData.checkIns}
-        loading={loading}
-      />
+      {showDeferredAnalytics ? (
+        <Suspense fallback={<div className="dash-card"><LoadingSkeleton rows={3} height={120} /></div>}>
+          <DashboardAnalytics
+            activeTab={activeTab}
+            objectives={dashboardData.objectives}
+            tasks={dashboardData.tasks}
+            teams={activeTab === 'team' ? dashboardData.scopeTeams : dashboardData.teams}
+            user={user}
+            checkIns={dashboardData.checkIns}
+            loading={loading}
+          />
+        </Suspense>
+      ) : (
+        <div className="dash-card">
+          <LoadingSkeleton rows={3} height={120} />
+        </div>
+      )}
 
       <div className="dash-workbench-grid">
         <div className="dash-workbench-grid__main">

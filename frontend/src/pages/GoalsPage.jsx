@@ -1,16 +1,18 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
 import { useToast } from '../components/common/Toast';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import GoalFilters from '../components/goals/GoalFilters';
 import GoalTable from '../components/goals/GoalTable';
-import GoalDetailsPanel from '../components/goals/GoalDetailsPanel';
-import CreateGoalModal from '../components/goals/CreateGoalModal';
-import EditGoalModal from '../components/goals/EditGoalModal';
-import ManagerReviewModal from '../components/goals/ManagerReviewModal';
-import EvaluateGoalModal from '../components/goals/EvaluateGoalModal';
+import LoadingSkeleton from '../components/common/LoadingSkeleton';
 import ViewSwitcher from '../components/goals/ViewSwitcher';
+
+const GoalDetailsPanel = lazy(() => import('../components/goals/GoalDetailsPanel'));
+const CreateGoalModal = lazy(() => import('../components/goals/CreateGoalModal'));
+const EditGoalModal = lazy(() => import('../components/goals/EditGoalModal'));
+const ManagerReviewModal = lazy(() => import('../components/goals/ManagerReviewModal'));
+const EvaluateGoalModal = lazy(() => import('../components/goals/EvaluateGoalModal'));
 
 function GoalsPage() {
     var { user } = useAuth();
@@ -53,7 +55,7 @@ function GoalsPage() {
 
     async function fetchCycles() {
         try {
-            var res = await api.get('/cycles');
+            var res = await api.getCached('/cycles', undefined, { ttl: 60000, cacheKey: 'cycles:goals-list' });
             setCycles(res.data);
             var active = res.data.filter(function (c) { return c.status === 'open' || c.status === 'active' || c.status === 'in_progress'; });
             if (active.length > 0) {
@@ -303,21 +305,16 @@ function GoalsPage() {
 
             {/* Phase Banner */}
             {activeTab === 'my' && activeCycleData && (
-                <div style={{
-                    background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-                    padding: '1rem 1.5rem', borderRadius: '12px', color: '#fff',
-                    marginBottom: '1rem', display: 'flex', justifyContent: 'space-between',
-                    alignItems: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                }}>
+                <div className="goals-phase-banner">
                     <div>
-                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Current Phase</div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{phaseLabel}</div>
+                        <div className="goals-phase-banner__eyebrow">Current phase</div>
+                        <div className="goals-phase-banner__title">{phaseLabel}</div>
                     </div>
-                    <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.85rem' }}>
+                    <div className="goals-phase-banner__stats">
                         {Object.entries(statusCounts).map(function(entry) {
                             var badge = getStatusBadgeStyle(entry[0]);
                             return (
-                                <span key={entry[0]} style={{ background: 'rgba(255,255,255,0.15)', padding: '4px 10px', borderRadius: '20px', color: '#fff', fontWeight: 600 }}>
+                                <span key={entry[0]} className="goals-phase-banner__stat">
                                     {badge.label}: {entry[1]}
                                 </span>
                             );
@@ -334,13 +331,8 @@ function GoalsPage() {
 
             {/* Submission Panel — only shows when conditions allow */}
             {activeTab === 'my' && selectedCycle && unapprovedObjectives.length > 0 && (
-                <div style={{
-                    background: canSubmit ? 'linear-gradient(135deg, #ecfdf5, #d1fae5)' : '#fff',
-                    border: canSubmit ? '2px solid #34d399' : '1px solid #e2e8f0',
-                    padding: '1.25rem 1.5rem', borderRadius: '12px', marginBottom: '1.25rem',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-                }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className={'goals-submit-panel' + (canSubmit ? ' goals-submit-panel--ready' : '')}>
+                    <div className="goals-submit-panel__header">
                         <div>
                             <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 🚀 Submit All Objectives
@@ -478,31 +470,22 @@ function GoalsPage() {
 
             {/* Review Status Legend */}
             {activeTab === 'pending' && (
-                <div style={{
-                    display: 'flex', gap: '1rem', padding: '0.75rem 1rem', marginBottom: '1rem',
-                    background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0',
-                    fontSize: '0.85rem', flexWrap: 'wrap', alignItems: 'center'
-                }}>
+                <div className="goals-review-legend">
                     <strong>Review Statuses:</strong>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#d97706', display: 'inline-block' }}></span> Pending</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#059669', display: 'inline-block' }}></span> Approved</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#dc2626', display: 'inline-block' }}></span> Rejected</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ea580c', display: 'inline-block' }}></span> Revision Requested</span>
+                    <span className="goals-review-legend__item"><span className="goals-review-legend__dot" style={{ background: '#d97706' }}></span> Pending</span>
+                    <span className="goals-review-legend__item"><span className="goals-review-legend__dot" style={{ background: '#059669' }}></span> Approved</span>
+                    <span className="goals-review-legend__item"><span className="goals-review-legend__dot" style={{ background: '#dc2626' }}></span> Rejected</span>
+                    <span className="goals-review-legend__item"><span className="goals-review-legend__dot" style={{ background: '#ea580c' }}></span> Revision Requested</span>
                 </div>
             )}
 
             {/* Bulk Approve / Reject Panel */}
             {activeTab === 'pending' && filteredObjectives.length > 0 && (
-                <div style={{
-                    background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-                    border: '1.5px solid #7dd3fc', borderRadius: '12px',
-                    padding: '1.25rem 1.5rem', marginBottom: '1.25rem',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-                }}>
-                    <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem', color: '#0c4a6e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="goals-bulk-review">
+                    <h3 className="goals-bulk-review__title">
                         ⚡ Bulk Review — {filteredObjectives.length} objective{filteredObjectives.length !== 1 ? 's' : ''}
                     </h3>
-                    <div style={{ marginBottom: '0.75rem' }}>
+                    <div>
                         <textarea
                             value={bulkComment}
                             onChange={function (e) { setBulkComment(e.target.value); }}
@@ -601,20 +584,36 @@ function GoalsPage() {
                 </div>
             )}
 
-            {selectedGoal && <GoalDetailsPanel goal={selectedGoal} onClose={function () { setSelectedGoal(null); }} onRefresh={fetchObjectives} />}
+            {selectedGoal && (
+                <Suspense fallback={<div className="goal-panel-overlay"><div className="goal-panel"><LoadingSkeleton rows={4} height={96} /></div></div>}>
+                    <GoalDetailsPanel goal={selectedGoal} onClose={function () { setSelectedGoal(null); }} onRefresh={fetchObjectives} />
+                </Suspense>
+            )}
 
             {canCreateObjectives && showCreateModal && (
-                <CreateGoalModal onClose={function () { setShowCreateModal(false); }} onCreated={fetchObjectives} cycles={cycles} selectedCycle={selectedCycle}
-                    parentGoals={objectives.filter(function (o) { return !o.parentObjective; })} existingObjectives={[].concat(individualObjectives, teamObjectives)} />
+                <Suspense fallback={null}>
+                    <CreateGoalModal onClose={function () { setShowCreateModal(false); }} onCreated={fetchObjectives} cycles={cycles} selectedCycle={selectedCycle}
+                        parentGoals={objectives.filter(function (o) { return !o.parentObjective; })} existingObjectives={[].concat(individualObjectives, teamObjectives)} />
+                </Suspense>
             )}
 
             {showEditModal && editingObjective && (
-                <EditGoalModal goal={editingObjective} onClose={function () { setShowEditModal(false); setEditingObjective(null); }} onUpdated={onGoalUpdated}
-                    cycles={cycles} parentGoals={objectives.filter(function (o) { return !o.parentObjective; })} existingObjectives={[].concat(individualObjectives, teamObjectives)} />
+                <Suspense fallback={null}>
+                    <EditGoalModal goal={editingObjective} onClose={function () { setShowEditModal(false); setEditingObjective(null); }} onUpdated={onGoalUpdated}
+                        cycles={cycles} parentGoals={objectives.filter(function (o) { return !o.parentObjective; })} existingObjectives={[].concat(individualObjectives, teamObjectives)} />
+                </Suspense>
             )}
 
-            {reviewGoal && <ManagerReviewModal goal={reviewGoal} onClose={function () { setReviewGoal(null); }} onReviewed={fetchObjectives} />}
-            {evaluateGoal && <EvaluateGoalModal goal={evaluateGoal} onClose={function () { setEvaluateGoal(null); }} onEvaluated={fetchObjectives} />}
+            {reviewGoal && (
+                <Suspense fallback={null}>
+                    <ManagerReviewModal goal={reviewGoal} onClose={function () { setReviewGoal(null); }} onReviewed={fetchObjectives} />
+                </Suspense>
+            )}
+            {evaluateGoal && (
+                <Suspense fallback={null}>
+                    <EvaluateGoalModal goal={evaluateGoal} onClose={function () { setEvaluateGoal(null); }} onEvaluated={fetchObjectives} />
+                </Suspense>
+            )}
 
             <ConfirmDialog open={!!deletingObjective} title="Delete Objective" message="Are you sure you want to delete this objective? This action cannot be undone."
                 confirmLabel="Delete" onConfirm={handleDeleteConfirm} onCancel={function () { setDeletingObjective(null); }} danger />

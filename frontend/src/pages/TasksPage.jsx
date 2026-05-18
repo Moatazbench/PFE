@@ -1,11 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useReducer, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
 import { ToastContainer, useToast } from '../components/common/Toast';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
-import KanbanBoard from '../components/tasks/KanbanBoard';
-import ProductivityTimerWidget from '../components/tasks/ProductivityTimerWidget';
 import usePersistentTimer from '../hooks/usePersistentTimer';
 import {
   buildDailyProductivity,
@@ -16,10 +14,71 @@ import {
   getTrackedSeconds,
   getWorkflowStage,
 } from '../utils/workManagement';
+import '../work-management.css';
+
+const KanbanBoard = lazy(() => import('../components/tasks/KanbanBoard'));
+const ProductivityTimerWidget = lazy(() => import('../components/tasks/ProductivityTimerWidget'));
 
 var priorityColors = { low: '#6b7280', medium: '#3b82f6', high: '#f59e0b', urgent: '#ef4444' };
 var statusLabels = { todo: 'To Do', in_progress: 'In Progress', done: 'Done', cancelled: 'Cancelled' };
 var statusColors = { todo: '#6b7280', in_progress: '#3b82f6', done: '#10b981', cancelled: '#ef4444' };
+var INITIAL_TASK_FORM = {
+  title: '',
+  description: '',
+  priority: 'medium',
+  dueDate: '',
+  labels: '',
+  linkedGoal: '',
+  notes: '',
+  workflowStage: 'todo',
+  progress: 0,
+};
+var INITIAL_WORKFLOW_STATE = {
+  showForm: false,
+  editingTask: null,
+  confirmDelete: null,
+  form: INITIAL_TASK_FORM,
+  loadError: '',
+};
+
+function taskWorkflowReducer(state, action) {
+  switch (action.type) {
+    case 'OPEN_CREATE_FORM':
+      return Object.assign({}, state, {
+        showForm: true,
+        editingTask: null,
+        form: Object.assign({}, INITIAL_TASK_FORM),
+      });
+    case 'OPEN_EDIT_FORM':
+      return Object.assign({}, state, {
+        showForm: true,
+        editingTask: action.taskId,
+        form: Object.assign({}, action.form),
+      });
+    case 'CLOSE_FORM':
+      return Object.assign({}, state, {
+        showForm: false,
+        editingTask: null,
+        form: Object.assign({}, INITIAL_TASK_FORM),
+      });
+    case 'UPDATE_FORM_FIELD':
+      return Object.assign({}, state, {
+        form: Object.assign({}, state.form, {
+          [action.field]: action.value,
+        }),
+      });
+    case 'REQUEST_DELETE':
+      return Object.assign({}, state, { confirmDelete: action.taskId });
+    case 'CLEAR_DELETE':
+      return Object.assign({}, state, { confirmDelete: null });
+    case 'SET_LOAD_ERROR':
+      return Object.assign({}, state, { loadError: action.message || '' });
+    case 'CLEAR_LOAD_ERROR':
+      return state.loadError ? Object.assign({}, state, { loadError: '' }) : state;
+    default:
+      return state;
+  }
+}
 
 function buildLocalStats(taskList) {
   var now = new Date();
@@ -76,21 +135,8 @@ function TasksPage() {
   var [objectives, setObjectives] = useState([]);
   var [stats, setStats] = useState(null);
   var [loading, setLoading] = useState(true);
-  var [showForm, setShowForm] = useState(false);
-  var [editingTask, setEditingTask] = useState(null);
-  var [confirmDelete, setConfirmDelete] = useState(null);
   var [savingTimer, setSavingTimer] = useState(false);
-  var [form, setForm] = useState({
-    title: '',
-    description: '',
-    priority: 'medium',
-    dueDate: '',
-    labels: '',
-    linkedGoal: '',
-    notes: '',
-    workflowStage: 'todo',
-    progress: 0,
-  });
+  var [workflowState, dispatchWorkflow] = useReducer(taskWorkflowReducer, INITIAL_WORKFLOW_STATE);
 
   useEffect(function () {
     loadData();
@@ -136,13 +182,14 @@ function TasksPage() {
       });
 
       setObjectives(deduped);
-    } catch (error) {
+    } catch {
       setObjectives([]);
     }
   }
 
   function loadData() {
     setLoading(true);
+    dispatchWorkflow({ type: 'CLEAR_LOAD_ERROR' });
     var url = tab === 'my' ? '/tasks/my' : tab === 'assigned' ? '/tasks/assigned' : '/tasks/all';
     Promise.all([
       api.get(url),
@@ -152,49 +199,34 @@ function TasksPage() {
       setTasks(responses[0].data.tasks || []);
       setStats(responses[1].data.stats || null);
     }).catch(function () {
+      dispatchWorkflow({ type: 'SET_LOAD_ERROR', message: 'Tasks could not be loaded right now.' });
       toast.error('Failed to load tasks');
     }).finally(function () {
       setLoading(false);
     });
   }
 
-  function resetForm() {
-    setEditingTask(null);
-    setForm({
-      title: '',
-      description: '',
-      priority: 'medium',
-      dueDate: '',
-      labels: '',
-      linkedGoal: '',
-      notes: '',
-      workflowStage: 'todo',
-      progress: 0,
-    });
-  }
-
   function closeForm() {
-    setShowForm(false);
-    resetForm();
+    dispatchWorkflow({ type: 'CLOSE_FORM' });
   }
 
   function buildTaskPayload() {
     return {
-      title: form.title,
-      description: form.description,
-      priority: form.priority,
-      labels: form.labels ? form.labels.split(',').map(function (label) { return label.trim(); }).filter(Boolean) : [],
-      linkedGoal: form.linkedGoal || null,
-      dueDate: form.dueDate || null,
-      notes: form.notes || '',
-      workflowStage: form.workflowStage,
-      status: getStatusForStage(form.workflowStage),
-      progress: Number(form.progress || 0),
+      title: workflowState.form.title,
+      description: workflowState.form.description,
+      priority: workflowState.form.priority,
+      labels: workflowState.form.labels ? workflowState.form.labels.split(',').map(function (label) { return label.trim(); }).filter(Boolean) : [],
+      linkedGoal: workflowState.form.linkedGoal || null,
+      dueDate: workflowState.form.dueDate || null,
+      notes: workflowState.form.notes || '',
+      workflowStage: workflowState.form.workflowStage,
+      status: getStatusForStage(workflowState.form.workflowStage),
+      progress: Number(workflowState.form.progress || 0),
     };
   }
 
   function handleCreate() {
-    if (!form.title.trim()) return;
+    if (!workflowState.form.title.trim()) return;
 
     api.post('/tasks', buildTaskPayload())
       .then(function () {
@@ -208,25 +240,27 @@ function TasksPage() {
   }
 
   function handleEdit(task) {
-    setEditingTask(task._id);
-    setForm({
-      title: task.title,
-      description: task.description || '',
-      priority: task.priority || 'medium',
-      dueDate: task.dueDate ? task.dueDate.substring(0, 10) : '',
-      labels: (task.labels || []).join(', '),
-      linkedGoal: task.linkedGoal?._id || '',
-      notes: task.notes || '',
-      workflowStage: getWorkflowStage(task),
-      progress: Number(task.progress || (task.status === 'done' ? 100 : 0)),
+    dispatchWorkflow({
+      type: 'OPEN_EDIT_FORM',
+      taskId: task._id,
+      form: {
+        title: task.title,
+        description: task.description || '',
+        priority: task.priority || 'medium',
+        dueDate: task.dueDate ? task.dueDate.substring(0, 10) : '',
+        labels: (task.labels || []).join(', '),
+        linkedGoal: task.linkedGoal?._id || '',
+        notes: task.notes || '',
+        workflowStage: getWorkflowStage(task),
+        progress: Number(task.progress || (task.status === 'done' ? 100 : 0)),
+      },
     });
-    setShowForm(true);
   }
 
   function handleUpdate() {
-    if (!form.title.trim() || !editingTask) return;
+    if (!workflowState.form.title.trim() || !workflowState.editingTask) return;
 
-    api.put('/tasks/' + editingTask, buildTaskPayload())
+    api.put('/tasks/' + workflowState.editingTask, buildTaskPayload())
       .then(function () {
         closeForm();
         loadData();
@@ -291,7 +325,7 @@ function TasksPage() {
         toast.error('Failed to delete task');
       })
       .finally(function () {
-        setConfirmDelete(null);
+        dispatchWorkflow({ type: 'CLEAR_DELETE' });
       });
   }
 
@@ -386,8 +420,13 @@ function TasksPage() {
             <button type="button" className={viewMode === 'list' ? 'is-active' : ''} onClick={function () { setViewMode('list'); }}>List</button>
             <button type="button" className={viewMode === 'kanban' ? 'is-active' : ''} onClick={function () { setViewMode('kanban'); }}>Kanban</button>
           </div>
-          <button className="btn btn--primary" onClick={function () { setShowForm(!showForm); if (showForm) resetForm(); }}>
-            {showForm ? 'Cancel' : 'New Task'}
+          <button
+            className="btn btn--primary"
+            onClick={function () {
+              dispatchWorkflow({ type: workflowState.showForm ? 'CLOSE_FORM' : 'OPEN_CREATE_FORM' });
+            }}
+          >
+            {workflowState.showForm ? 'Cancel' : 'New Task'}
           </button>
         </div>
       </div>
@@ -415,21 +454,31 @@ function TasksPage() {
         </div>
       </div>
 
-      {showForm ? (
+      {workflowState.loadError ? (
+        <div className="wm-view-banner" role="alert">
+          <div>
+            <strong>Task data is temporarily unavailable</strong>
+            <p>{workflowState.loadError}</p>
+          </div>
+          <button className="btn btn--secondary btn--sm" onClick={loadData}>Retry</button>
+        </div>
+      ) : null}
+
+      {workflowState.showForm ? (
         <div className="form-card wm-form-card">
-          <h3 className="form-card__title">{editingTask ? 'Edit Task' : 'Create Task'}</h3>
+          <h3 className="form-card__title">{workflowState.editingTask ? 'Edit Task' : 'Create Task'}</h3>
           <div className="form-grid">
             <div className="form-group form-group--full">
               <label>Title *</label>
-              <input className="form-input" value={form.title} onChange={function (event) { setForm(Object.assign({}, form, { title: event.target.value })); }} />
+              <input className="form-input" value={workflowState.form.title} onChange={function (event) { dispatchWorkflow({ type: 'UPDATE_FORM_FIELD', field: 'title', value: event.target.value }); }} />
             </div>
             <div className="form-group form-group--full">
               <label>Description</label>
-              <textarea className="form-textarea" rows={3} value={form.description} onChange={function (event) { setForm(Object.assign({}, form, { description: event.target.value })); }} />
+              <textarea className="form-textarea" rows={3} value={workflowState.form.description} onChange={function (event) { dispatchWorkflow({ type: 'UPDATE_FORM_FIELD', field: 'description', value: event.target.value }); }} />
             </div>
             <div className="form-group">
               <label>Priority</label>
-              <select className="form-select" value={form.priority} onChange={function (event) { setForm(Object.assign({}, form, { priority: event.target.value })); }}>
+              <select className="form-select" value={workflowState.form.priority} onChange={function (event) { dispatchWorkflow({ type: 'UPDATE_FORM_FIELD', field: 'priority', value: event.target.value }); }}>
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
@@ -438,7 +487,7 @@ function TasksPage() {
             </div>
             <div className="form-group">
               <label>Workflow stage</label>
-              <select className="form-select" value={form.workflowStage} onChange={function (event) { setForm(Object.assign({}, form, { workflowStage: event.target.value })); }}>
+              <select className="form-select" value={workflowState.form.workflowStage} onChange={function (event) { dispatchWorkflow({ type: 'UPDATE_FORM_FIELD', field: 'workflowStage', value: event.target.value }); }}>
                 <option value="backlog">Backlog</option>
                 <option value="todo">Todo</option>
                 <option value="in_progress">In Progress</option>
@@ -448,16 +497,16 @@ function TasksPage() {
             </div>
             <div className="form-group">
               <label>Due date</label>
-              <input type="date" className="form-input" value={form.dueDate} onChange={function (event) { setForm(Object.assign({}, form, { dueDate: event.target.value })); }} />
+              <input type="date" className="form-input" value={workflowState.form.dueDate} onChange={function (event) { dispatchWorkflow({ type: 'UPDATE_FORM_FIELD', field: 'dueDate', value: event.target.value }); }} />
             </div>
             <div className="form-group">
               <label>Progress</label>
-              <input type="range" min="0" max="100" step="5" value={form.progress} onChange={function (event) { setForm(Object.assign({}, form, { progress: event.target.value })); }} />
-              <div className="wm-slider-value">{form.progress}%</div>
+              <input type="range" min="0" max="100" step="5" value={workflowState.form.progress} onChange={function (event) { dispatchWorkflow({ type: 'UPDATE_FORM_FIELD', field: 'progress', value: event.target.value }); }} />
+              <div className="wm-slider-value">{workflowState.form.progress}%</div>
             </div>
             <div className="form-group">
               <label>Linked goal</label>
-              <select className="form-select" value={form.linkedGoal} onChange={function (event) { setForm(Object.assign({}, form, { linkedGoal: event.target.value })); }}>
+              <select className="form-select" value={workflowState.form.linkedGoal} onChange={function (event) { dispatchWorkflow({ type: 'UPDATE_FORM_FIELD', field: 'linkedGoal', value: event.target.value }); }}>
                 <option value="">No linked goal</option>
                 {objectives.map(function (objective) {
                   return <option key={objective._id} value={objective._id}>{objective.title}</option>;
@@ -466,13 +515,13 @@ function TasksPage() {
             </div>
             <div className="form-group">
               <label>Labels</label>
-              <input className="form-input" value={form.labels} onChange={function (event) { setForm(Object.assign({}, form, { labels: event.target.value })); }} />
+              <input className="form-input" value={workflowState.form.labels} onChange={function (event) { dispatchWorkflow({ type: 'UPDATE_FORM_FIELD', field: 'labels', value: event.target.value }); }} />
             </div>
           </div>
           <div className="form-actions">
             <button className="btn btn--secondary" onClick={closeForm}>Cancel</button>
-            <button className="btn btn--primary" onClick={editingTask ? handleUpdate : handleCreate} disabled={!form.title.trim()}>
-              {editingTask ? 'Save Changes' : 'Create Task'}
+            <button className="btn btn--primary" onClick={workflowState.editingTask ? handleUpdate : handleCreate} disabled={!workflowState.form.title.trim()}>
+              {workflowState.editingTask ? 'Save Changes' : 'Create Task'}
             </button>
           </div>
         </div>
@@ -509,17 +558,19 @@ function TasksPage() {
               <div className="empty-state__icon">Tasks</div>
               <h3>No tasks in this view</h3>
               <p>Create a task to start tracking execution and focus time.</p>
-              <button className="btn btn--primary" onClick={function () { setShowForm(true); }}>Create Task</button>
+              <button className="btn btn--primary" onClick={function () { dispatchWorkflow({ type: 'OPEN_CREATE_FORM' }); }}>Create Task</button>
             </div>
           ) : viewMode === 'kanban' ? (
-            <KanbanBoard
-              tasks={visibleTasks}
-              onMoveTask={handleMoveTask}
-              activeTimerTaskId={timer.timerState?.taskId || ''}
-              savingTimer={savingTimer}
-              onStartTimer={startTimerForTask}
-              onStopTimer={stopAndPersistTimer}
-            />
+            <Suspense fallback={<LoadingSkeleton rows={3} height={108} />}>
+              <KanbanBoard
+                tasks={visibleTasks}
+                onMoveTask={handleMoveTask}
+                activeTimerTaskId={timer.timerState?.taskId || ''}
+                savingTimer={savingTimer}
+                onStartTimer={startTimerForTask}
+                onStopTimer={stopAndPersistTimer}
+              />
+            </Suspense>
           ) : (
             <div className="task-list wm-task-list">
               {visibleTasks.map(function (task) {
@@ -566,7 +617,7 @@ function TasksPage() {
                         })}
                       </select>
                       <button className="btn btn--ghost btn--sm" onClick={function () { handleEdit(task); }}>Edit</button>
-                      <button className="btn btn--ghost btn--sm" style={{ color: '#ef4444' }} onClick={function () { setConfirmDelete(task._id); }}>Delete</button>
+                      <button className="btn btn--ghost btn--sm" style={{ color: '#ef4444' }} onClick={function () { dispatchWorkflow({ type: 'REQUEST_DELETE', taskId: task._id }); }}>Delete</button>
                     </div>
                   </article>
                 );
@@ -649,22 +700,24 @@ function TasksPage() {
         </aside>
       </div>
 
-      <ProductivityTimerWidget
-        timerState={timer.timerState}
-        elapsedSeconds={timer.elapsedSeconds}
-        onPause={timer.pauseTimer}
-        onResume={timer.resumeTimer}
-        onStop={stopAndPersistTimer}
-      />
+      <Suspense fallback={null}>
+        <ProductivityTimerWidget
+          timerState={timer.timerState}
+          elapsedSeconds={timer.elapsedSeconds}
+          onPause={timer.pauseTimer}
+          onResume={timer.resumeTimer}
+          onStop={stopAndPersistTimer}
+        />
+      </Suspense>
 
       <ConfirmDialog
-        open={!!confirmDelete}
+        open={!!workflowState.confirmDelete}
         title="Delete task?"
         message="This action cannot be undone."
         confirmLabel="Delete"
         danger={true}
-        onConfirm={function () { handleDelete(confirmDelete); }}
-        onCancel={function () { setConfirmDelete(null); }}
+        onConfirm={function () { handleDelete(workflowState.confirmDelete); }}
+        onCancel={function () { dispatchWorkflow({ type: 'CLEAR_DELETE' }); }}
       />
 
       <ToastContainer toasts={toast.toasts} removeToast={toast.removeToast} />

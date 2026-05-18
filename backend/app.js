@@ -96,7 +96,8 @@ const routes = {
   '/api/evaluations': './routes/evaluations',
   '/api/pdf': './routes/pdf',
   '/api/checkins': './routes/checkins',
-  '/api/final-evaluations': './routes/finalEvaluations'
+  '/api/final-evaluations': './routes/finalEvaluations',
+  '/api/improvement-plans': './routes/improvementPlans'
 };
 
 Object.entries(routes).forEach(([routePath, modulePath]) => {

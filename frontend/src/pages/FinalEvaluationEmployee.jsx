@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
 import { useToast } from '../components/common/Toast';
+import PerformanceStatusBadge from '../components/evaluations/PerformanceStatusBadge';
+import { getImprovementProgressLabel } from '../components/evaluations/workflowOptions';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend
@@ -33,8 +35,11 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
   const [objectives, setObjectives] = useState([]);
   const [checkins, setCheckins] = useState([]);
   const [historyEvals, setHistoryEvals] = useState([]);
+  const [improvementPlans, setImprovementPlans] = useState([]);
   const [assessmentForms, setAssessmentForms] = useState({});
+  const [feedbackForm, setFeedbackForm] = useState({ acknowledged: false, comment: '' });
   const [savingObjectiveId, setSavingObjectiveId] = useState('');
+  const [savingFeedback, setSavingFeedback] = useState(false);
   const [loading, setLoading] = useState(true);
   const [attachments, setAttachments] = useState({});
   const [uploading, setUploading] = useState({});
@@ -57,9 +62,17 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
       ]);
 
       if (evaluationResult.status === 'fulfilled') {
-        setEvaluation(evaluationResult.value.data.evaluation || null);
+        const nextEvaluation = evaluationResult.value.data.evaluation || null;
+        setEvaluation(nextEvaluation);
+        setImprovementPlans(evaluationResult.value.data.improvementPlans || []);
+        setFeedbackForm({
+          acknowledged: Boolean(nextEvaluation?.employee_feedback?.acknowledged),
+          comment: nextEvaluation?.employee_feedback?.comment || ''
+        });
       } else {
         setEvaluation(null);
+        setImprovementPlans([]);
+        setFeedbackForm({ acknowledged: false, comment: '' });
       }
 
       if (objectivesResult.status === 'fulfilled') {
@@ -169,7 +182,22 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
 
   const submittedCount = objectives.filter((objective) => objective.finalSelfSubmittedAt).length;
 
-  if (!evaluation || evaluation.status !== 'validated') {
+  async function handleSubmitFeedback() {
+    if (!evaluation?._id) return;
+
+    try {
+      setSavingFeedback(true);
+      const res = await api.put(`/final-evaluations/${evaluation._id}/employee-feedback`, feedbackForm);
+      setEvaluation(res.data.evaluation || evaluation);
+      toast.success('Your acknowledgment and response have been saved.');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save your response');
+    } finally {
+      setSavingFeedback(false);
+    }
+  }
+
+  if (!evaluation || !['validated', 'closed'].includes(evaluation.status)) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div className="card shadow-sm" style={{ padding: '1.5rem', borderLeft: '5px solid #4f46e5' }}>
@@ -456,6 +484,7 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
             <span className="badge" style={{ background: '#e0e7ff', color: '#4f46e5', fontSize: '1rem', padding: '0.5rem 1rem' }}>
               {renderRatingLabel(evaluation.rating_label)}
             </span>
+            <PerformanceStatusBadge status={evaluation.performance_status} />
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
@@ -485,6 +514,17 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
           <div className="text-muted" style={{ fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 700 }}>Average Objective Achievement</div>
           <div style={{ fontSize: '1.9rem', fontWeight: 800, color: 'var(--primary)', marginTop: '0.35rem' }}>{averageAchievement}%</div>
           <div style={{ fontSize: '0.9rem', marginTop: '0.35rem' }}>Compared to your planned delivery for this cycle.</div>
+        </div>
+        <div className="card shadow-sm" style={{ padding: '1.25rem' }}>
+          <div className="text-muted" style={{ fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 700 }}>HR Performance Status</div>
+          <div style={{ marginTop: '0.5rem' }}>
+            <PerformanceStatusBadge status={evaluation.performance_status} />
+          </div>
+          <div style={{ fontSize: '0.9rem', marginTop: '0.45rem' }}>
+            {evaluation.performance_status
+              ? 'HR has finalized a performance status for this evaluation.'
+              : 'HR has validated the report without assigning a specific status.'}
+          </div>
         </div>
         <div className="card shadow-sm" style={{ padding: '1.25rem' }}>
           <div className="text-muted" style={{ fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 700 }}>Growth History</div>
@@ -584,6 +624,76 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
             Submitted by {evaluation.evaluator_id?.name || 'Unknown'}{evaluation.evaluator_role ? ` (${renderRoleLabel(evaluation.evaluator_role)})` : ''}{evaluation.evaluated_at ? ` on ${new Date(evaluation.evaluated_at).toLocaleDateString()}` : ''}.
           </div>
         )}
+      </div>
+
+      {(improvementPlans.length > 0 || ['needs_improvement', 'critical_attention'].includes(evaluation.performance_status)) && (
+        <div className="card shadow-sm" style={{ padding: '1.5rem' }}>
+          <h3 style={{ margin: '0 0 0.75rem 0' }}>Improvement Plans</h3>
+          {improvementPlans.length === 0 ? (
+            <p className="text-muted" style={{ margin: 0 }}>
+              No improvement plan has been assigned for this evaluation yet.
+            </p>
+          ) : (
+            <div style={{ display: 'grid', gap: '0.85rem' }}>
+              {improvementPlans.map((plan) => (
+                <div key={plan._id} style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem', background: '#f8fafc' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontWeight: 700 }}>{plan.objective_goal}</div>
+                      <div className="text-muted" style={{ fontSize: '0.88rem', marginTop: '0.3rem' }}>
+                        Deadline: {new Date(plan.deadline).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <span className="badge" style={{ background: '#e0f2fe', color: '#0f766e' }}>
+                      {getImprovementProgressLabel(plan.progress_status)}
+                    </span>
+                  </div>
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <strong>Expected Outcome:</strong> {plan.expected_outcome}
+                  </div>
+                  {plan.notes && (
+                    <div style={{ marginTop: '0.4rem' }}>
+                      <strong>Notes:</strong> {plan.notes}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="card shadow-sm" style={{ padding: '1.5rem', background: '#f8fafc' }}>
+        <h3 style={{ margin: '0 0 0.75rem 0' }}>Employee Feedback Portal</h3>
+        <p className="text-muted" style={{ margin: '0 0 1rem 0' }}>
+          Review the HR outcome, acknowledge this evaluation, and add your response for HR and management.
+        </p>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1rem', fontWeight: 600 }}>
+          <input
+            type="checkbox"
+            checked={feedbackForm.acknowledged}
+            onChange={(e) => setFeedbackForm((prev) => ({ ...prev, acknowledged: e.target.checked }))}
+          />
+          I acknowledge that I have reviewed this evaluation.
+        </label>
+        <div style={{ marginBottom: '1rem' }}>
+          <label className="ent-label">Your Comment / Response</label>
+          <textarea
+            className="ent-input"
+            style={{ minHeight: '110px' }}
+            value={feedbackForm.comment}
+            onChange={(e) => setFeedbackForm((prev) => ({ ...prev, comment: e.target.value }))}
+            placeholder="Share context, clarifications, or a response to this evaluation."
+          />
+        </div>
+        {evaluation.employee_feedback?.updated_at && (
+          <div className="text-muted" style={{ fontSize: '0.88rem', marginBottom: '1rem' }}>
+            Last updated on {new Date(evaluation.employee_feedback.updated_at).toLocaleString()}.
+          </div>
+        )}
+        <button type="button" className="btn btn--primary" onClick={handleSubmitFeedback} disabled={savingFeedback}>
+          {savingFeedback ? 'Saving...' : 'Save Acknowledgment & Response'}
+        </button>
       </div>
 
       <div className="card shadow-sm" style={{ padding: '1.5rem', background: '#f8fafc' }}>

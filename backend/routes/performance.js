@@ -28,8 +28,13 @@ async function computeSummary(employeeId, cycleId) {
   })
     .populate('owner', 'name email role')
     .populate('cycle', 'name year')
-    .sort({ createdAt: 1 });
+    .sort({ createdAt: 1 })
+    .lean();
 
+  return buildSummaryFromObjectives(employeeId, cycleId, objectives);
+}
+
+function buildSummaryFromObjectives(employeeId, cycleId, objectives) {
   if (objectives.length === 0) {
     return {
       employeeId,
@@ -126,16 +131,30 @@ router.get('/team-summary/:managerId/:cycleId', auth, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Forbidden' });
     }
 
-    const team = await Team.findOne({ leader: managerId });
+    const team = await Team.findOne({ leader: managerId }).select('members').lean();
     const employeeIds = team ? team.members.map((member) => String(member)) : [];
+    const objectives = employeeIds.length > 0
+      ? await Objective.find({
+          owner: { $in: employeeIds },
+          cycle: cycleId,
+          status: { $nin: ['rejected', 'cancelled', 'archived'] },
+        })
+          .populate('owner', 'name email role')
+          .populate('cycle', 'name year')
+          .sort({ createdAt: 1 })
+          .lean()
+      : [];
 
-    const summaries = [];
-    for (const employeeId of employeeIds) {
-      const summary = await computeSummary(employeeId, cycleId);
-      if (summary.totalObjectives > 0) {
-        summaries.push(summary);
-      }
-    }
+    const objectivesByEmployeeId = objectives.reduce((acc, objective) => {
+      const ownerId = String(objective.owner?._id || objective.owner);
+      if (!acc[ownerId]) acc[ownerId] = [];
+      acc[ownerId].push(objective);
+      return acc;
+    }, {});
+
+    const summaries = employeeIds
+      .map((employeeId) => buildSummaryFromObjectives(employeeId, cycleId, objectivesByEmployeeId[employeeId] || []))
+      .filter((summary) => summary.totalObjectives > 0);
 
     const teamPerformanceScore = summaries.length > 0
       ? roundScore(summaries.reduce((sum, summary) => sum + summary.performanceScore, 0) / summaries.length)

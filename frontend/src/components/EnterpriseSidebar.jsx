@@ -3,8 +3,9 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import useActiveCycle from '../hooks/useActiveCycle';
 import UserAvatar from './UserAvatar';
+import { getSidebarSections, preloadRoute } from '../routes/routeConfig';
 
-function EnterpriseSidebar({ collapsed, setCollapsed }) {
+function EnterpriseSidebar({ collapsed, setCollapsed, onNavigate }) {
     var location = useLocation();
     var { user, logout } = useAuth();
     var { activeCycle, currentPhase } = useActiveCycle();
@@ -15,58 +16,7 @@ function EnterpriseSidebar({ collapsed, setCollapsed }) {
         return location.pathname === path;
     }
 
-    // Phase metadata: which phases each nav item is visible in (for employees)
-    var navSections = [
-        {
-            label: 'Main',
-            items: [
-                { path: '/dashboard', label: 'Dashboard', icon: 'grid' },
-                { path: '/goals', label: 'Objectives', icon: 'target' },
-                { path: '/tasks', label: 'Tasks', icon: 'check-square' },
-                { path: '/calendar', label: 'Calendar', icon: 'calendar' },
-                { path: '/meetings', label: 'Meetings', icon: 'calendar' },
-                { path: '/feed', label: 'Feed', icon: 'activity' },
-            ],
-        },
-        {
-            label: 'Annual Cycle',
-            items: [
-                { path: '/cycles', label: 'Manage Cycles', icon: 'refresh' },
-                { path: '/midyear-assessments', label: 'Mid-Year Assessment', icon: 'bar-chart' },
-                { path: '/manager-review', label: 'Goal Check-Up', icon: 'star' },
-                { path: '/final-evaluations', label: 'End-Year Review', icon: 'clipboard' },
-                { path: '/evaluation-scoring', label: 'Evaluation Scoring', icon: 'bar-chart' },
-                { path: '/performance', label: 'Performance', icon: 'trending-up' },
-            ],
-        },
-        {
-            label: 'People',
-            items: [
-                { path: '/my-team', label: 'My Team', icon: 'users' },
-                { path: '/feedback', label: 'Feedback', icon: 'message-circle' },
-            ],
-        },
-        {
-            label: 'Development',
-            items: [
-                { path: '/career', label: 'Career', icon: 'compass' },
-                { path: '/evaluations', label: 'Assessments', icon: 'file-text' },
-            ],
-        },
-        {
-            label: 'Management',
-            items: [
-                { path: '/validation', label: 'Validation', icon: 'check-circle' },
-                { path: '/hr-validation', label: 'HR Validation', icon: 'shield' },
-                { path: '/hr-decisions', label: 'HR Decisions', icon: 'briefcase' },
-                { path: '/teams', label: 'Teams', icon: 'layers' },
-                { path: '/users', label: 'Users', icon: 'user' },
-                { path: '/analytics', label: 'Analytics', icon: 'pie-chart' },
-                { path: '/audit-logs', label: 'Audit Logs', icon: 'shield' },
-                { path: '/settings', label: 'Settings', icon: 'settings' },
-            ],
-        },
-    ];
+    var navSections = getSidebarSections();
 
     function getIcon(name) {
         var icons = {
@@ -93,7 +43,7 @@ function EnterpriseSidebar({ collapsed, setCollapsed }) {
             'settings': <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
             'log-out': <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
         };
-        return icons[name] || <span style={{width:18,height:18,display:'inline-block'}}></span>;
+        return icons[name] || <span className="ent-sidebar__item-icon ent-sidebar__item-icon--empty"></span>;
     }
 
     var phaseLabel = currentPhase === 'phase1' ? 'Phase 1' :
@@ -103,8 +53,13 @@ function EnterpriseSidebar({ collapsed, setCollapsed }) {
 
     return (
         <aside className="ent-sidebar">
-            {/* Toggle button */}
-            <button className="ent-sidebar__toggle" onClick={function(){setCollapsed(!collapsed);}} title={collapsed ? 'Expand' : 'Collapse'}>
+            <button
+                type="button"
+                className="ent-sidebar__toggle"
+                onClick={function () { setCollapsed(!collapsed); }}
+                title={collapsed ? 'Expand' : 'Collapse'}
+                aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+            >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     {collapsed
                         ? <polyline points="9 18 15 12 9 6"/>
@@ -113,23 +68,20 @@ function EnterpriseSidebar({ collapsed, setCollapsed }) {
                 </svg>
             </button>
 
-            {/* Brand */}
             <div className="ent-sidebar__brand">
                 <div className="ent-sidebar__logo">PM</div>
                 <span className="ent-sidebar__app-name">PerfManager</span>
             </div>
 
-            <div style={{ margin: '0 1rem 1rem', padding: '0.85rem 0.95rem', borderRadius: '10px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: '0.35rem' }}>Active phase</div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>{phaseLabel}</div>
-                <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: '0.2rem' }}>{activeCycle?.name || 'No active cycle selected'}</div>
+            <div className="ent-sidebar__phase" aria-label="Active cycle phase">
+                <div className="ent-sidebar__phase-label">Active phase</div>
+                <div className="ent-sidebar__phase-title">{phaseLabel}</div>
+                <div className="ent-sidebar__phase-cycle">{activeCycle?.name || 'No active cycle selected'}</div>
             </div>
 
-            {/* Navigation */}
             <nav className="ent-sidebar__nav">
                 {navSections.map(function(section, sIndex) {
                     var visibleItems = section.items.filter(function(item) {
-                        // Role filter
                         if (item.roles && !item.roles.includes(user.role)) return false;
                         if (item.phases && item.phases.indexOf(currentPhase) === -1) return false;
                         return true;
@@ -146,6 +98,9 @@ function EnterpriseSidebar({ collapsed, setCollapsed }) {
                                         to={item.path}
                                         className={'ent-sidebar__item' + (isActive(item.path) ? ' active' : '')}
                                         title={collapsed ? item.label : ''}
+                                        onClick={onNavigate}
+                                        onMouseEnter={function () { preloadRoute(item.path); }}
+                                        onFocus={function () { preloadRoute(item.path); }}
                                     >
                                         <span className="ent-sidebar__item-icon">{getIcon(item.icon)}</span>
                                         <span className="ent-sidebar__item-label">{item.label}</span>
@@ -158,9 +113,8 @@ function EnterpriseSidebar({ collapsed, setCollapsed }) {
                 })}
             </nav>
 
-            {/* Footer */}
             <div className="ent-sidebar__footer">
-                <button className="ent-sidebar__item" onClick={logout} title="Sign Out">
+                <button type="button" className="ent-sidebar__item" onClick={logout} title="Sign Out">
                     <span className="ent-sidebar__item-icon">{getIcon('log-out')}</span>
                     <span className="ent-sidebar__item-label">Sign Out</span>
                 </button>
@@ -177,4 +131,4 @@ function EnterpriseSidebar({ collapsed, setCollapsed }) {
     );
 }
 
-export default EnterpriseSidebar;
+export default React.memo(EnterpriseSidebar);

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
 import { useToast, ToastContainer } from '../components/common/Toast';
+import '../evaluation.css';
 
 function EvaluationListPage() {
   const { user } = useAuth();
@@ -50,7 +51,7 @@ function EvaluationListPage() {
         const teamRes = await api.get('/team-members');
         setTeamMembers(Array.isArray(teamRes.data) ? teamRes.data : (teamRes.data.members || []));
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to load evaluation data.');
     } finally {
       setLoading(false);
@@ -73,7 +74,7 @@ function EvaluationListPage() {
 
       const res = await api.get(`${url}?${params.toString()}`);
       setEvaluations(res.data.evaluations || []);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load evaluations.');
     } finally {
       setLoading(false);

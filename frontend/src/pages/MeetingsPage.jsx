@@ -66,14 +66,14 @@ function MeetingsPage() {
 
     async function fetchTeams() {
         try {
-            var res = await api.get('/teams');
+            var res = await api.getCached('/teams', undefined, { ttl: 30000, cacheKey: 'teams:meetings-list' });
             setTeams(Array.isArray(res.data) ? res.data : (res.data.teams || []));
         } catch (err) { /* Collaborators may not have access */ }
     }
 
     async function fetchCycles() {
         try {
-            var res = await api.get('/cycles');
+            var res = await api.getCached('/cycles', undefined, { ttl: 60000, cacheKey: 'cycles:meetings-list' });
             setCycles(res.data || []);
         } catch (err) { }
     }

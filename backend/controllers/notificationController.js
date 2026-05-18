@@ -9,7 +9,8 @@ exports.getMyNotifications = async (req, res) => {
         const notifs = await Notification.find({ recipient: req.user.id })
             .populate('sender', 'name profileImage')
             .sort({ createdAt: -1 })
-            .limit(50);
+            .limit(50)
+            .lean();
         res.json(notifs);
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
 
@@ -12,185 +12,284 @@ function AnalyticsPage() {
   var [objectives, setObjectives] = useState([]);
   var [activeCycle, setActiveCycle] = useState(null);
 
-  useEffect(function () { loadData(); }, []);
+  useEffect(function () {
+    loadData();
+  }, []);
 
   function loadData() {
     setLoading(true);
     var scope = 'me';
+
     if (user && (user.role === 'ADMIN' || user.role === 'HR')) scope = 'org';
     else if (user && user.role === 'TEAM_LEADER') scope = 'team';
 
-    var promises = [
-      api.get('/stats/dashboard?scope=' + scope).catch(function () { return { data: {} }; }),
-      api.get('/tasks/stats').catch(function () { return { data: {} }; }),
-      api.get('/feedback/stats').catch(function () { return { data: {} }; }),
+    var requests = [
+      api.getCached('/stats/dashboard', { params: { scope: scope } }, { ttl: 15000 }).catch(function () { return { data: {} }; }),
+      api.getCached('/tasks/stats', undefined, { ttl: 15000 }).catch(function () { return { data: {} }; }),
+      api.getCached('/feedback/stats', undefined, { ttl: 15000 }).catch(function () { return { data: {} }; }),
       api.get('/objectives' + (scope === 'me' ? '/my' : '')).catch(function () { return { data: [] }; }),
-      api.get('/cycles').catch(function () { return { data: [] }; }),
+      api.getCached('/cycles', undefined, { ttl: 60000, cacheKey: 'cycles:analytics-list' }).catch(function () { return { data: [] }; }),
     ];
+
     if (user && (user.role === 'ADMIN' || user.role === 'HR')) {
-      promises.push(api.get('/stats/performance').catch(function () { return null; }));
+      requests.push(api.get('/stats/performance').catch(function () { return null; }));
     }
 
-    Promise.all(promises)
-      .then(function (res) {
-        if (res[0] && res[0].data) setDashStats(res[0].data);
-        if (res[1] && res[1].data && res[1].data.stats) setTaskStats(res[1].data.stats);
-        if (res[2] && res[2].data && res[2].data.stats) setFeedbackStats(res[2].data.stats);
-        
-        // Objectives
-        var objData = res[3] ? res[3].data : [];
-        var objArr = Array.isArray(objData) ? objData : (objData.objectives || objData.individualObjectives || []);
-        setObjectives(objArr);
-        
-        // Cycles
-        var cyclesData = res[4] ? (Array.isArray(res[4].data) ? res[4].data : []) : [];
-        var active = cyclesData.find(function(c) { return c.status === 'in_progress' || c.status === 'active'; });
-        if (active) setActiveCycle(active);
-        
-        if (res[5] && res[5].data) setPerformance(res[5].data);
+    Promise.all(requests)
+      .then(function (responses) {
+        if (responses[0]?.data) setDashStats(responses[0].data);
+        if (responses[1]?.data?.stats) setTaskStats(responses[1].data.stats);
+        if (responses[2]?.data?.stats) setFeedbackStats(responses[2].data.stats);
+
+        var objectivePayload = responses[3] ? responses[3].data : [];
+        var objectiveList = Array.isArray(objectivePayload)
+          ? objectivePayload
+          : (objectivePayload.objectives || objectivePayload.individualObjectives || []);
+        setObjectives(objectiveList);
+
+        var cyclesPayload = responses[4] ? responses[4].data : [];
+        var cycles = Array.isArray(cyclesPayload) ? cyclesPayload : [];
+        var current = cycles.find(function (cycle) {
+          return cycle.status === 'in_progress' || cycle.status === 'active';
+        });
+        setActiveCycle(current || null);
+
+        if (responses[5]?.data) setPerformance(responses[5].data);
       })
       .catch(function () {})
       .finally(function () { setLoading(false); });
   }
 
   if (loading) {
-    return <div className="ds-main__inner"><div className="page-loading"><div className="spinner"></div><p>Loading analytics...</p></div></div>;
+    return (
+      <div className="ds-main__inner">
+        <div className="page-loading">
+          <div className="spinner"></div>
+          <p>Loading analytics...</p>
+        </div>
+      </div>
+    );
   }
 
-  var dash = dashStats || {};
-  var tasks = taskStats || {};
-  var feedback = feedbackStats || {};
+  var objectivesList = Array.isArray(objectives) ? objectives : [];
+  var approvedCount = objectivesList.filter(function (objective) {
+    return ['approved', 'validated'].includes(objective.status);
+  }).length;
+  var draftCount = objectivesList.filter(function (objective) { return objective.status === 'draft'; }).length;
+  var pendingCount = objectivesList.filter(function (objective) {
+    return ['pending', 'submitted', 'pending_approval'].includes(objective.status);
+  }).length;
+  var rejectedCount = objectivesList.filter(function (objective) {
+    return objective.status === 'rejected' || objective.status === 'revision_requested';
+  }).length;
+  var avgProgress = approvedCount > 0
+    ? Math.round(
+        objectivesList
+          .filter(function (objective) { return ['approved', 'validated'].includes(objective.status); })
+          .reduce(function (sum, objective) { return sum + (objective.achievementPercent || 0); }, 0) / approvedCount
+      )
+    : 0;
+  var completionRate = objectivesList.length > 0 ? Math.round((approvedCount / objectivesList.length) * 100) : 0;
+  var atRiskCount = objectivesList.filter(function (objective) {
+    return ['approved', 'validated'].includes(objective.status) && (objective.achievementPercent || 0) < 30;
+  }).length;
 
-  // Computed insights from objectives
-  var objArr = Array.isArray(objectives) ? objectives : [];
-  var approvedCount = objArr.filter(function(o) { return ['approved', 'validated'].includes(o.status); }).length;
-  var draftCount = objArr.filter(function(o) { return o.status === 'draft'; }).length;
-  var pendingCount = objArr.filter(function(o) { return ['pending', 'submitted', 'pending_approval'].includes(o.status); }).length;
-  var rejectedCount = objArr.filter(function(o) { return o.status === 'rejected' || o.status === 'revision_requested'; }).length;
-  var avgProgress = approvedCount > 0 ? Math.round(objArr.filter(function(o) { return ['approved', 'validated'].includes(o.status); }).reduce(function(s, o) { return s + (o.achievementPercent || 0); }, 0) / approvedCount) : 0;
-  var completionRate = objArr.length > 0 ? Math.round((approvedCount / objArr.length) * 100) : 0;
+  var overviewMetrics = [
+    { label: 'Objectives', value: dashStats.objectives || 0 },
+    { label: 'Teams', value: dashStats.teams || 0 },
+    { label: 'Users', value: dashStats.users || 0 },
+    { label: 'Cycles', value: dashStats.cycles || 0 },
+  ];
 
-  // At risk objectives (approved but < 30% progress)
-  var atRiskCount = objArr.filter(function(o) { return ['approved', 'validated'].includes(o.status) && (o.achievementPercent || 0) < 30; }).length;
+  var objectiveMetrics = [
+    { label: 'Total objectives', value: objectivesList.length, tone: 'neutral' },
+    { label: 'Approved', value: approvedCount, tone: 'success' },
+    { label: 'Pending review', value: pendingCount, tone: 'warning' },
+    { label: 'Draft', value: draftCount, tone: 'neutral' },
+    { label: 'Rejected', value: rejectedCount, tone: 'danger' },
+  ];
+
+  var taskMetrics = [
+    { label: 'Total tasks', value: taskStats.total || 0, tone: 'neutral' },
+    { label: 'Completed', value: taskStats.done || 0, tone: 'success' },
+    { label: 'In progress', value: taskStats.inProgress || 0, tone: 'info' },
+    { label: 'Overdue', value: taskStats.overdue || 0, tone: 'danger' },
+    { label: 'Completion rate', value: (taskStats.completionRate || 0) + '%', tone: 'info' },
+  ];
 
   return (
     <div className="ds-main__inner">
       <div className="ds-page-header">
         <div className="ds-page-header__left">
           <h1 className="ds-page-header__title">Analytics</h1>
-          <p className="ds-page-header__subtitle">Performance insights and real-time data</p>
+          <p className="ds-page-header__subtitle">Performance, task, and feedback insight across the current workspace.</p>
         </div>
       </div>
 
-      {/* Active Cycle Phase */}
-      {activeCycle && (
-        <div style={{ background: 'linear-gradient(135deg, #1e293b, #334155)', borderRadius: '14px', padding: '1.25rem 1.75rem', marginBottom: '1.75rem', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {activeCycle ? (
+        <div className="ui-hero">
           <div>
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Active Cycle</div>
-            <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>
-              {activeCycle.name} — {activeCycle.currentPhase === 'phase1' ? '📝 Goal Setting' : activeCycle.currentPhase === 'phase2' ? '⚖️ Mid-Year Execution' : activeCycle.currentPhase === 'phase3' ? '📊 End-Year' : '🔒 Closed'}
-            </div>
+            <span className="ui-hero__eyebrow">Active cycle</span>
+            <h2 className="ui-hero__title">{activeCycle.name}</h2>
+            <p className="ui-hero__subtitle">
+              {activeCycle.currentPhase === 'phase1'
+                ? 'Objective setting'
+                : activeCycle.currentPhase === 'phase2'
+                  ? 'Mid-year execution'
+                  : activeCycle.currentPhase === 'phase3'
+                    ? 'Final evaluation'
+                    : 'Closed cycle'}
+            </p>
           </div>
+          <span className="ui-badge ui-badge--info">{String(activeCycle.currentPhase || 'phase1').replace('phase', 'Phase ')}</span>
         </div>
-      )}
+      ) : null}
 
-      {/* Overview Stats */}
-      <div className="analytics-section">
+      <section className="analytics-section">
         <h2 className="section-title">Overview</h2>
         <div className="stats-row">
-          <div className="mini-stat mini-stat--purple"><span className="mini-stat__value">{dash.objectives || 0}</span><span className="mini-stat__label">Objectives</span></div>
-          <div className="mini-stat mini-stat--blue"><span className="mini-stat__value">{dash.teams || 0}</span><span className="mini-stat__label">Teams</span></div>
-          <div className="mini-stat mini-stat--green"><span className="mini-stat__value">{dash.users || 0}</span><span className="mini-stat__label">Users</span></div>
-          <div className="mini-stat mini-stat--orange"><span className="mini-stat__value">{dash.cycles || 0}</span><span className="mini-stat__label">Cycles</span></div>
+          {overviewMetrics.map(function (metric) {
+            return (
+              <div key={metric.label} className="mini-stat">
+                <span className="mini-stat__label">{metric.label}</span>
+                <span className="mini-stat__value">{metric.value}</span>
+              </div>
+            );
+          })}
         </div>
-      </div>
+      </section>
 
-      {/* Objective Analytics — NEW */}
-      <div className="analytics-section">
-        <h2 className="section-title">🎯 Objective Analytics</h2>
-        <div className="stats-row">
-          <div className="mini-stat"><span className="mini-stat__value">{objArr.length}</span><span className="mini-stat__label">Total Objectives</span></div>
-          <div className="mini-stat"><span className="mini-stat__value" style={{ color: '#059669' }}>{approvedCount}</span><span className="mini-stat__label">Approved</span></div>
-          <div className="mini-stat"><span className="mini-stat__value" style={{ color: '#d97706' }}>{pendingCount}</span><span className="mini-stat__label">Pending Review</span></div>
-          <div className="mini-stat"><span className="mini-stat__value" style={{ color: '#64748b' }}>{draftCount}</span><span className="mini-stat__label">Draft</span></div>
-          <div className="mini-stat"><span className="mini-stat__value" style={{ color: '#dc2626' }}>{rejectedCount}</span><span className="mini-stat__label">Rejected</span></div>
+      <section className="analytics-section">
+        <h2 className="section-title">Objective analytics</h2>
+        <div className="ui-metric-grid ui-metric-grid--five">
+          {objectiveMetrics.map(function (metric) {
+            return (
+              <div key={metric.label} className="ui-metric-card">
+                <span className="ui-metric-card__label">{metric.label}</span>
+                <strong className="ui-metric-card__value">{metric.value}</strong>
+              </div>
+            );
+          })}
         </div>
 
-        {/* Progress Indicators */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginTop: '1.5rem' }}>
-          <div style={{ background: 'var(--bg-main, #f8fafc)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color, #e2e8f0)' }}>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Average Progress</div>
-            <div style={{ fontSize: '2rem', fontWeight: 800, color: avgProgress >= 70 ? '#059669' : avgProgress >= 40 ? '#d97706' : '#64748b' }}>{avgProgress}%</div>
-            <div style={{ height: '8px', background: 'rgba(0,0,0,0.08)', borderRadius: '4px', marginTop: '8px' }}>
-              <div style={{ height: '100%', width: avgProgress + '%', background: avgProgress >= 70 ? '#059669' : avgProgress >= 40 ? '#d97706' : '#94a3b8', borderRadius: '4px', transition: 'width 0.5s' }}></div>
+        <div className="ui-progress-grid">
+          <div className="ui-progress-card">
+            <span className="ui-progress-card__label">Average progress</span>
+            <strong className="ui-progress-card__value">{avgProgress}%</strong>
+            <div className="ui-progress-bar">
+              <div className="ui-progress-bar__fill" style={{ width: avgProgress + '%' }}></div>
             </div>
           </div>
-          <div style={{ background: 'var(--bg-main, #f8fafc)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color, #e2e8f0)' }}>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Approval Rate</div>
-            <div style={{ fontSize: '2rem', fontWeight: 800, color: completionRate >= 80 ? '#059669' : '#3b82f6' }}>{completionRate}%</div>
-            <div style={{ height: '8px', background: 'rgba(0,0,0,0.08)', borderRadius: '4px', marginTop: '8px' }}>
-              <div style={{ height: '100%', width: completionRate + '%', background: completionRate >= 80 ? '#059669' : '#3b82f6', borderRadius: '4px', transition: 'width 0.5s' }}></div>
+
+          <div className="ui-progress-card">
+            <span className="ui-progress-card__label">Approval rate</span>
+            <strong className="ui-progress-card__value">{completionRate}%</strong>
+            <div className="ui-progress-bar">
+              <div className="ui-progress-bar__fill" style={{ width: completionRate + '%' }}></div>
             </div>
           </div>
-          <div style={{ background: atRiskCount > 0 ? '#fef2f2' : 'var(--bg-main, #f8fafc)', padding: '1.25rem', borderRadius: '12px', border: '1px solid ' + (atRiskCount > 0 ? '#fecaca' : 'var(--border-color, #e2e8f0)') }}>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>⚠️ At Risk</div>
-            <div style={{ fontSize: '2rem', fontWeight: 800, color: atRiskCount > 0 ? '#dc2626' : '#059669' }}>{atRiskCount}</div>
-            <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>Objectives with {'<'}30% progress</div>
+
+          <div className={'ui-progress-card' + (atRiskCount > 0 ? ' ui-progress-card--danger' : '')}>
+            <span className="ui-progress-card__label">At risk</span>
+            <strong className="ui-progress-card__value">{atRiskCount}</strong>
+            <span className="ui-metric-card__meta">Objectives under 30% progress</span>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Task Analytics */}
-      <div className="analytics-section">
-        <h2 className="section-title">✅ Task Analytics</h2>
-        <div className="stats-row">
-          <div className="mini-stat"><span className="mini-stat__value">{tasks.total || 0}</span><span className="mini-stat__label">Total Tasks</span></div>
-          <div className="mini-stat"><span className="mini-stat__value" style={{ color: '#10b981' }}>{tasks.done || 0}</span><span className="mini-stat__label">Completed</span></div>
-          <div className="mini-stat"><span className="mini-stat__value" style={{ color: '#3b82f6' }}>{tasks.inProgress || 0}</span><span className="mini-stat__label">In Progress</span></div>
-          <div className="mini-stat"><span className="mini-stat__value" style={{ color: '#ef4444' }}>{tasks.overdue || 0}</span><span className="mini-stat__label">Overdue</span></div>
-          <div className="mini-stat"><span className="mini-stat__value" style={{ color: '#6366f1' }}>{tasks.completionRate || 0}%</span><span className="mini-stat__label">Completion Rate</span></div>
+      <section className="analytics-section">
+        <h2 className="section-title">Task analytics</h2>
+        <div className="ui-metric-grid ui-metric-grid--five">
+          {taskMetrics.map(function (metric) {
+            return (
+              <div key={metric.label} className="ui-metric-card">
+                <span className="ui-metric-card__label">{metric.label}</span>
+                <strong className="ui-metric-card__value">{metric.value}</strong>
+              </div>
+            );
+          })}
         </div>
-      </div>
+      </section>
 
-      {/* Feedback Analytics */}
-      <div className="analytics-section">
-        <h2 className="section-title">💬 Feedback Analytics</h2>
+      <section className="analytics-section">
+        <h2 className="section-title">Feedback analytics</h2>
         <div className="stats-row">
-          <div className="mini-stat"><span className="mini-stat__value">{feedback.received || 0}</span><span className="mini-stat__label">Received</span></div>
-          <div className="mini-stat"><span className="mini-stat__value">{feedback.sent || 0}</span><span className="mini-stat__label">Sent</span></div>
+          <div className="mini-stat">
+            <span className="mini-stat__label">Received</span>
+            <span className="mini-stat__value">{feedbackStats.received || 0}</span>
+          </div>
+          <div className="mini-stat">
+            <span className="mini-stat__label">Sent</span>
+            <span className="mini-stat__value">{feedbackStats.sent || 0}</span>
+          </div>
         </div>
-        {Array.isArray(feedback.byType) && feedback.byType.length > 0 && (
+
+        {Array.isArray(feedbackStats.byType) && feedbackStats.byType.length > 0 ? (
           <div className="analytics-breakdown">
-            <h3 className="subsection-title">By Type</h3>
-            <div className="breakdown-list">{feedback.byType.map(function (t) { return <div key={t._id} className="breakdown-item"><span className="breakdown-item__label">{t._id}</span><span className="breakdown-item__value">{t.count}</span></div>; })}</div>
+            <h3 className="subsection-title">By type</h3>
+            <div className="breakdown-list">
+              {feedbackStats.byType.map(function (entry) {
+                return (
+                  <div key={entry._id} className="breakdown-item">
+                    <span>{entry._id}</span>
+                    <strong>{entry.count}</strong>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        )}
-      </div>
+        ) : null}
+      </section>
 
-      {/* Performance (Admin only) */}
-      {performance && (
-        <div className="analytics-section">
-          <h2 className="section-title">🏆 Performance Overview</h2>
+      {performance ? (
+        <section className="analytics-section">
+          <h2 className="section-title">Performance overview</h2>
           <div className="stats-row">
-            <div className="mini-stat mini-stat--green"><span className="mini-stat__value">{performance.overview?.companyAverage?.toFixed(1) || '0.0'}</span><span className="mini-stat__label">Company Avg</span></div>
-            <div className="mini-stat mini-stat--red"><span className="mini-stat__value">{performance.overview?.redFlagsCount || 0}</span><span className="mini-stat__label">Red Flags (&lt;60)</span></div>
+            <div className="mini-stat">
+              <span className="mini-stat__label">Company average</span>
+              <span className="mini-stat__value">{performance.overview?.companyAverage?.toFixed(1) || '0.0'}</span>
+            </div>
+            <div className="mini-stat">
+              <span className="mini-stat__label">Red flags</span>
+              <span className="mini-stat__value">{performance.overview?.redFlagsCount || 0}</span>
+            </div>
           </div>
+
           <div className="analytics-grid">
             <div className="analytics-card">
-              <h3>🏆 Top Performers</h3>
+              <h3>Top performers</h3>
               {performance.topPerformers?.length ? (
-                <div className="perf-list">{performance.topPerformers.map(function (p) { return <div key={p._id} className="perf-item"><span>{p.user?.name || 'Unknown'}</span><span className="perf-score perf-score--good">{p.finalScore?.toFixed(1) || '0.0'}</span></div>; })}</div>
-              ) : <p className="empty-text">No data</p>}
+                <div className="perf-list">
+                  {performance.topPerformers.map(function (entry) {
+                    return (
+                      <div key={entry._id} className="perf-item">
+                        <span>{entry.user?.name || 'Unknown'}</span>
+                        <strong>{entry.finalScore?.toFixed(1) || '0.0'}</strong>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : <p className="ui-metric-card__meta">No data</p>}
             </div>
+
             <div className="analytics-card">
-              <h3>⚠️ Needs Attention</h3>
+              <h3>Needs attention</h3>
               {performance.bottomPerformers?.length ? (
-                <div className="perf-list">{performance.bottomPerformers.map(function (p) { return <div key={p._id} className="perf-item"><span>{p.user?.name || 'Unknown'}</span><span className={'perf-score' + ((p.finalScore || 0) < 60 ? ' perf-score--bad' : ' perf-score--warn')}>{p.finalScore?.toFixed(1) || '0.0'}</span></div>; })}</div>
-              ) : <p className="empty-text">No data</p>}
+                <div className="perf-list">
+                  {performance.bottomPerformers.map(function (entry) {
+                    return (
+                      <div key={entry._id} className="perf-item">
+                        <span>{entry.user?.name || 'Unknown'}</span>
+                        <strong>{entry.finalScore?.toFixed(1) || '0.0'}</strong>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : <p className="ui-metric-card__meta">No data</p>}
             </div>
           </div>
-        </div>
-      )}
+        </section>
+      ) : null}
     </div>
   );
 }

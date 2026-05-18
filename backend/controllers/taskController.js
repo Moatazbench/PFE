@@ -159,7 +159,8 @@ exports.getMyTasks = async (req, res) => {
       .populate('linkedMeeting', 'title date')
       .sort({ dueDate: 1, createdAt: -1 })
       .skip((page - 1) * limit)
-      .limit(parseInt(limit));
+      .limit(parseInt(limit))
+      .lean();
 
     const total = await Task.countDocuments(filter);
     res.json({ success: true, tasks, total, page: parseInt(page), pages: Math.ceil(total / limit) });
@@ -175,7 +176,8 @@ exports.getAssignedByMe = async (req, res) => {
       .populate('assignee', 'name email role')
       .populate('linkedGoal', 'title')
       .sort({ createdAt: -1 })
-      .limit(100);
+      .limit(100)
+      .lean();
 
     res.json({ success: true, tasks });
   } catch (err) {
@@ -191,7 +193,8 @@ exports.getTeamTasks = async (req, res) => {
       .populate('assignee', 'name email role')
       .populate('assignedBy', 'name email role')
       .populate('linkedGoal', 'title')
-      .sort({ dueDate: 1, createdAt: -1 });
+      .sort({ dueDate: 1, createdAt: -1 })
+      .lean();
 
     res.json({ success: true, tasks });
   } catch (err) {
@@ -213,7 +216,8 @@ exports.getAllTasks = async (req, res) => {
       .populate('linkedGoal', 'title')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
-      .limit(parseInt(limit));
+      .limit(parseInt(limit))
+      .lean();
 
     const total = await Task.countDocuments(filter);
     res.json({ success: true, tasks, total, page: parseInt(page), pages: Math.ceil(total / limit) });
