@@ -1,12 +1,14 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const xss = require('xss-clean');
 const mongoSanitize = require('express-mongo-sanitize');
 const path = require('path');
 const fs = require('fs');
+const routeRateLimiter = require('./middleware/rateLimiter');
 
 const app = express();
 
@@ -38,11 +40,16 @@ app.use(cors({
   credentials: true
 }));
 
+app.use(compression());
 app.use(express.json());
 app.use(xss());
 app.use(mongoSanitize());
 
 app.use((req, res, next) => {
+  if (req.path.startsWith('/uploads/')) {
+    return next();
+  }
+
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.set('Pragma', 'no-cache');
   res.set('Expires', '0');
@@ -50,9 +57,20 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 5000 }));
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5000,
+  skip: routeRateLimiter.shouldSkipRateLimit
+}));
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  etag: true,
+  maxAge: '7d',
+  immutable: true,
+  setHeaders: function setUploadCacheHeaders(res) {
+    res.set('Cache-Control', 'public, max-age=604800, immutable');
+  }
+}));
 
 // =======================
 // Health Endpoints

@@ -125,24 +125,33 @@ function Dashboard() {
 
       try {
         var scope = getScopeFromTab(activeTab);
+        var cacheKeyScope = ':tick:' + refreshTick;
+        var shouldLoadTeams = activeTab !== 'me';
 
         var requests = await Promise.all([
-          api.get('/stats/dashboard', { params: { scope: scope } }).catch(function () {
+          api.getCached('/stats/dashboard', { params: { scope: scope } }, { ttl: 20000, cacheKey: 'stats:dashboard:' + scope + cacheKeyScope }).catch(function () {
             return { data: { users: 0, teams: 0, objectives: 0, cycles: 0 } };
           }),
           activeTab === 'me'
-            ? api.get('/objectives/my').catch(function () { return { data: { objectives: [] } }; })
-            : api.get('/objectives', { params: activeTab === 'team' ? { scope: 'team' } : {} }).catch(function () {
+            ? api.getCached('/objectives/my', { params: { compact: 'true' } }, { ttl: 20000, cacheKey: 'objectives:dashboard:me' + cacheKeyScope }).catch(function () { return { data: { objectives: [] } }; })
+            : api.getCached('/objectives', {
+                params: Object.assign(
+                  { compact: 'true' },
+                  activeTab === 'team' ? { scope: 'team' } : {}
+                ),
+              }, { ttl: 20000, cacheKey: 'objectives:dashboard:' + activeTab + cacheKeyScope }).catch(function () {
                 return { data: { objectives: [] } };
               }),
-          api.getCached('/cycles', undefined, { ttl: 60000, cacheKey: 'cycles:dashboard-list' }).catch(function () { return { data: [] }; }),
-          api.getCached('/teams', undefined, { ttl: 30000, cacheKey: 'teams:dashboard-list' }).catch(function () { return { data: { teams: [] } }; }),
-          api.get('/meetings', { params: { upcoming: 'true' } }).catch(function () { return { data: { meetings: [] } }; }),
-          api.get('/feedback/received').catch(function () { return { data: { feedbacks: [] } }; }),
+          api.getCached('/cycles', undefined, { ttl: 60000, cacheKey: 'cycles:dashboard-list' + cacheKeyScope }).catch(function () { return { data: [] }; }),
+          shouldLoadTeams
+            ? api.getCached('/teams', undefined, { ttl: 30000, cacheKey: 'teams:dashboard-list' + cacheKeyScope }).catch(function () { return { data: { teams: [] } }; })
+            : Promise.resolve({ data: { teams: [] } }),
+          api.getCached('/meetings', { params: { upcoming: 'true' } }, { ttl: 30000, cacheKey: 'meetings:dashboard:upcoming' + cacheKeyScope }).catch(function () { return { data: { meetings: [] } }; }),
+          api.getCached('/feedback/received', undefined, { ttl: 30000, cacheKey: 'feedback:dashboard:received' + cacheKeyScope }).catch(function () { return { data: { feedbacks: [] } }; }),
           activeTab === 'org' && isAdminOrHr
-            ? api.get('/tasks/all', { params: { limit: 200 } }).catch(function () { return { data: { tasks: [] } }; })
+            ? api.getCached('/tasks/all', { params: { limit: 200 } }, { ttl: 15000, cacheKey: 'tasks:dashboard:org' + cacheKeyScope }).catch(function () { return { data: { tasks: [] } }; })
             : activeTab === 'me'
-              ? api.get('/tasks/my', { params: { limit: 100 } }).catch(function () { return { data: { tasks: [] } }; })
+              ? api.getCached('/tasks/my', { params: { limit: 100 } }, { ttl: 15000, cacheKey: 'tasks:dashboard:me' + cacheKeyScope }).catch(function () { return { data: { tasks: [] } }; })
               : Promise.resolve({ data: { tasks: [] } }),
         ]);
 
@@ -162,21 +171,26 @@ function Dashboard() {
         var objectives = filterObjectivesForCycle(dedupeById(rawObjectives), activeCycle);
 
         if (activeTab === 'team') {
-          var teamTaskResponses = await Promise.all(
-            scopeTeams.map(function (team) {
-              return api.get('/tasks/team/' + team._id).catch(function () {
-                nextSectionErrors.tasks = 'Some team task records could not be loaded.';
-                return { data: { tasks: [] } };
-              });
-            })
-          );
+          var scopedTeamIds = scopeTeams
+            .map(function (team) { return team?._id; })
+            .filter(Boolean)
+            .map(String);
 
-          if (!cancelled) {
-            tasks = dedupeById(
-              teamTaskResponses.flatMap(function (response) {
-                return normalizeTasksPayload(response?.data);
-              })
-            );
+          if (scopedTeamIds.length > 0) {
+            var sortedTeamIds = scopedTeamIds.slice().sort();
+            var teamTaskResponse = await api.getCached('/tasks/teams', {
+              params: { teamIds: sortedTeamIds.join(',') },
+            }, {
+              ttl: 15000,
+              cacheKey: 'tasks:dashboard:team-batch:' + sortedTeamIds.join(',') + cacheKeyScope,
+            }).catch(function () {
+              nextSectionErrors.tasks = 'Some team task records could not be loaded.';
+              return { data: { tasks: [] } };
+            });
+
+            if (!cancelled) {
+              tasks = dedupeById(normalizeTasksPayload(teamTaskResponse?.data));
+            }
           }
         }
 
@@ -184,10 +198,10 @@ function Dashboard() {
         if (activeCycle?._id && ['phase2', 'phase3'].includes(activeCycle?.currentPhase)) {
           try {
             if (activeTab === 'me') {
-              var checkInResponse = await api.get('/checkins', { params: { cycle_id: activeCycle._id } });
+              var checkInResponse = await api.getCached('/checkins', { params: { cycle_id: activeCycle._id } }, { ttl: 15000, cacheKey: 'checkins:dashboard:me:' + activeCycle._id + cacheKeyScope });
               checkIns = dedupeById(normalizeCheckInsPayload(checkInResponse?.data));
             } else if (activeTab === 'team' && user?.role === 'TEAM_LEADER') {
-              var leaderCheckInResponse = await api.get('/checkins/team', { params: { cycle_id: activeCycle._id } });
+              var leaderCheckInResponse = await api.getCached('/checkins/team', { params: { cycle_id: activeCycle._id } }, { ttl: 15000, cacheKey: 'checkins:dashboard:team:' + activeCycle._id + cacheKeyScope });
               checkIns = dedupeById(normalizeCheckInsPayload(leaderCheckInResponse?.data));
             } else if (activeTab !== 'me') {
               nextSectionErrors.checkIns = 'Check-ins are currently surfaced in personal and managed team views.';

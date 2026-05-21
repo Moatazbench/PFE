@@ -4,6 +4,18 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import UserAvatar from './UserAvatar';
 
+const NOTIFICATION_LIST_TTL_MS = 20000;
+const UNREAD_COUNT_TTL_MS = 20000;
+
+let notificationCache = {
+    items: [],
+    unreadCount: 0,
+    listFetchedAt: 0,
+    unreadFetchedAt: 0,
+};
+let notificationListRequest = null;
+let unreadCountRequest = null;
+
 function normalizeNotificationsPayload(payload) {
     if (Array.isArray(payload)) return payload;
     if (Array.isArray(payload?.notifications)) return payload.notifications;
@@ -46,75 +58,204 @@ function formatNotificationTime(value) {
     return formatDistanceToNow(parsed, { addSuffix: true });
 }
 
+function countUnreadNotifications(items) {
+    return (Array.isArray(items) ? items : []).filter(function (notification) {
+        return !notification.isRead;
+    }).length;
+}
+
+function hasFreshNotificationList() {
+    return Date.now() - notificationCache.listFetchedAt < NOTIFICATION_LIST_TTL_MS;
+}
+
+function hasFreshUnreadCount() {
+    return Date.now() - notificationCache.unreadFetchedAt < UNREAD_COUNT_TTL_MS;
+}
+
+function updateNotificationCache(items) {
+    var nextItems = Array.isArray(items) ? items : [];
+    notificationCache = {
+        items: nextItems,
+        unreadCount: countUnreadNotifications(nextItems),
+        listFetchedAt: Date.now(),
+        unreadFetchedAt: Date.now(),
+    };
+    return notificationCache;
+}
+
+function updateUnreadCountCache(count) {
+    notificationCache = {
+        items: notificationCache.items,
+        unreadCount: Math.max(0, Number(count) || 0),
+        listFetchedAt: notificationCache.listFetchedAt,
+        unreadFetchedAt: Date.now(),
+    };
+    return notificationCache;
+}
+
+async function requestNotificationList(force) {
+    if (!force && hasFreshNotificationList()) {
+        return notificationCache;
+    }
+
+    if (!force && notificationListRequest) {
+        return notificationListRequest;
+    }
+
+    notificationListRequest = api.get('/notifications')
+        .then(function (response) {
+            return updateNotificationCache(normalizeNotificationsPayload(response.data));
+        })
+        .finally(function () {
+            notificationListRequest = null;
+        });
+
+    return notificationListRequest;
+}
+
+async function requestUnreadCount(force) {
+    if (!force && hasFreshUnreadCount()) {
+        return notificationCache.unreadCount;
+    }
+
+    if (!force && unreadCountRequest) {
+        return unreadCountRequest;
+    }
+
+    unreadCountRequest = api.get('/notifications/unread-count')
+        .then(function (response) {
+            return updateUnreadCountCache(response.data?.count).unreadCount;
+        })
+        .finally(function () {
+            unreadCountRequest = null;
+        });
+
+    return unreadCountRequest;
+}
+
 function getIcon(type) {
     switch (type) {
         case 'MENTION':
-            return '👤';
+            return '@';
         case 'DEADLINE':
         case 'DEADLINE_REMINDER':
         case 'OVERDUE_ALERT':
-            return '⏰';
+            return 'DL';
         case 'KPI_DROP':
-            return '⚠️';
+            return '!';
         case 'COMMENT':
         case 'FEEDBACK':
-            return '💬';
+            return 'CM';
         case 'GOAL_SUBMITTED':
         case 'GOAL_APPROVED':
         case 'GOAL_REJECTED':
         case 'GOAL_REVISION_REQUESTED':
-            return '🎯';
+            return 'OK';
         case 'MIDYEAR_REVIEW_COMPLETED':
         case 'FINAL_EVALUATION_COMPLETED':
-            return '📝';
+            return 'EV';
         case 'PHASE_OPENED':
         case 'PHASE_CLOSED':
-            return '🔄';
+            return 'CY';
         default:
-            return '🔔';
+            return 'UP';
     }
 }
 
+function BellIcon() {
+    return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+    );
+}
+
 function Notifications() {
-    const [notifications, setNotifications] = useState([]);
+    const [notifications, setNotifications] = useState(function () {
+        return notificationCache.items;
+    });
     const [showDropdown, setShowDropdown] = useState(false);
-    const [unreadCount, setUnreadCount] = useState(0);
+    const [unreadCount, setUnreadCount] = useState(function () {
+        return notificationCache.unreadCount;
+    });
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState('');
     const dropdownRef = useRef(null);
     const navigate = useNavigate();
 
-    async function fetchNotifications() {
+    async function fetchNotifications(options) {
         if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
             return;
         }
 
         try {
-            setLoading(true);
+            if (!options?.silent) {
+                setLoading(true);
+            }
             setLoadError('');
 
-            const res = await api.get('/notifications');
-            const nextNotifications = normalizeNotificationsPayload(res.data);
-
-            setNotifications(nextNotifications);
-            setUnreadCount(nextNotifications.filter(function (notification) {
-                return !notification.isRead;
-            }).length);
+            const snapshot = await requestNotificationList(Boolean(options?.force));
+            setNotifications(snapshot.items);
+            setUnreadCount(snapshot.unreadCount);
         } catch (err) {
             console.error('Error fetching notifications:', err);
             setNotifications([]);
             setUnreadCount(0);
             setLoadError(err.response?.data?.message || 'Notifications are temporarily unavailable.');
         } finally {
-            setLoading(false);
+            if (!options?.silent) {
+                setLoading(false);
+            }
         }
     }
 
     useEffect(function () {
-        fetchNotifications();
-        const interval = setInterval(fetchNotifications, showDropdown ? 15000 : 60000);
+        var cancelScheduledWarmup = function () {};
+        var intervalId;
+
+        if (showDropdown) {
+            fetchNotifications();
+            intervalId = setInterval(function () {
+                fetchNotifications({ force: true, silent: true });
+            }, 15000);
+        } else {
+            function warmUnreadCount() {
+                requestUnreadCount(false)
+                    .then(function (count) {
+                        setUnreadCount(count);
+                    })
+                    .catch(function (err) {
+                        console.error('Error fetching unread notification count:', err);
+                    });
+            }
+
+            if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+                var idleId = window.requestIdleCallback(warmUnreadCount, { timeout: 1000 });
+                cancelScheduledWarmup = function () {
+                    window.cancelIdleCallback(idleId);
+                };
+            } else {
+                var timeoutId = window.setTimeout(warmUnreadCount, 250);
+                cancelScheduledWarmup = function () {
+                    window.clearTimeout(timeoutId);
+                };
+            }
+
+            intervalId = setInterval(function () {
+                requestUnreadCount(true)
+                    .then(function (count) {
+                        setUnreadCount(count);
+                    })
+                    .catch(function (err) {
+                        console.error('Error refreshing unread notification count:', err);
+                    });
+            }, 60000);
+        }
+
         return function () {
-            clearInterval(interval);
+            cancelScheduledWarmup();
+            clearInterval(intervalId);
         };
     }, [showDropdown]);
 
@@ -135,14 +276,13 @@ function Notifications() {
     async function markAsRead(id) {
         try {
             await api.post('/notifications/' + id + '/read');
-            setNotifications(function (prev) {
-                return prev.map(function (notification) {
-                    return notification._id === id ? Object.assign({}, notification, { isRead: true }) : notification;
-                });
-            });
-            setUnreadCount(function (prev) {
-                return Math.max(0, prev - 1);
-            });
+
+            var nextSnapshot = updateNotificationCache(notifications.map(function (notification) {
+                return notification._id === id ? Object.assign({}, notification, { isRead: true }) : notification;
+            }));
+
+            setNotifications(nextSnapshot.items);
+            setUnreadCount(nextSnapshot.unreadCount);
         } catch (err) {
             console.error('Error marking as read:', err);
         }
@@ -151,12 +291,13 @@ function Notifications() {
     async function markAllRead() {
         try {
             await api.post('/notifications/read-all');
-            setNotifications(function (prev) {
-                return prev.map(function (notification) {
-                    return Object.assign({}, notification, { isRead: true });
-                });
-            });
-            setUnreadCount(0);
+
+            var nextSnapshot = updateNotificationCache(notifications.map(function (notification) {
+                return Object.assign({}, notification, { isRead: true });
+            }));
+
+            setNotifications(nextSnapshot.items);
+            setUnreadCount(nextSnapshot.unreadCount);
         } catch (err) {
             console.error('Error marking all as read:', err);
         }
@@ -186,7 +327,7 @@ function Notifications() {
                 aria-expanded={showDropdown}
             >
                 <span className="notification-trigger__icon" aria-hidden="true">
-                    {unreadCount > 0 ? '🔔' : '🔕'}
+                    <BellIcon />
                 </span>
                 {unreadCount > 0 ? (
                     <span className="badge badge--error notification-trigger__badge">
@@ -221,20 +362,20 @@ function Notifications() {
                     <div className="dropdown-body notification-dropdown__body">
                         {loading ? (
                             <div className="notification-empty-state">
-                                <div className="notification-empty-state__icon">⏳</div>
+                                <div className="notification-empty-state__icon">...</div>
                                 <p>Loading notifications...</p>
                             </div>
                         ) : loadError ? (
                             <div className="notification-empty-state notification-empty-state--error">
-                                <div className="notification-empty-state__icon">⚠️</div>
+                                <div className="notification-empty-state__icon">!</div>
                                 <p>{loadError}</p>
-                                <button type="button" className="btn btn--secondary btn--sm" onClick={fetchNotifications}>
+                                <button type="button" className="btn btn--secondary btn--sm" onClick={function () { fetchNotifications({ force: true }); }}>
                                     Retry
                                 </button>
                             </div>
                         ) : notifications.length === 0 ? (
                             <div className="notification-empty-state">
-                                <div className="notification-empty-state__icon">📭</div>
+                                <div className="notification-empty-state__icon">-</div>
                                 <p>No notifications yet</p>
                                 <span>New mentions, deadlines, and workflow updates will appear here.</span>
                             </div>

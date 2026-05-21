@@ -345,6 +345,7 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, parentGoals, existing
                                     {analysisResult.quality === 'good' ? 'Good quality' : 'Needs improvement'}
                                 </span>
                             </div>
+                            {analysisResult.warning && <div style={{ marginBottom: '0.5rem', fontSize: '0.8rem', color: '#92400e' }}>{analysisResult.warning}</div>}
                             {(analysisResult.strengths || []).length > 0 && <div style={{ marginBottom: '0.5rem', fontSize: '0.85rem', color: '#065f46' }}>Strengths: {(analysisResult.strengths || []).join(' • ')}</div>}
                             {(analysisResult.issues || []).length > 0 ? (analysisResult.issues || []).map(function (issue, index) {
                                 return <div key={index} style={{ fontSize: '0.85rem', color: '#7c2d12', marginTop: index === 0 ? 0 : '0.35rem' }}>{issue.message}</div>;
@@ -355,6 +356,7 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, parentGoals, existing
                     {refinementResult && (
                         <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff' }}>
                             <strong>AI refinement suggestions</strong>
+                            {refinementResult.warning && <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#92400e' }}>{refinementResult.warning}</div>}
                             <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#475569' }}>{refinementResult.recommendedFormat}</div>
                             {(refinementResult.suggestions || []).slice(0, 3).map(function (suggestion, index) {
                                 return (

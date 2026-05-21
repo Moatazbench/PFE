@@ -598,96 +598,234 @@ exports.draftCheckin = async (req, res) => {
     }
 };
 
+function buildObjectiveSignal(payload) {
+    var title = String(payload.title || '').trim();
+    var description = String(payload.description || '').trim();
+    var successIndicator = String(payload.successIndicator || '').trim();
+    var combined = (title + ' ' + description + ' ' + successIndicator).toLowerCase();
+
+    var signal = {
+        subject: title || 'this objective',
+        combined: combined,
+        metricExample: 'Increase completion rate from 70% to 85% by Q4 2026 through weekly review checkpoints.',
+        deadlineHint: 'by Q4 2026',
+        methodHint: 'weekly review checkpoints and clear ownership',
+        actionExample: 'Deliver a clearly defined outcome',
+        recommendedFormat: 'Use: [Action Verb] [Focus Area] from [Current State] to [Target] by [Deadline] through [Method]',
+    };
+
+    if (/(performance|latency|response|system|api|bug|uptime|automation)/.test(combined)) {
+        signal.metricExample = 'Reduce average API response time from 250ms to 120ms by Q3 2026 through caching and query optimization.';
+        signal.deadlineHint = 'by Q3 2026';
+        signal.methodHint = 'caching, automated testing, and query optimization';
+        signal.actionExample = 'Reduce platform response time';
+    } else if (/(customer|client|support|satisfaction|nps|service)/.test(combined)) {
+        signal.metricExample = 'Increase customer satisfaction from 78% to 88% by Q4 2026 through faster follow-up and clearer issue tracking.';
+        signal.deadlineHint = 'by Q4 2026';
+        signal.methodHint = 'faster follow-up loops and clearer issue tracking';
+        signal.actionExample = 'Increase customer satisfaction';
+    } else if (/(sales|revenue|pipeline|deal|conversion|acquisition)/.test(combined)) {
+        signal.metricExample = 'Increase qualified pipeline from $400k to $550k by Q4 2026 through weekly prospect reviews and tighter follow-up.';
+        signal.deadlineHint = 'by Q4 2026';
+        signal.methodHint = 'weekly prospect reviews and tighter follow-up';
+        signal.actionExample = 'Increase qualified pipeline';
+    } else if (/(training|skill|learn|certification|capability|competenc)/.test(combined)) {
+        signal.metricExample = 'Complete 2 role-relevant certifications and apply the learning in 1 live project by Q3 2026.';
+        signal.deadlineHint = 'by Q3 2026';
+        signal.methodHint = 'targeted training and one live project application';
+        signal.actionExample = 'Complete targeted upskilling';
+    } else if (/(process|efficiency|workflow|cycle time|productivity)/.test(combined)) {
+        signal.metricExample = 'Reduce process turnaround time from 5 days to 3 days by Q3 2026 through workflow automation and weekly bottleneck reviews.';
+        signal.deadlineHint = 'by Q3 2026';
+        signal.methodHint = 'workflow automation and weekly bottleneck reviews';
+        signal.actionExample = 'Reduce process turnaround time';
+    }
+
+    return signal;
+}
+
+function buildObjectiveAnalysisFallback(payload) {
+    var signal = buildObjectiveSignal(payload);
+    var title = String(payload.title || '').trim();
+    var description = String(payload.description || '').trim();
+    var successIndicator = String(payload.successIndicator || '').trim();
+    var combined = signal.combined;
+    var issues = [];
+    var strengths = [];
+
+    var vagueWords = ['improve', 'better', 'good', 'enhance', 'explore', 'consider', 'investigate', 'think about', 'maybe'];
+    var vagueMatches = vagueWords.filter(function (word) { return combined.includes(word); });
+    if (vagueMatches.length >= 2) {
+        issues.push({
+            type: 'vague_language',
+            severity: 'medium',
+            message: 'The wording for "' + signal.subject + '" is still broad. Replace vague words such as ' + vagueMatches.join(', ') + ' with a measurable outcome like "' + signal.metricExample + '"',
+        });
+    }
+
+    var hasMetric = /\b\d+(\.\d+)?\s*(%|ms|hrs?|hours?|days?|weeks?|months?|points?|tickets?|users?)\b/i.test(combined) || /\$\d+/.test(combined);
+    if (!hasMetric && !successIndicator) {
+        issues.push({
+            type: 'not_measurable',
+            severity: 'high',
+            message: 'This objective does not explain how success will be measured. Add a target such as "' + signal.metricExample + '"',
+        });
+    } else if (hasMetric || successIndicator) {
+        strengths.push('The objective already includes at least one measurable success signal.');
+    }
+
+    var hasTimeFrame = /\b(q[1-4]|january|february|march|april|may|june|july|august|september|october|november|december|week|month|quarter|year|by|end of)\b/i.test(combined);
+    if (!hasTimeFrame) {
+        issues.push({
+            type: 'no_deadline',
+            severity: 'medium',
+            message: 'The objective does not say when "' + signal.subject + '" must be completed. Add a deadline such as "' + signal.deadlineHint + '"',
+        });
+    } else {
+        strengths.push('A timeframe or deadline is already present.');
+    }
+
+    var actionVerbs = ['implement', 'deliver', 'build', 'design', 'develop', 'launch', 'achieve', 'reduce', 'increase', 'optimize', 'establish', 'create', 'improve', 'automate', 'complete'];
+    var hasAction = actionVerbs.some(function (verb) { return combined.includes(verb); });
+    if (!hasAction) {
+        issues.push({
+            type: 'not_specific',
+            severity: 'medium',
+            message: 'Start the objective with a clear action verb. For example: "' + signal.actionExample + ' ' + signal.deadlineHint + '"',
+        });
+    } else {
+        strengths.push('The objective uses action-oriented wording.');
+    }
+
+    if (title && title.length < 10) {
+        issues.push({
+            type: 'title_too_short',
+            severity: 'low',
+            message: 'The title "' + title + '" is too short to be descriptive. Expand it so the outcome is obvious at a glance.',
+        });
+    } else if (title && title.length > 100) {
+        issues.push({
+            type: 'title_too_long',
+            severity: 'low',
+            message: 'The title is quite long. Tighten it so the main outcome is easier to scan.',
+        });
+    }
+
+    if (description && description.length >= 50) {
+        strengths.push('The description gives enough context to refine the objective further.');
+    }
+
+    return {
+        quality: issues.some(function (issue) { return issue.severity === 'high'; }) ? 'needs_improvement' : 'good',
+        issues: issues,
+        strengths: strengths.slice(0, 4),
+        smartScore: {
+            specific: !issues.some(function (issue) { return issue.type === 'not_specific'; }),
+            measurable: !issues.some(function (issue) { return issue.type === 'not_measurable'; }),
+            achievable: true,
+            relevant: true,
+            timeBound: !issues.some(function (issue) { return issue.type === 'no_deadline'; }),
+        },
+    };
+}
+
+function buildObjectiveRefinementFallback(payload) {
+    var signal = buildObjectiveSignal(payload);
+    var title = String(payload.title || '').trim();
+    var description = String(payload.description || '').trim();
+    var successIndicator = String(payload.successIndicator || '').trim();
+    var combined = signal.combined;
+    var suggestions = [];
+
+    var hasMetric = /\b\d+(\.\d+)?\s*(%|ms|hrs?|hours?|days?|weeks?|months?|points?|tickets?|users?)\b/i.test(combined) || /\$\d+/.test(combined);
+    if (!hasMetric) {
+        suggestions.push({
+            type: 'add_metrics',
+            suggestion: 'Add a numeric baseline and target so the outcome can be scored clearly.',
+            example: signal.metricExample,
+        });
+    }
+
+    var hasTimeFrame = /\b(q[1-4]|january|february|march|april|may|june|july|august|september|october|november|december|week|month|quarter|year|by|end of)\b/i.test(combined);
+    if (!hasTimeFrame) {
+        suggestions.push({
+            type: 'add_deadline',
+            suggestion: 'Add a delivery date or quarter so the objective becomes time-bound.',
+            example: signal.subject + ' ' + signal.deadlineHint,
+        });
+    }
+
+    if (!description || description.length < 50) {
+        suggestions.push({
+            type: 'add_method',
+            suggestion: 'Explain how the result will be achieved so reviewers can track the execution plan.',
+            example: 'Deliver this outcome through ' + signal.methodHint + '.',
+        });
+    }
+
+    if (!successIndicator) {
+        suggestions.push({
+            type: 'strengthen_success_indicator',
+            suggestion: 'Move the KPI target into the success indicator field so the scoring logic has a clear benchmark.',
+            example: signal.metricExample,
+        });
+    }
+
+    if (title && !/^(implement|deliver|build|design|develop|launch|achieve|reduce|increase|optimize|establish|create|automate|complete)\b/i.test(title)) {
+        suggestions.push({
+            type: 'rewrite_title',
+            suggestion: 'Rewrite the title so it begins with the outcome-driving action verb.',
+            example: signal.actionExample + ' ' + signal.deadlineHint,
+        });
+    }
+
+    return {
+        recommendedFormat: signal.recommendedFormat,
+        suggestions: suggestions.slice(0, 5),
+        refinementTemplates: [
+            {
+                template: '[Action Verb] [Focus Area] from [Current State] to [Target] by [Deadline] through [Method]',
+                example: signal.metricExample,
+            },
+            {
+                template: '[Action Verb] [Deliverable] by [Deadline] for [Stakeholder] with [Quality Standard]',
+                example: 'Deliver a documented improvement plan for ' + signal.subject + ' ' + signal.deadlineHint + ' with a weekly review cadence.',
+            },
+            {
+                template: '[Action Verb] [Problem to Solve] by [Deadline] using [Specific Initiative]',
+                example: signal.actionExample + ' ' + signal.deadlineHint + ' using ' + signal.methodHint + '.',
+            },
+        ],
+    };
+}
+
 // ============ OBJECTIVE QUALITY ANALYSIS (SMART Detection) ============
 exports.analyzeObjectiveQuality = async (req, res) => {
     try {
-        const { title, description, successIndicator } = req.body;
-        const combined = ((title || '') + ' ' + (description || '') + ' ' + (successIndicator || '')).toLowerCase();
-        
-        const issues = [];
-        const strengths = [];
-        
-        // Check for vague language
-        const vagueWords = ['improve', 'better', 'good', 'enhance', 'explore', 'consider', 'investigate', 'think about', 'maybe'];
-        const vagueCount = vagueWords.filter(word => combined.includes(word)).length;
-        if (vagueCount >= 2) {
-            issues.push({
-                type: 'vague_language',
-                severity: 'medium',
-                message: 'Objective uses vague language. Add specific metrics or numbers (e.g., "Increase by 25%", "Reduce to 80ms").',
-                examples: vagueWords.filter(w => combined.includes(w))
-            });
+        const payload = {
+            title: req.body.title,
+            description: req.body.description,
+            successIndicator: req.body.successIndicator,
+            context: req.body.context || null,
+        };
+
+        var analysis = null;
+        var usedAi = false;
+        var aiConfigured = aiService.isConfigured();
+        if (aiConfigured) {
+            analysis = await aiService.generateObjectiveQualityAnalysis(payload);
+            usedAi = Boolean(analysis);
         }
-        
-        // Check for measurability (SMART: Measurable)
-        const measurableIndicators = ['%', '$', '#', 'achieve', 'reach', 'reduce', 'increase', 'complete', 'deliver'];
-        const hasMeasurable = measurableIndicators.some(ind => combined.includes(ind));
-        if (!hasMeasurable && !successIndicator) {
-            issues.push({
-                type: 'not_measurable',
-                severity: 'high',
-                message: 'Success Indicator is missing or vague. Define how you will measure success (e.g., "Achieve 90% accuracy by Q3").'
-            });
-        } else if (hasMeasurable) {
-            strengths.push('Contains measurable metrics');
+        if (!analysis) {
+            analysis = buildObjectiveAnalysisFallback(payload);
         }
-        
-        // Check for timeframe (SMART: Time-bound)
-        const timeFrames = ['q1', 'q2', 'q3', 'q4', 'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december', 'week', 'month', 'quarter', 'end of', 'by'];
-        const hasTimeFrame = timeFrames.some(tf => combined.includes(tf));
-        if (!hasTimeFrame) {
-            issues.push({
-                type: 'no_deadline',
-                severity: 'medium',
-                message: 'No clear timeframe specified. Add when this objective must be achieved (e.g., "by end of Q2").'
-            });
-        } else {
-            strengths.push('Contains clear deadline or timeframe');
+
+        var response = Object.assign({ success: true, source: usedAi ? 'ai' : 'fallback' }, analysis);
+        if (!usedAi && aiConfigured) {
+            response.warning = 'AI provider is currently unavailable, so local guidance was used instead.';
         }
-        
-        // Check for actionability (SMART: Specific)
-        const actionVerbs = ['implement', 'deliver', 'build', 'design', 'develop', 'launch', 'achieve', 'reduce', 'increase', 'optimize', 'establish', 'create'];
-        const hasAction = actionVerbs.some(verb => combined.includes(verb));
-        if (!hasAction) {
-            issues.push({
-                type: 'not_specific',
-                severity: 'medium',
-                message: 'Use action verbs to clarify what will be done. Examples: Implement, Deliver, Build, Launch, Achieve.'
-            });
-        } else {
-            strengths.push('Contains clear action verb');
-        }
-        
-        // Check for realistic scope
-        if (title && title.length < 10) {
-            issues.push({
-                type: 'title_too_short',
-                severity: 'low',
-                message: 'Objective title is quite short. Expand it to be more descriptive (at least 10 characters).'
-            });
-        } else if (title && title.length > 100) {
-            issues.push({
-                type: 'title_too_long',
-                severity: 'low',
-                message: 'Objective title is very long (>100 chars). Consider shortening for clarity.'
-            });
-        }
-        
-        const overallQuality = issues.filter(i => i.severity === 'high').length === 0 ? 'good' : 'needs_improvement';
-        
-        res.json({
-            success: true,
-            quality: overallQuality,
-            issues,
-            strengths,
-            smartScore: {
-                specific: issues.some(i => i.type === 'not_specific') ? false : true,
-                measurable: issues.some(i => i.type === 'not_measurable') ? false : true,
-                achievable: true, // Generally assume achievable unless title suggests otherwise
-                relevant: true,   // Assume relevant in business context
-                timeBound: issues.some(i => i.type === 'no_deadline') ? false : true
-            }
-        });
+
+        res.json(response);
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
@@ -696,6 +834,31 @@ exports.analyzeObjectiveQuality = async (req, res) => {
 // ============ OBJECTIVE REFINEMENT SUGGESTIONS ============
 exports.refineObjective = async (req, res) => {
     try {
+        const payload = {
+            title: req.body.title,
+            description: req.body.description,
+            successIndicator: req.body.successIndicator,
+            context: req.body.context || null,
+        };
+
+        var refinement = null;
+        var usedAi = false;
+        var aiConfigured = aiService.isConfigured();
+        if (aiConfigured) {
+            refinement = await aiService.generateObjectiveRefinement(payload);
+            usedAi = Boolean(refinement);
+        }
+        if (!refinement) {
+            refinement = buildObjectiveRefinementFallback(payload);
+        }
+
+        var response = Object.assign({ success: true, source: usedAi ? 'ai' : 'fallback' }, refinement);
+        if (!usedAi && aiConfigured) {
+            response.warning = 'AI provider is currently unavailable, so local guidance was used instead.';
+        }
+
+        return res.json(response);
+
         const { title, description, successIndicator, context } = req.body;
         const combined = ((title || '') + ' ' + (description || '')).toLowerCase();
         

@@ -26,53 +26,88 @@ function resolveStatus(inputStatus, inputStage, existingTask) {
   return existingTask?.status || 'todo';
 }
 
-function sanitizeTimeTracking(input, existingTask) {
-  const current = existingTask?.timeTracking || {};
-  const next = input && typeof input === 'object' ? input : {};
-  const existingSessions = Array.isArray(current.sessions) ? current.sessions : [];
-  const candidateSessions = Array.isArray(next.sessions) ? next.sessions : existingSessions;
+function normalizeTrackingSession(session) {
+  if (!session) return null;
 
-  const sessions = candidateSessions
-    .map((session) => {
-      if (!session?.startedAt || !session?.endedAt) return null;
-      const durationSeconds = Math.max(0, Math.round(Number(session.durationSeconds) || 0));
-      return {
-        startedAt: session.startedAt,
-        endedAt: session.endedAt,
-        durationSeconds,
-        focusMode: Boolean(session.focusMode),
-        source: session.source || 'timer',
-        notes: session.notes || '',
-      };
-    })
-    .filter(Boolean)
-    .sort((left, right) => new Date(right.endedAt) - new Date(left.endedAt))
-    .slice(0, 120);
-
-  const totalSeconds = Number.isFinite(Number(next.totalSeconds))
-    ? Math.max(0, Math.round(Number(next.totalSeconds)))
-    : sessions.reduce((sum, session) => sum + Number(session.durationSeconds || 0), 0);
+  const startedAt = session.startedAt || session.startTime;
+  const endedAt = session.endedAt || session.endTime;
+  if (!startedAt || !endedAt) return null;
 
   return {
-    totalSeconds,
-    lastTrackedAt: next.lastTrackedAt || current.lastTrackedAt || (sessions[0] ? sessions[0].endedAt : null),
-    sessions,
-  };
-}
-
-function sanitizeSingleSession(session) {
-  if (!session || !session.startedAt || !session.endedAt) {
-    return null;
-  }
-
-  return {
-    startedAt: session.startedAt,
-    endedAt: session.endedAt,
-    durationSeconds: Math.max(0, Math.round(Number(session.durationSeconds) || 0)),
+    startedAt,
+    endedAt,
+    durationSeconds: Math.max(0, Math.round(Number(session.durationSeconds ?? session.duration ?? 0))),
     focusMode: Boolean(session.focusMode),
     source: session.source || 'timer',
     notes: session.notes || '',
   };
+}
+
+function sanitizeTimeTracking(input, existingTask) {
+  const current = existingTask?.timeTracking || {};
+  const next = input && typeof input === 'object' ? input : {};
+  const existingAliasSessions = Array.isArray(existingTask?.timeSessions) ? existingTask.timeSessions : [];
+  const existingSessions = Array.isArray(current.sessions) && current.sessions.length > 0
+    ? current.sessions
+    : existingAliasSessions;
+  const candidateSessions = Array.isArray(next.sessions)
+    ? next.sessions
+    : Array.isArray(next.timeSessions)
+      ? next.timeSessions
+      : existingSessions;
+
+  const sessions = candidateSessions
+    .map(normalizeTrackingSession)
+    .filter(Boolean)
+    .sort((left, right) => new Date(right.endedAt) - new Date(left.endedAt))
+    .slice(0, 120);
+
+  const candidateTotal = next.totalSeconds ?? next.totalTimeSpent ?? next.totalTrackedTime;
+  const totalSeconds = Number.isFinite(Number(candidateTotal))
+    ? Math.max(0, Math.round(Number(candidateTotal)))
+    : sessions.reduce((sum, session) => sum + Number(session.durationSeconds || 0), 0);
+
+  return {
+    totalSeconds,
+    lastTrackedAt: next.lastTrackedAt
+      || current.lastTrackedAt
+      || existingTask?.timeSessions?.[0]?.endTime
+      || (sessions[0] ? sessions[0].endedAt : null),
+    sessions,
+  };
+}
+
+function buildTimerAliases(timeTracking) {
+  const normalized = sanitizeTimeTracking(timeTracking);
+
+  return {
+    totalTrackedTime: Math.max(0, Math.round(Number(normalized.totalSeconds || 0))),
+    totalTimeSpent: Math.max(0, Math.round(Number(normalized.totalSeconds || 0))),
+    timeSessions: (normalized.sessions || []).map(function (session) {
+      return {
+        startTime: session.startedAt,
+        endTime: session.endedAt,
+        duration: Math.max(0, Math.round(Number(session.durationSeconds || 0))),
+        focusMode: Boolean(session.focusMode),
+        source: session.source || 'timer',
+        notes: session.notes || '',
+      };
+    }),
+  };
+}
+
+function sanitizeSingleSession(session) {
+  return normalizeTrackingSession(session);
+}
+
+function isDuplicateSession(left, right) {
+  if (!left || !right) return false;
+
+  return String(new Date(left.startedAt).toISOString()) === String(new Date(right.startedAt).toISOString())
+    && String(new Date(left.endedAt).toISOString()) === String(new Date(right.endedAt).toISOString())
+    && Math.round(Number(left.durationSeconds || 0)) === Math.round(Number(right.durationSeconds || 0))
+    && Boolean(left.focusMode) === Boolean(right.focusMode)
+    && String(left.source || 'timer') === String(right.source || 'timer');
 }
 
 function canManageTask(task, user) {
@@ -80,6 +115,31 @@ function canManageTask(task, user) {
   const isAssigner = task.assignedBy.toString() === user._id.toString();
   const isAdmin = ['ADMIN', 'HR'].includes(user.role);
   return isAssignee || isAssigner || isAdmin;
+}
+
+function canTrackTask(task, user) {
+  return String(task?.assignee?._id || task?.assignee || '') === String(user?._id || user?.id || '');
+}
+
+function syncTaskTimerFields(task) {
+  if (!task) return task;
+
+  const nextTimeTracking = sanitizeTimeTracking({
+    totalSeconds: task?.timeTracking?.totalSeconds,
+    lastTrackedAt: task?.timeTracking?.lastTrackedAt,
+    sessions: Array.isArray(task?.timeTracking?.sessions) && task.timeTracking.sessions.length > 0
+      ? task.timeTracking.sessions
+      : task?.timeSessions,
+    totalTrackedTime: task?.totalTrackedTime,
+    timeSessions: task?.timeSessions,
+  }, task);
+  const aliases = buildTimerAliases(nextTimeTracking);
+
+  task.timeTracking = nextTimeTracking;
+  task.totalTrackedTime = aliases.totalTrackedTime;
+  task.totalTimeSpent = aliases.totalTimeSpent;
+  task.timeSessions = aliases.timeSessions;
+  return task;
 }
 
 // Create task
@@ -101,6 +161,9 @@ exports.createTask = async (req, res) => {
       team,
       notes,
       timeTracking,
+      totalTimeSpent,
+      totalTrackedTime,
+      timeSessions,
     } = req.body;
     const resolvedAssigneeId = assigneeId || req.user._id;
 
@@ -112,6 +175,14 @@ exports.createTask = async (req, res) => {
     if (!assignee) {
       return res.status(404).json({ success: false, message: 'Assignee not found' });
     }
+
+    const nextTimeTracking = sanitizeTimeTracking({
+      ...(timeTracking && typeof timeTracking === 'object' ? timeTracking : {}),
+      totalTimeSpent,
+      totalTrackedTime,
+      timeSessions,
+    });
+    const timerAliases = buildTimerAliases(nextTimeTracking);
 
     const task = await Task.create({
       title,
@@ -129,14 +200,17 @@ exports.createTask = async (req, res) => {
       linkedMeeting: linkedMeeting || null,
       team: team || null,
       notes: notes || '',
-      timeTracking: sanitizeTimeTracking(timeTracking),
+      timeTracking: nextTimeTracking,
+      totalTimeSpent: timerAliases.totalTimeSpent,
+      totalTrackedTime: timerAliases.totalTrackedTime,
+      timeSessions: timerAliases.timeSessions,
     });
 
-    const populated = await Task.findById(task._id)
+    const populated = syncTaskTimerFields(await Task.findById(task._id)
       .populate('assignee', 'name email role')
       .populate('assignedBy', 'name email role')
       .populate('linkedGoal', 'title')
-      .populate('linkedMeeting', 'title');
+      .populate('linkedMeeting', 'title'));
 
     res.status(201).json({ success: true, task: populated });
   } catch (err) {
@@ -152,7 +226,7 @@ exports.getMyTasks = async (req, res) => {
     if (status) filter.status = status;
     if (priority) filter.priority = priority;
 
-    const tasks = await Task.find(filter)
+    const tasks = (await Task.find(filter)
       .populate('assignee', 'name email role')
       .populate('assignedBy', 'name email role')
       .populate('linkedGoal', 'title goalStatus')
@@ -160,7 +234,7 @@ exports.getMyTasks = async (req, res) => {
       .sort({ dueDate: 1, createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
-      .lean();
+      .lean()).map(syncTaskTimerFields);
 
     const total = await Task.countDocuments(filter);
     res.json({ success: true, tasks, total, page: parseInt(page), pages: Math.ceil(total / limit) });
@@ -172,12 +246,12 @@ exports.getMyTasks = async (req, res) => {
 // Get tasks assigned by me
 exports.getAssignedByMe = async (req, res) => {
   try {
-    const tasks = await Task.find({ assignedBy: req.user._id })
+    const tasks = (await Task.find({ assignedBy: req.user._id })
       .populate('assignee', 'name email role')
       .populate('linkedGoal', 'title')
       .sort({ createdAt: -1 })
       .limit(100)
-      .lean();
+      .lean()).map(syncTaskTimerFields);
 
     res.json({ success: true, tasks });
   } catch (err) {
@@ -189,12 +263,43 @@ exports.getAssignedByMe = async (req, res) => {
 exports.getTeamTasks = async (req, res) => {
   try {
     const { teamId } = req.params;
-    const tasks = await Task.find({ team: teamId })
+    const tasks = (await Task.find({ team: teamId })
       .populate('assignee', 'name email role')
       .populate('assignedBy', 'name email role')
       .populate('linkedGoal', 'title')
       .sort({ dueDate: 1, createdAt: -1 })
-      .lean();
+      .lean()).map(syncTaskTimerFields);
+
+    res.json({ success: true, tasks });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Get tasks for multiple teams
+exports.getTasksByTeams = async (req, res) => {
+  try {
+    const teamIds = String(req.query.teamIds || '')
+      .split(',')
+      .map(function (value) { return value.trim(); })
+      .filter(Boolean);
+
+    if (teamIds.length === 0) {
+      return res.json({ success: true, tasks: [] });
+    }
+
+    const limit = Number.parseInt(req.query.limit, 10);
+    let query = Task.find({ team: { $in: teamIds } })
+      .populate('assignee', 'name email role')
+      .populate('assignedBy', 'name email role')
+      .populate('linkedGoal', 'title')
+      .sort({ dueDate: 1, createdAt: -1 });
+
+    if (Number.isFinite(limit) && limit > 0) {
+      query = query.limit(limit);
+    }
+
+    const tasks = (await query.lean()).map(syncTaskTimerFields);
 
     res.json({ success: true, tasks });
   } catch (err) {
@@ -210,14 +315,14 @@ exports.getAllTasks = async (req, res) => {
     if (status) filter.status = status;
     if (priority) filter.priority = priority;
 
-    const tasks = await Task.find(filter)
+    const tasks = (await Task.find(filter)
       .populate('assignee', 'name email role')
       .populate('assignedBy', 'name email role')
       .populate('linkedGoal', 'title')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
-      .lean();
+      .lean()).map(syncTaskTimerFields);
 
     const total = await Task.countDocuments(filter);
     res.json({ success: true, tasks, total, page: parseInt(page), pages: Math.ceil(total / limit) });
@@ -247,8 +352,18 @@ exports.updateTask = async (req, res) => {
     updates.workflowStage = resolveWorkflowStage(updates.workflowStage, updates.status, task);
     updates.status = resolveStatus(updates.status, updates.workflowStage, task);
 
-    if (updates.timeTracking !== undefined) {
-      updates.timeTracking = sanitizeTimeTracking(updates.timeTracking, task);
+    if (updates.timeTracking !== undefined || updates.totalTimeSpent !== undefined || updates.totalTrackedTime !== undefined || updates.timeSessions !== undefined) {
+      const nextTimeTracking = sanitizeTimeTracking({
+        ...(updates.timeTracking && typeof updates.timeTracking === 'object' ? updates.timeTracking : {}),
+        totalTimeSpent: updates.totalTimeSpent,
+        totalTrackedTime: updates.totalTrackedTime,
+        timeSessions: updates.timeSessions,
+      }, task);
+      const timerAliases = buildTimerAliases(nextTimeTracking);
+      updates.timeTracking = nextTimeTracking;
+      updates.totalTimeSpent = timerAliases.totalTimeSpent;
+      updates.totalTrackedTime = timerAliases.totalTrackedTime;
+      updates.timeSessions = timerAliases.timeSessions;
     }
 
     // Track completion
@@ -259,11 +374,11 @@ exports.updateTask = async (req, res) => {
       updates.completedAt = null;
     }
 
-    const updated = await Task.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true })
+    const updated = syncTaskTimerFields(await Task.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true })
       .populate('assignee', 'name email role')
       .populate('assignedBy', 'name email role')
       .populate('linkedGoal', 'title achievementPercent')
-      .populate('linkedMeeting', 'title');
+      .populate('linkedMeeting', 'title'));
 
     // Auto-update objective progress
     const objId = updated.objective_id || updated.linkedGoal?._id || updated.linkedGoal;
@@ -297,7 +412,7 @@ exports.appendTimeEntry = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Task not found' });
     }
 
-    if (!canManageTask(task, req.user)) {
+    if (!canTrackTask(task, req.user)) {
       return res.status(403).json({ success: false, message: 'Not authorized to track time for this task' });
     }
 
@@ -319,17 +434,27 @@ exports.appendTimeEntry = async (req, res) => {
         })
       : [];
 
+    if (existingSessions.some(function (session) { return isDuplicateSession(session, entry); })) {
+      return res.json({ success: true, task: syncTaskTimerFields(task) });
+    }
+
     const nextTimeTracking = sanitizeTimeTracking({
       totalSeconds: Number(task?.timeTracking?.totalSeconds || 0) + entry.durationSeconds,
       lastTrackedAt: entry.endedAt,
       sessions: [entry].concat(existingSessions),
     }, task);
 
+    const timerAliases = buildTimerAliases(nextTimeTracking);
+
     task.timeTracking = nextTimeTracking;
+    task.totalTimeSpent = timerAliases.totalTimeSpent;
+    task.totalTrackedTime = timerAliases.totalTrackedTime;
+    task.timeSessions = timerAliases.timeSessions;
     task.markModified('timeTracking');
+    task.markModified('timeSessions');
     await task.save({ validateBeforeSave: false });
 
-    res.json({ success: true, task });
+    res.json({ success: true, task: syncTaskTimerFields(task) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

@@ -4,7 +4,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { KANBAN_COLUMNS, formatDuration, getTrackedSeconds, getWorkflowStage } from '../../utils/workManagement';
 
-function TaskCardItem({ task, activeTimerTaskId, savingTimer, onStartTimer, onStopTimer, dragOverlay }) {
+function TaskCardItem({ task, activeTimerTaskId, savingTimer, selectedTaskId, currentUserId, onSelectTask, onStartTimer, onStopTimer, dragOverlay }) {
   var sortable = useSortable({ id: task._id, data: { type: 'task', stage: getWorkflowStage(task) } });
   var style = {
     transform: CSS.Transform.toString(sortable.transform),
@@ -13,6 +13,9 @@ function TaskCardItem({ task, activeTimerTaskId, savingTimer, onStartTimer, onSt
   };
   var tracked = getTrackedSeconds(task);
   var isActiveTimer = activeTimerTaskId === task._id;
+  var isSelected = selectedTaskId === task._id;
+  var canTrackTask = String(task?.assignee?._id || task?.assignee || '') === String(currentUserId || '');
+  var anotherTaskIsActive = Boolean(activeTimerTaskId && activeTimerTaskId !== task._id);
 
   function handleAction(event, callback) {
     event.preventDefault();
@@ -26,7 +29,10 @@ function TaskCardItem({ task, activeTimerTaskId, savingTimer, onStartTimer, onSt
       style={style}
       {...sortable.attributes}
       {...(dragOverlay ? {} : sortable.listeners)}
-      className={'wm-kanban-card' + (sortable.isDragging && !dragOverlay ? ' wm-kanban-card--dragging' : '') + (dragOverlay ? ' wm-kanban-card--overlay' : '')}
+      className={'wm-kanban-card' + (sortable.isDragging && !dragOverlay ? ' wm-kanban-card--dragging' : '') + (dragOverlay ? ' wm-kanban-card--overlay' : '') + (isSelected ? ' wm-kanban-card--selected' : '')}
+      onClick={function () {
+        if (onSelectTask) onSelectTask(task._id);
+      }}
     >
       <div className="wm-kanban-card__top">
         <strong>{task.title}</strong>
@@ -42,42 +48,39 @@ function TaskCardItem({ task, activeTimerTaskId, savingTimer, onStartTimer, onSt
         <span>Tracked {formatDuration(tracked)}</span>
       </div>
       <div className="wm-kanban-card__actions">
-        {isActiveTimer ? (
-          <button
-            type="button"
-            className="btn btn--primary btn--sm"
-            disabled={savingTimer}
-            onPointerDown={function (event) { event.stopPropagation(); }}
-            onClick={function (event) { handleAction(event, onStopTimer); }}
-          >
-            {savingTimer ? 'Saving...' : 'Stop Timer'}
-          </button>
-        ) : (
-          <>
-            <button
-              type="button"
-              className="btn btn--secondary btn--sm"
-              onPointerDown={function (event) { event.stopPropagation(); }}
-              onClick={function (event) { handleAction(event, function () { onStartTimer(task, false); }); }}
-            >
-              Start Timer
-            </button>
-            <button
-              type="button"
-              className="btn btn--ghost btn--sm"
-              onPointerDown={function (event) { event.stopPropagation(); }}
-              onClick={function (event) { handleAction(event, function () { onStartTimer(task, true); }); }}
-            >
-              Focus
-            </button>
-          </>
-        )}
+        <button
+          type="button"
+          className="btn btn--secondary btn--sm"
+          disabled={!canTrackTask || isActiveTimer || anotherTaskIsActive || savingTimer}
+          onPointerDown={function (event) { event.stopPropagation(); }}
+          onClick={function (event) { handleAction(event, function () { onStartTimer(task, false); }); }}
+        >
+          Start Timer
+        </button>
+        <button
+          type="button"
+          className="btn btn--primary btn--sm"
+          disabled={!canTrackTask || !isActiveTimer || savingTimer}
+          onPointerDown={function (event) { event.stopPropagation(); }}
+          onClick={function (event) { handleAction(event, onStopTimer); }}
+        >
+          {savingTimer && isActiveTimer ? 'Saving...' : 'Stop Timer'}
+        </button>
+        <button
+          type="button"
+          className="btn btn--ghost btn--sm"
+          disabled={!canTrackTask || isActiveTimer || anotherTaskIsActive || savingTimer}
+          onPointerDown={function (event) { event.stopPropagation(); }}
+          onClick={function (event) { handleAction(event, function () { onStartTimer(task, true); }); }}
+        >
+          Focus
+        </button>
       </div>
     </article>
   );
 }
 
-function Column({ column, tasks, activeTimerTaskId, savingTimer, onStartTimer, onStopTimer }) {
+function Column({ column, tasks, activeTimerTaskId, savingTimer, selectedTaskId, currentUserId, onSelectTask, onStartTimer, onStopTimer }) {
   var droppable = useDroppable({ id: column.key, data: { stage: column.key } });
   return (
     <section
@@ -103,6 +106,9 @@ function Column({ column, tasks, activeTimerTaskId, savingTimer, onStartTimer, o
                   task={task}
                   activeTimerTaskId={activeTimerTaskId}
                   savingTimer={savingTimer}
+                  selectedTaskId={selectedTaskId}
+                  currentUserId={currentUserId}
+                  onSelectTask={onSelectTask}
                   onStartTimer={onStartTimer}
                   onStopTimer={onStopTimer}
                 />
@@ -115,7 +121,7 @@ function Column({ column, tasks, activeTimerTaskId, savingTimer, onStartTimer, o
   );
 }
 
-function KanbanBoard({ tasks, onMoveTask, activeTimerTaskId, savingTimer, onStartTimer, onStopTimer }) {
+function KanbanBoard({ tasks, onMoveTask, activeTimerTaskId, savingTimer, selectedTaskId, currentUserId, onSelectTask, onStartTimer, onStopTimer }) {
   var sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   var [activeTaskId, setActiveTaskId] = useState('');
 
@@ -177,6 +183,9 @@ function KanbanBoard({ tasks, onMoveTask, activeTimerTaskId, savingTimer, onStar
               tasks={groupedTasks[column.key] || []}
               activeTimerTaskId={activeTimerTaskId}
               savingTimer={savingTimer}
+              selectedTaskId={selectedTaskId}
+              currentUserId={currentUserId}
+              onSelectTask={onSelectTask}
               onStartTimer={onStartTimer}
               onStopTimer={onStopTimer}
             />
@@ -189,6 +198,9 @@ function KanbanBoard({ tasks, onMoveTask, activeTimerTaskId, savingTimer, onStar
             task={activeTask}
             activeTimerTaskId={activeTimerTaskId}
             savingTimer={savingTimer}
+            selectedTaskId={selectedTaskId}
+            currentUserId={currentUserId}
+            onSelectTask={onSelectTask}
             onStartTimer={onStartTimer}
             onStopTimer={onStopTimer}
             dragOverlay={true}

@@ -34,4 +34,8 @@ const TeamSchema = new mongoose.Schema({
   }
 });
 
+TeamSchema.index({ leader: 1 });
+TeamSchema.index({ members: 1 });
+TeamSchema.index({ parentTeam: 1 });
+
 module.exports = mongoose.model('Team', TeamSchema);

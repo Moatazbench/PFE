@@ -4,6 +4,9 @@ import api from '../services/api';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
 import { ToastContainer, useToast } from '../components/common/Toast';
 import { buildCalendarItems, getEventTone } from '../utils/workManagement';
+import '../work-management.css';
+
+var MAX_MONTH_EVENTS_VISIBLE = 3;
 
 function startOfDay(value) {
   var date = new Date(value);
@@ -57,6 +60,10 @@ function buildMonthGrid(selectedDate) {
   });
 }
 
+function getCalendarDayKey(value) {
+  return new Date(value).toISOString().slice(0, 10);
+}
+
 function toProviderEventPayload(item) {
   var start = new Date(item.start);
   var end = item.end ? new Date(item.end) : null;
@@ -108,6 +115,17 @@ function getEventTimeLabel(item) {
   });
 
   return startLabel + ' - ' + endLabel;
+}
+
+function getEventTooltip(item) {
+  var details = [
+    item.title,
+    getEventTypeLabel(item),
+    getEventTimeLabel(item),
+    item.meta || '',
+  ].filter(Boolean);
+
+  return details.join(' • ');
 }
 
 function getEventStyle(item) {
@@ -254,6 +272,17 @@ function CalendarPage() {
     });
   }, [allItems, range.end, range.start]);
 
+  var visibleItemsByDay = useMemo(function () {
+    return visibleItems.reduce(function (collection, item) {
+      var dayKey = getCalendarDayKey(item.start);
+      if (!collection[dayKey]) {
+        collection[dayKey] = [];
+      }
+      collection[dayKey].push(item);
+      return collection;
+    }, Object.create(null));
+  }, [visibleItems]);
+
   var upcomingItems = useMemo(function () {
     var now = new Date();
     return allItems.filter(function (item) {
@@ -283,9 +312,10 @@ function CalendarPage() {
   }, [layout, range.start, selectedDate]);
 
   var connectedProviders = providers.filter(function (provider) { return provider.connected; });
+  var todayKey = getCalendarDayKey(new Date());
 
   return (
-    <div className="page-container wm-page wm-page--calendar">
+    <div className="page-container page-container--wide wm-page wm-page--calendar">
       <div className="page-header wm-page__header">
         <div className="page-header__left">
           <h1 className="page-title">Calendar Workspace</h1>
@@ -325,21 +355,21 @@ function CalendarPage() {
                 </div>
                 <div className="wm-calendar-grid">
                 {monthGrid.map(function (day) {
-                  var dayKey = day.toISOString().slice(0, 10);
-                  var dayItems = visibleItems.filter(function (item) {
-                    return new Date(item.start).toISOString().slice(0, 10) === dayKey;
-                  }).slice(0, 4);
+                  var dayKey = getCalendarDayKey(day);
+                  var dayItems = visibleItemsByDay[dayKey] || [];
+                  var visibleDayItems = dayItems.slice(0, MAX_MONTH_EVENTS_VISIBLE);
                   var isCurrentMonth = day.getMonth() === selectedDate.getMonth();
-                  var totalDayItems = visibleItems.filter(function (item) {
-                    return new Date(item.start).toISOString().slice(0, 10) === dayKey;
-                  }).length;
+                  var isToday = dayKey === todayKey;
+                  var cellClassName = 'wm-calendar-grid__cell'
+                    + (isCurrentMonth ? '' : ' is-muted')
+                    + (isToday ? ' is-today' : '');
                   return (
-                    <div key={dayKey} className={'wm-calendar-grid__cell' + (isCurrentMonth ? '' : ' is-muted')}>
+                    <div key={dayKey} className={cellClassName}>
                       <div className="wm-calendar-grid__day">{day.getDate()}</div>
                       <div className="wm-calendar-grid__events">
-                        {dayItems.map(function (item) {
+                        {visibleDayItems.map(function (item) {
                           return (
-                            <div key={item.id} className="wm-calendar-event" style={getEventStyle(item)}>
+                            <div key={item.id} className="wm-calendar-event wm-calendar-event--month" style={getEventStyle(item)} title={getEventTooltip(item)}>
                               <div className="wm-calendar-event__top">
                                 <span className="wm-calendar-event__type">{getEventTypeLabel(item)}</span>
                                 <span className="wm-calendar-event__time">{getEventTimeLabel(item)}</span>
@@ -349,7 +379,7 @@ function CalendarPage() {
                             </div>
                           );
                         })}
-                        {totalDayItems > 4 ? <small>+{totalDayItems - 4} more</small> : null}
+                        {dayItems.length > MAX_MONTH_EVENTS_VISIBLE ? <small className="wm-calendar-grid__more">+{dayItems.length - MAX_MONTH_EVENTS_VISIBLE} more</small> : null}
                       </div>
                     </div>
                   );
@@ -359,10 +389,8 @@ function CalendarPage() {
             ) : (
               <div className={'wm-agenda-grid' + (layout === 'week' ? ' is-week' : ' is-day')}>
                 {weekColumns.map(function (day) {
-                  var dayKey = day.toISOString().slice(0, 10);
-                  var dayItems = visibleItems.filter(function (item) {
-                    return new Date(item.start).toISOString().slice(0, 10) === dayKey;
-                  });
+                  var dayKey = getCalendarDayKey(day);
+                  var dayItems = visibleItemsByDay[dayKey] || [];
                   return (
                     <div key={dayKey} className="wm-agenda-column">
                       <header>
@@ -374,7 +402,7 @@ function CalendarPage() {
                       ) : (
                         dayItems.map(function (item) {
                           return (
-                            <div key={item.id} className="wm-agenda-item" style={getEventStyle(item)}>
+                            <div key={item.id} className="wm-agenda-item" style={getEventStyle(item)} title={getEventTooltip(item)}>
                               <div className="wm-calendar-event__top">
                                 <span className="wm-calendar-event__type">{getEventTypeLabel(item)}</span>
                                 <span className="wm-calendar-event__time">{getEventTimeLabel(item)}</span>

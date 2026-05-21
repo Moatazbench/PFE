@@ -29,7 +29,6 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
     var [fieldErrors, setFieldErrors] = useState({});
     var [capacityInfo, setCapacityInfo] = useState({ usedWeight: null, remainingWeight: null, message: '' });
     var [aiSuggestions, setAiSuggestions] = useState(null);
-    var [aiSuggestionsLoading, setAiSuggestionsLoading] = useState(false);
 
     useEffect(() => {
         if (user.role === 'TEAM_LEADER' || user.role === 'ADMIN' || user.role === 'HR') {
@@ -179,30 +178,14 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
         }
     }
 
-    async function handleAISuggest(e) {
-        e.preventDefault();
-        setAiSuggestionsLoading(true);
-        setAiSuggestions(null);
-        setAiError('');
-        try {
-            var res = await api.post('/ai/goal-suggestions', {
-                context: form.title || ''
-            });
-            setAiSuggestions(res.data.suggestions || []);
-        } catch (err) {
-            setAiError(err.response?.data?.message || 'AI goal suggestions failed.');
-        } finally {
-            setAiSuggestionsLoading(false);
-        }
-    }
-
     function handleUseSuggestion(suggestion) {
-        setForm(prev => ({
-            ...prev,
-            title: suggestion.title || prev.title,
-            description: suggestion.description || prev.description,
-            successIndicator: suggestion.successIndicator || prev.successIndicator,
-        }));
+        setForm(function (prev) {
+            return Object.assign({}, prev, {
+                title: suggestion.title || prev.title,
+                description: suggestion.description || prev.description,
+                successIndicator: suggestion.successIndicator || prev.successIndicator,
+            });
+        });
         setAiSuggestions(null);
     }
 
@@ -303,13 +286,10 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
                                 <label>Objective Title *</label>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     <input type="text" value={form.title} onChange={function (e) { handleChange('title', e.target.value); }} placeholder="e.g. Achieve Company Growth" required minLength={5} maxLength={100} style={{ flex: 1, borderColor: fieldErrors.title ? '#dc2626' : undefined }} disabled={isCreateLocked} />
-                                    <button type="button" onClick={handleAISuggest} disabled={aiSuggestionsLoading || isCreateLocked} className="btn btn--secondary btn--sm" title="Get AI-powered goal suggestions based on your performance data" style={{ whiteSpace: 'nowrap' }}>
-                                        {aiSuggestionsLoading ? '⏳ Thinking...' : '🎯 AI Suggest Goals'}
-                                    </button>
                                 </div>
                             </div>
 
-                            {aiSuggestions && aiSuggestions.length > 0 && (
+                            {false && aiSuggestions && aiSuggestions.length > 0 && (
                                 <div style={{ marginTop: '0.5rem', padding: '1rem', borderRadius: '12px', border: '2px solid #6366f1', background: 'linear-gradient(135deg, #f5f3ff 0%, #eef2ff 100%)' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                                         <strong style={{ color: '#4338ca', fontSize: '0.95rem' }}>🎯 AI Goal Suggestions</strong>
@@ -375,6 +355,7 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
                                             {analysisResult.quality === 'good' ? 'Good quality' : 'Needs improvement'}
                                         </span>
                                     </div>
+                                    {analysisResult.warning && <div style={{ marginBottom: '0.5rem', fontSize: '0.8rem', color: '#92400e' }}>{analysisResult.warning}</div>}
                                     {(analysisResult.strengths || []).length > 0 && <div style={{ marginBottom: '0.5rem', fontSize: '0.85rem', color: '#065f46' }}>Strengths: {(analysisResult.strengths || []).join(' • ')}</div>}
                                     {(analysisResult.issues || []).length > 0 ? (analysisResult.issues || []).map(function (issue, index) {
                                         return <div key={index} style={{ fontSize: '0.85rem', color: '#7c2d12', marginTop: index === 0 ? 0 : '0.35rem' }}>{issue.message}</div>;
@@ -384,6 +365,7 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
                             {refinementResult && (
                                 <div style={{ marginTop: '1rem', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff' }}>
                                     <strong>AI refinement suggestions</strong>
+                                    {refinementResult.warning && <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#92400e' }}>{refinementResult.warning}</div>}
                                     <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#475569' }}>{refinementResult.recommendedFormat}</div>
                                     {(refinementResult.suggestions || []).slice(0, 3).map(function (suggestion, index) {
                                         return (

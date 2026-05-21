@@ -6,7 +6,6 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import GoalFilters from '../components/goals/GoalFilters';
 import GoalTable from '../components/goals/GoalTable';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
-import ViewSwitcher from '../components/goals/ViewSwitcher';
 
 const GoalDetailsPanel = lazy(() => import('../components/goals/GoalDetailsPanel'));
 const CreateGoalModal = lazy(() => import('../components/goals/CreateGoalModal'));
@@ -24,7 +23,7 @@ function GoalsPage() {
     var [selectedCycle, setSelectedCycle] = useState('');
     var [activeCycleData, setActiveCycleData] = useState(null);
     var [activeTab, setActiveTab] = useState('my');
-    var [activeView, setActiveView] = useState('list');
+    var activeView = 'list';
     var [searchTerm, setSearchTerm] = useState('');
     var [selectedGoal, setSelectedGoal] = useState(null);
     var [showCreateModal, setShowCreateModal] = useState(false);
@@ -291,7 +290,6 @@ function GoalsPage() {
                     <p className="ds-page-header__subtitle">{filteredObjectives.length} objectives · {phaseLabel}</p>
                 </div>
                 <div className="ds-page-header__actions">
-                    <ViewSwitcher activeView={activeView} onChange={setActiveView} />
                     {canCreateObjectives && objectives.length < 10 ? (
                         <button className="ds-btn ds-btn--primary" onClick={function () { setShowCreateModal(true); }}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>

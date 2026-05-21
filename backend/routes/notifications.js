@@ -9,9 +9,11 @@ const { sendNotificationEmail } = require('../utils/mailer');
 router.get('/', auth, async function(req, res) {
   try {
     const notifications = await Notification.find({ recipient: req.user.id })
+      .select('sender type title message link isRead createdAt')
       .populate('sender', 'name profileImage') // Populate sender info
       .sort({ createdAt: -1 })
-      .limit(50);
+      .limit(50)
+      .lean();
     res.json(notifications);
   } catch (err) {
     console.error('Get notifications error:', err);
@@ -22,9 +24,9 @@ router.get('/', auth, async function(req, res) {
 // Get unread count
 router.get('/unread-count', auth, async function(req, res) {
   try {
-    const count = await Notification.countDocuments({ 
-      recipient: req.user.id, 
-      isRead: false 
+    const count = await Notification.countDocuments({
+      recipient: req.user.id,
+      isRead: false
     });
     res.json({ count: count });
   } catch (err) {
@@ -36,7 +38,7 @@ router.get('/unread-count', auth, async function(req, res) {
 // Create notification
 router.post('/', auth, async function(req, res) {
   try {
-    // NOTE: 'sendEmailFlag' is a boolean from caller — renamed to avoid shadowing the imported sendNotificationEmail
+    // NOTE: 'sendEmailFlag' is a boolean from caller - renamed to avoid shadowing the imported sendNotificationEmail
     const { recipientId, type, title, message, link, sendEmail: sendEmailFlag } = req.body;
 
     const notification = await Notification.create({
@@ -74,15 +76,15 @@ router.post('/', auth, async function(req, res) {
 router.post('/:id/read', auth, async function(req, res) {
   try {
     const notification = await Notification.findOneAndUpdate(
-      { _id: req.params.id, recipient: req.user.id }, 
+      { _id: req.params.id, recipient: req.user.id },
       { isRead: true },
       { new: true }
     );
-    
+
     if (!notification) {
       return res.status(404).json({ message: 'Notification not found' });
     }
-    
+
     res.json(notification);
   } catch (err) {
     console.error('Mark read error:', err);
@@ -115,4 +117,4 @@ router.delete('/:id', auth, async function(req, res) {
   }
 });
 
-module.exports = router;
+module.exports = router;

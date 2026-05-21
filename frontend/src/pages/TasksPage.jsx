@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useMemo, useReducer, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
 import { ToastContainer, useToast } from '../components/common/Toast';
@@ -10,6 +10,7 @@ import {
   buildProductivitySummary,
   buildTimesheetEntries,
   formatDuration,
+  formatDurationLong,
   getStatusForStage,
   getTrackedSeconds,
   getWorkflowStage,
@@ -120,27 +121,96 @@ function mergeSessionIntoTask(task, session) {
       lastTrackedAt: session.endedAt,
       sessions: nextSessions.slice(0, 120),
     },
+    totalTimeSpent: nextTotal,
+    totalTrackedTime: nextTotal,
+    timeSessions: nextSessions.slice(0, 120).map(function (item) {
+      return {
+        startTime: item.startedAt,
+        endTime: item.endedAt,
+        duration: item.durationSeconds,
+        focusMode: Boolean(item.focusMode),
+        source: item.source || 'timer',
+        notes: item.notes || '',
+      };
+    }),
   });
+}
+
+function getLastWorkedAt(task) {
+  return task?.timeTracking?.lastTrackedAt
+    || task?.timeTracking?.sessions?.[0]?.endedAt
+    || task?.timeSessions?.[0]?.endTime
+    || null;
+}
+
+function formatDateTime(value) {
+  if (!value) return 'Not available';
+  var parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return 'Not available';
+  return parsed.toLocaleString();
+}
+
+function formatRelativeDateTime(value) {
+  if (!value) return 'Not yet';
+  var parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return 'Not yet';
+
+  var diffMs = Date.now() - parsed.getTime();
+  if (diffMs < 60000) return 'Just now';
+
+  var minutes = Math.floor(diffMs / 60000);
+  if (minutes < 60) return minutes + 'm ago';
+
+  var hours = Math.floor(minutes / 60);
+  if (hours < 24) return hours + 'h ago';
+
+  var days = Math.floor(hours / 24);
+  if (days < 7) return days + 'd ago';
+
+  return parsed.toLocaleDateString();
 }
 
 function TasksPage() {
   var auth = useAuth();
   var user = auth.user;
   var toast = useToast();
-  var timer = usePersistentTimer();
+  var currentUserId = String(user?._id || user?.id || '');
+  var timer = usePersistentTimer(currentUserId);
 
   var [tab, setTab] = useState('my');
   var [viewMode, setViewMode] = useState('list');
   var [tasks, setTasks] = useState([]);
   var [objectives, setObjectives] = useState([]);
   var [stats, setStats] = useState(null);
+  var [selectedTaskId, setSelectedTaskId] = useState('');
   var [loading, setLoading] = useState(true);
   var [savingTimer, setSavingTimer] = useState(false);
   var [workflowState, dispatchWorkflow] = useReducer(taskWorkflowReducer, INITIAL_WORKFLOW_STATE);
+  var exitPersistenceRef = useRef(false);
+  var timerRef = useRef(timer);
+  var persistTimeEntryRef = useRef(null);
 
   useEffect(function () {
     loadData();
   }, [tab]);
+
+  useEffect(function () {
+    setSelectedTaskId(function (currentTaskId) {
+      var hasCurrentSelection = currentTaskId && tasks.some(function (task) { return task._id === currentTaskId; });
+      if (hasCurrentSelection) return currentTaskId;
+
+      var activeTaskId = timer.timerState?.taskId || '';
+      if (activeTaskId) {
+        return activeTaskId;
+      }
+
+      return tasks[0]?._id || '';
+    });
+  }, [tasks, timer.timerState?.taskId]);
+
+  useEffect(function () {
+    exitPersistenceRef.current = false;
+  }, [timer.timerState?.taskId, timer.timerState?.startedAt, timer.timerState?.isRunning]);
 
   function normalizeObjectiveResponse(payload) {
     if (Array.isArray(payload)) return payload;
@@ -223,6 +293,10 @@ function TasksPage() {
       status: getStatusForStage(workflowState.form.workflowStage),
       progress: Number(workflowState.form.progress || 0),
     };
+  }
+
+  function canTrackTask(task) {
+    return String(task?.assignee?._id || task?.assignee || '') === currentUserId;
   }
 
   function handleCreate() {
@@ -330,23 +404,32 @@ function TasksPage() {
   }
 
   function startTimerForTask(task, focusMode) {
-    if (timer.timerState?.taskId && timer.timerState.taskId !== task._id) {
-      toast.warning('Stop the active timer before starting another one');
+    if (!canTrackTask(task)) {
+      toast.warning('You can only track time on tasks assigned to you');
       return;
     }
 
-    if (timer.timerState?.taskId === task._id) {
-      toast.info('This task is already being tracked');
-      return;
-    }
-
-    timer.startTimer({
+    var startResult = timer.startTimer({
       taskId: task._id,
       taskTitle: task.title,
       linkedGoal: task?.linkedGoal?.title || '',
       taskSnapshot: task,
       focusMode: focusMode,
     });
+
+    if (!startResult?.ok) {
+      if (startResult.reason === 'another_timer_active') {
+        toast.warning('Stop the active timer before starting another one');
+      } else if (startResult.reason === 'missing_user') {
+        toast.error('Your session is still loading. Please try again.');
+      } else {
+        toast.info('This task is already being tracked');
+      }
+      setSelectedTaskId(startResult?.timer?.taskId || task._id);
+      return;
+    }
+
+    setSelectedTaskId(task._id);
     toast.success(focusMode ? 'Focus session started' : 'Timer started');
   }
 
@@ -362,19 +445,14 @@ function TasksPage() {
 
     var updatedTask = mergeSessionIntoTask(trackedTask, session);
     setSavingTimer(true);
+    setSelectedTaskId(session.taskId);
     setTasks(function (currentTasks) {
       return currentTasks.map(function (task) {
         return task._id === session.taskId ? updatedTask : task;
       });
     });
 
-    api.post('/tasks/' + session.taskId + '/time-entries', {
-      startedAt: session.startedAt,
-      endedAt: session.endedAt,
-      durationSeconds: session.durationSeconds,
-      focusMode: session.focusMode,
-      source: session.source,
-    }).then(function () {
+    persistTimeEntry(session).then(function () {
       toast.success('Tracked ' + formatDuration(session.durationSeconds));
       loadData();
     }).catch(function (error) {
@@ -384,6 +462,73 @@ function TasksPage() {
       setSavingTimer(false);
     });
   }
+
+  function buildTimeEntryPayload(session) {
+    return {
+      startedAt: session.startedAt,
+      endedAt: session.endedAt,
+      durationSeconds: session.durationSeconds,
+      focusMode: session.focusMode,
+      source: session.source,
+    };
+  }
+
+  function persistTimeEntry(session, options) {
+    var settings = options || {};
+    var payload = buildTimeEntryPayload(session);
+
+    if (settings.keepalive) {
+      var token = localStorage.getItem('token');
+      return fetch('/api/tasks/' + session.taskId + '/time-entries', {
+        method: 'POST',
+        headers: Object.assign(
+          { 'Content-Type': 'application/json' },
+          token ? { Authorization: 'Bearer ' + token } : {}
+        ),
+        body: JSON.stringify(payload),
+        keepalive: true,
+      });
+    }
+
+    return api.post('/tasks/' + session.taskId + '/time-entries', payload);
+  }
+
+  useEffect(function () {
+    timerRef.current = timer;
+    persistTimeEntryRef.current = persistTimeEntry;
+  });
+
+  useEffect(function () {
+    function persistTimerOnExit(useKeepalive) {
+      if (exitPersistenceRef.current) return;
+      if (!timerRef.current?.timerState?.taskId) return;
+
+      var session = timerRef.current.consumeTimer({ skipState: true });
+      if (!session) return;
+
+      exitPersistenceRef.current = true;
+      persistTimeEntryRef.current(session, { keepalive: useKeepalive }).catch(function () {
+        exitPersistenceRef.current = false;
+      });
+    }
+
+    function handlePageHide() {
+      persistTimerOnExit(true);
+    }
+
+    function handleBeforeUnload() {
+      persistTimerOnExit(true);
+    }
+
+    window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return function () {
+      window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      persistTimerOnExit(false);
+    };
+  }, []);
 
   var tabs = [{ key: 'my', label: 'My Tasks' }, { key: 'assigned', label: 'Assigned by Me' }];
   if (user.role === 'ADMIN' || user.role === 'HR') tabs.push({ key: 'all', label: 'All Tasks' });
@@ -407,6 +552,29 @@ function TasksPage() {
       return leftDue - rightDue;
     });
   }, [tasks]);
+
+  var selectedTask = useMemo(function () {
+    if (!selectedTaskId) {
+      return visibleTasks[0] || null;
+    }
+
+    return visibleTasks.find(function (task) { return task._id === selectedTaskId; })
+      || (timer.timerState?.taskId === selectedTaskId ? timer.timerState.taskSnapshot || null : null);
+  }, [selectedTaskId, timer.timerState, visibleTasks]);
+
+  var selectedTaskEntries = useMemo(function () {
+    return selectedTask ? buildTimesheetEntries([selectedTask]).slice(0, 8) : [];
+  }, [selectedTask]);
+
+  var selectedTaskTrackedSeconds = useMemo(function () {
+    return selectedTask ? getTrackedSeconds(selectedTask) : 0;
+  }, [selectedTask]);
+
+  var selectedTaskLastWorkedAt = useMemo(function () {
+    return getLastWorkedAt(selectedTask);
+  }, [selectedTask]);
+
+  var selectedTaskIsActive = Boolean(selectedTask?._id && timer.timerState?.taskId === selectedTask._id);
 
   return (
     <div className="page-container wm-page">
@@ -499,11 +667,13 @@ function TasksPage() {
               <label>Due date</label>
               <input type="date" className="form-input" value={workflowState.form.dueDate} onChange={function (event) { dispatchWorkflow({ type: 'UPDATE_FORM_FIELD', field: 'dueDate', value: event.target.value }); }} />
             </div>
-            <div className="form-group">
-              <label>Progress</label>
-              <input type="range" min="0" max="100" step="5" value={workflowState.form.progress} onChange={function (event) { dispatchWorkflow({ type: 'UPDATE_FORM_FIELD', field: 'progress', value: event.target.value }); }} />
-              <div className="wm-slider-value">{workflowState.form.progress}%</div>
-            </div>
+            {workflowState.editingTask ? (
+              <div className="form-group">
+                <label>Progress</label>
+                <input type="range" min="0" max="100" step="5" value={workflowState.form.progress} onChange={function (event) { dispatchWorkflow({ type: 'UPDATE_FORM_FIELD', field: 'progress', value: event.target.value }); }} />
+                <div className="wm-slider-value">{workflowState.form.progress}%</div>
+              </div>
+            ) : null}
             <div className="form-group">
               <label>Linked goal</label>
               <select className="form-select" value={workflowState.form.linkedGoal} onChange={function (event) { dispatchWorkflow({ type: 'UPDATE_FORM_FIELD', field: 'linkedGoal', value: event.target.value }); }}>
@@ -566,7 +736,10 @@ function TasksPage() {
                 tasks={visibleTasks}
                 onMoveTask={handleMoveTask}
                 activeTimerTaskId={timer.timerState?.taskId || ''}
+                selectedTaskId={selectedTaskId}
+                currentUserId={currentUserId}
                 savingTimer={savingTimer}
+                onSelectTask={setSelectedTaskId}
                 onStartTimer={startTimerForTask}
                 onStopTimer={stopAndPersistTimer}
               />
@@ -577,8 +750,14 @@ function TasksPage() {
                 var isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !['done', 'cancelled'].includes(task.status);
                 var trackedSeconds = getTrackedSeconds(task);
                 var isActiveTimer = timer.timerState?.taskId === task._id;
+                var taskCanTrack = canTrackTask(task);
+                var anotherTaskIsActive = Boolean(timer.timerState?.taskId && timer.timerState.taskId !== task._id);
                 return (
-                  <article key={task._id} className={'task-item wm-task-item' + (isOverdue ? ' task-item--overdue' : '')}>
+                  <article
+                    key={task._id}
+                    className={'task-item wm-task-item' + (isOverdue ? ' task-item--overdue' : '') + (selectedTaskId === task._id ? ' wm-task-item--selected' : '')}
+                    onClick={function () { setSelectedTaskId(task._id); }}
+                  >
                     <div className="task-item__left">
                       <span className="task-item__status-dot" style={{ background: statusColors[task.status] || '#6b7280' }} />
                       <div className="task-item__info">
@@ -600,16 +779,27 @@ function TasksPage() {
 
                     <div className="task-item__right wm-task-item__actions">
                       <div className="wm-task-item__timer">
-                        {isActiveTimer ? (
-                          <button className="btn btn--primary btn--sm" onClick={stopAndPersistTimer} disabled={savingTimer}>
-                            {savingTimer ? 'Saving...' : 'Stop Timer'}
-                          </button>
-                        ) : (
-                          <>
-                            <button className="btn btn--secondary btn--sm" onClick={function () { startTimerForTask(task, false); }}>Start Timer</button>
-                            <button className="btn btn--ghost btn--sm" onClick={function () { startTimerForTask(task, true); }}>Focus Session</button>
-                          </>
-                        )}
+                        <button
+                          className="btn btn--secondary btn--sm"
+                          onClick={function () { startTimerForTask(task, false); }}
+                          disabled={!taskCanTrack || isActiveTimer || anotherTaskIsActive || savingTimer}
+                        >
+                          Start Timer
+                        </button>
+                        <button
+                          className="btn btn--primary btn--sm"
+                          onClick={stopAndPersistTimer}
+                          disabled={!taskCanTrack || !isActiveTimer || savingTimer}
+                        >
+                          {savingTimer && isActiveTimer ? 'Saving...' : 'Stop Timer'}
+                        </button>
+                        <button
+                          className="btn btn--ghost btn--sm"
+                          onClick={function () { startTimerForTask(task, true); }}
+                          disabled={!taskCanTrack || isActiveTimer || anotherTaskIsActive || savingTimer}
+                        >
+                          Focus Session
+                        </button>
                       </div>
                       <select className="form-select form-select--sm" value={task.status} onChange={function (event) { handleStatusChange(task._id, event.target.value); }}>
                         {Object.entries(statusLabels).map(function (entry) {
@@ -627,6 +817,78 @@ function TasksPage() {
         </section>
 
         <aside className="wm-side-panel">
+          {selectedTask ? (
+            <div className="wm-panel-card wm-task-detail">
+              <div className="wm-panel-card__header">
+                <div>
+                  <h3>Task time tracking</h3>
+                  <p>Selected task timing, activity, and session history.</p>
+                </div>
+                {selectedTaskIsActive ? (
+                  <span className="wm-stage-pill">{timer.timerState?.isRunning ? 'Timer running' : 'Timer paused'}</span>
+                ) : null}
+              </div>
+
+              <div className="wm-task-detail__title">
+                <strong>{selectedTask.title}</strong>
+                {selectedTask.linkedGoal?.title ? <span>{selectedTask.linkedGoal.title}</span> : null}
+              </div>
+
+              <div className="wm-task-detail__metrics">
+                <div className="wm-task-detail__metric">
+                  <span>Total time spent</span>
+                  <strong>{formatDuration(selectedTaskTrackedSeconds)}</strong>
+                  <small>{selectedTaskEntries.length} logged session{selectedTaskEntries.length === 1 ? '' : 's'}</small>
+                </div>
+                <div className="wm-task-detail__metric">
+                  <span>Active timer</span>
+                  <strong>{selectedTaskIsActive ? formatDurationLong(timer.elapsedSeconds) : 'Not running'}</strong>
+                  <small>{selectedTaskIsActive ? (timer.timerState?.isRunning ? 'Currently tracking' : 'Paused and persisted locally') : 'Use task actions to start tracking'}</small>
+                </div>
+                <div className="wm-task-detail__metric">
+                  <span>Last worked</span>
+                  <strong>{formatRelativeDateTime(selectedTaskLastWorkedAt)}</strong>
+                  <small>{formatDateTime(selectedTaskLastWorkedAt)}</small>
+                </div>
+                <div className="wm-task-detail__metric">
+                  <span>Current status</span>
+                  <strong>{statusLabels[selectedTask.status] || selectedTask.status || 'To Do'}</strong>
+                  <small>{String(getWorkflowStage(selectedTask)).replace(/_/g, ' ')}</small>
+                </div>
+              </div>
+
+              <div className="wm-panel-card__header">
+                <div>
+                  <h3>Session history</h3>
+                  <p>Most recent tracked sessions for this task.</p>
+                </div>
+              </div>
+
+              {selectedTaskEntries.length === 0 ? (
+                <div className="wm-empty-inline">No tracked sessions yet for this task.</div>
+              ) : (
+                <div className="wm-timesheet-list">
+                  {selectedTaskEntries.map(function (entry) {
+                    return (
+                      <div key={entry.id} className="wm-timesheet-row">
+                        <div>
+                          <strong>{formatDateTime(entry.endedAt)}</strong>
+                          <span>
+                            {formatDateTime(entry.startedAt)} to {formatDateTime(entry.endedAt)}
+                          </span>
+                        </div>
+                        <div className="wm-timesheet-row__meta">
+                          {entry.focusMode ? <span className="wm-stage-pill">Focus</span> : null}
+                          <strong>{formatDuration(entry.durationSeconds)}</strong>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : null}
+
           <div className="wm-panel-card">
             <div className="wm-panel-card__header">
               <div>

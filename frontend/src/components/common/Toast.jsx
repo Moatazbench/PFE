@@ -20,12 +20,12 @@ function ToastItem({ message, type, onClose, duration }) {
   }[type] || 'i';
 
   return (
-    <div className={'toast toast--' + type} role="status" aria-live="polite">
+    <div className={'toast toast--' + type} role={type === 'error' ? 'alert' : 'status'} aria-live="polite">
       <span className="toast__icon" aria-hidden="true">{icon}</span>
-      <span className="toast__message">{message}</span>
-      <button type="button" className="toast__close" onClick={onClose} aria-label="Dismiss notification">
-        x
-      </button>
+      <div className="toast__content">
+        <span className="toast__message">{message}</span>
+      </div>
+      <button type="button" className="toast__close" onClick={onClose} aria-label="Dismiss notification">x</button>
     </div>
   );
 }

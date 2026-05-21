@@ -48,13 +48,25 @@ const TaskSchema = new mongoose.Schema({
       notes: { type: String, default: '' }
     }]
   },
+  totalTimeSpent: { type: Number, default: 0, min: 0 },
+  totalTrackedTime: { type: Number, default: 0, min: 0 },
+  timeSessions: [{
+    startTime: { type: Date, required: true },
+    endTime: { type: Date, required: true },
+    duration: { type: Number, required: true, min: 0 },
+    focusMode: { type: Boolean, default: false },
+    source: { type: String, default: 'timer' },
+    notes: { type: String, default: '' }
+  }],
 }, { timestamps: true });
 
 TaskSchema.index({ assignee: 1, status: 1 });
+TaskSchema.index({ assignee: 1, dueDate: 1, createdAt: -1 });
 TaskSchema.index({ assignedBy: 1, createdAt: -1 });
 TaskSchema.index({ dueDate: 1, status: 1 });
 TaskSchema.index({ linkedGoal: 1 });
 TaskSchema.index({ linkedMeeting: 1 });
 TaskSchema.index({ team: 1, status: 1 });
+TaskSchema.index({ team: 1, dueDate: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Task', TaskSchema);

@@ -63,7 +63,7 @@ function Settings() {
       const res = await axios.put(`${API}/users/${user._id}/avatar`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      updateUser(res.data);
+      updateUser(res.data?.user || res.data);
       setSuccess('Profile picture updated successfully!');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to upload profile picture');

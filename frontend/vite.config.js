@@ -6,6 +6,30 @@ import react from '@vitejs/plugin-react';
 // Keep local API traffic on localhost while avoiding flaky IPv6 loopback resolution on Windows.
 dns.setDefaultResultOrder('ipv4first');
 
+function buildManualChunks(id) {
+  if (!id.includes('node_modules')) {
+    return undefined;
+  }
+
+  if (id.includes('recharts') || id.includes('chart.js') || id.includes('react-chartjs-2')) {
+    return 'vendor-charts';
+  }
+
+  if (id.includes('@dnd-kit')) {
+    return 'vendor-dnd';
+  }
+
+  if (id.includes('framer-motion')) {
+    return 'vendor-motion';
+  }
+
+  if (id.includes('jspdf') || id.includes('html2canvas')) {
+    return 'vendor-export';
+  }
+
+  return 'vendor';
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const backendTarget = env.VITE_DEV_PROXY_TARGET || 'http://localhost:5009';
@@ -26,6 +50,13 @@ export default defineConfig(({ mode }) => {
           target: backendTarget,
           changeOrigin: true,
           secure: false,
+        },
+      },
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: buildManualChunks,
         },
       },
     },

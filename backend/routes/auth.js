@@ -147,7 +147,9 @@ router.get('/me', async function (req, res) {
     const decoded = jwt.verify(token, jwtSecret);
 
     const userId = decoded.id || (decoded.user && decoded.user.id);
-    const user = await User.findOne({ _id: userId, isDeleted: false }).select('-password -refreshToken');
+    const user = await User.findOne({ _id: userId, isDeleted: false })
+      .select('name email role profileImage')
+      .lean();
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });

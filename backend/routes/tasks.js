@@ -21,6 +21,9 @@ router.get('/stats', ctrl.getStats);
 // Get all tasks (admin)
 router.get('/all', role('ADMIN', 'HR'), ctrl.getAllTasks);
 
+// Get tasks for multiple teams in a single request
+router.get('/teams', ctrl.getTasksByTeams);
+
 // Get team tasks
 router.get('/team/:teamId', ctrl.getTeamTasks);
 

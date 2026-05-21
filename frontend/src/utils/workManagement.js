@@ -19,11 +19,27 @@ export function getStatusForStage(stage) {
   return 'todo';
 }
 
+function getTaskSessions(task) {
+  if (Array.isArray(task?.timeTracking?.sessions) && task.timeTracking.sessions.length > 0) {
+    return task.timeTracking.sessions;
+  }
+
+  return (task?.timeSessions || []).map(function (session) {
+    return {
+      startedAt: session?.startedAt || session?.startTime,
+      endedAt: session?.endedAt || session?.endTime,
+      durationSeconds: session?.durationSeconds ?? session?.duration ?? 0,
+      focusMode: Boolean(session?.focusMode),
+      source: session?.source || 'timer',
+    };
+  });
+}
+
 export function getTrackedSeconds(task) {
-  var total = Number(task?.timeTracking?.totalSeconds || 0);
+  var total = Number(task?.timeTracking?.totalSeconds ?? task?.totalTimeSpent ?? task?.totalTrackedTime ?? 0);
   if (Number.isFinite(total) && total > 0) return Math.round(total);
 
-  return (task?.timeTracking?.sessions || []).reduce(function (sum, session) {
+  return getTaskSessions(task).reduce(function (sum, session) {
     return sum + Math.max(0, Number(session?.durationSeconds || 0));
   }, 0);
 }
@@ -32,9 +48,11 @@ export function formatDuration(totalSeconds) {
   var seconds = Math.max(0, Math.round(Number(totalSeconds) || 0));
   var hours = Math.floor(seconds / 3600);
   var minutes = Math.floor((seconds % 3600) / 60);
+  var secs = seconds % 60;
 
-  if (hours > 0) return hours + 'h ' + String(minutes).padStart(2, '0') + 'm';
-  return minutes + 'm';
+  if (hours > 0) return hours + 'h ' + minutes + 'm';
+  if (minutes > 0) return minutes + 'm' + (secs > 0 ? ' ' + secs + 's' : '');
+  return secs + 's';
 }
 
 export function formatDurationLong(totalSeconds) {
@@ -48,7 +66,7 @@ export function formatDurationLong(totalSeconds) {
 export function buildTimesheetEntries(tasks) {
   return (tasks || [])
     .flatMap(function (task) {
-      return (task?.timeTracking?.sessions || []).map(function (session, index) {
+      return getTaskSessions(task).map(function (session, index) {
         return {
           id: String(task?._id || task?.id || 'task') + '-session-' + index + '-' + String(session?.endedAt || ''),
           taskId: task?._id || task?.id,

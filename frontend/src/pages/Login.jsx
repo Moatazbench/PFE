@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext';
 import { useTheme } from '../components/ThemeContext';
+import { preloadRoute } from '../routes/routeConfig';
 
 function Login() {
   const { darkMode, toggleDarkMode } = useTheme();
@@ -28,7 +29,9 @@ function Login() {
     }
 
     try {
-      // Use AuthContext login — it handles the API call, token storage, and user state
+      preloadRoute('/dashboard');
+
+      // Use AuthContext login - it handles the API call, token storage, and user state
       var result = await login(cleanEmail, formData.password);
 
       if (result.success) {
@@ -52,8 +55,8 @@ function Login() {
 
   return (
     <div className="auth-page page-enter">
-      <button 
-        onClick={toggleDarkMode} 
+      <button
+        onClick={toggleDarkMode}
         style={{
           position: 'absolute',
           top: '20px',
@@ -70,11 +73,11 @@ function Login() {
           fontSize: '0.9rem'
         }}
       >
-        {darkMode ? '☀️ Normal Mode' : '🌙 Retro Dark Mode'}
+        {darkMode ? 'Normal Mode' : 'Retro Dark Mode'}
       </button>
       <div className="auth-card">
         <div className="auth-header">
-          <div className="auth-logo">🏢</div>
+          <div className="auth-logo">HR</div>
           <h1>HR Management System</h1>
           <p>Sign in to your account</p>
         </div>
@@ -84,7 +87,7 @@ function Login() {
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-row">
             <div className="form-group">
-              <label>📧 Email Address</label>
+              <label>Email Address</label>
               <input
                 type="email"
                 name="email"
@@ -98,7 +101,7 @@ function Login() {
 
           <div className="form-row">
             <div className="form-group">
-              <label>🔒 Password</label>
+              <label>Password</label>
               <input
                 type="password"
                 name="password"
@@ -125,10 +128,10 @@ function Login() {
         <div className="demo-accounts">
           <p className="demo-title">Demo Accounts:</p>
           <div className="demo-list">
-            <span>👑 admin@biat.com / Admin123!</span>
-            <span>🟣 hr@biat.com / HR123!</span>
-            <span>🔵 leader@biat.com / Leader123!</span>
-            <span>🟢 collaborator@biat.com / Collab123!</span>
+            <span>Admin: admin@biat.com / Admin123!</span>
+            <span>HR: hr@biat.com / HR123!</span>
+            <span>Leader: leader@biat.com / Leader123!</span>
+            <span>Collaborator: collaborator@biat.com / Collab123!</span>
           </div>
         </div>
       </div>

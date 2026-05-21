@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider } from './components/AuthContext';
 import { ThemeProvider } from './components/ThemeContext';
 import { ActiveCycleProvider } from './components/ActiveCycleContext';
@@ -30,12 +30,61 @@ function AppRouteLoader() {
   );
 }
 
+function AppShell() {
+  return (
+    <DashboardLayout>
+      <Suspense fallback={<AppRouteLoader />}>
+        <Outlet />
+      </Suspense>
+    </DashboardLayout>
+  );
+}
+
+function GuardedAppRoute({ route }) {
+  var Component = route.component;
+
+  return (
+    <RouteGuard route={route}>
+      <Component />
+    </RouteGuard>
+  );
+}
+
+function getWarmRouteLimit() {
+  if (typeof navigator === 'undefined') {
+    return 2;
+  }
+
+  var connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (!connection) {
+    return 2;
+  }
+
+  if (connection.saveData) {
+    return 0;
+  }
+
+  var effectiveType = String(connection.effectiveType || '').toLowerCase();
+  if (effectiveType === 'slow-2g' || effectiveType === '2g') {
+    return 0;
+  }
+
+  if (effectiveType === '3g') {
+    return 1;
+  }
+
+  return 2;
+}
+
 function App() {
   useEffect(function () {
     var cleanup;
 
     function warmRoutes() {
-      preloadPrimaryAppRoutes(5);
+      var warmLimit = getWarmRouteLimit();
+      if (warmLimit > 0) {
+        preloadPrimaryAppRoutes(warmLimit);
+      }
     }
 
     if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
@@ -74,25 +123,17 @@ function App() {
                 );
               })}
 
-              {APP_ROUTES.map(function (route) {
-                var Component = route.component;
-
-                return (
-                  <Route
-                    key={route.path}
-                    path={route.path}
-                    element={
-                      <RouteGuard route={route}>
-                        <DashboardLayout>
-                          <Suspense fallback={<AppRouteLoader />}>
-                            <Component />
-                          </Suspense>
-                        </DashboardLayout>
-                      </RouteGuard>
-                    }
-                  />
-                );
-              })}
+              <Route element={<AppShell />}>
+                {APP_ROUTES.map(function (route) {
+                  return (
+                    <Route
+                      key={route.path}
+                      path={route.path}
+                      element={<GuardedAppRoute route={route} />}
+                    />
+                  );
+                })}
+              </Route>
 
               <Route path="/" element={<Navigate to="/login" replace />} />
               <Route path="*" element={<Navigate to="/login" replace />} />

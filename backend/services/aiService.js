@@ -322,6 +322,184 @@ ${contextStr}`,
 }
 
 // ─── Check if AI is configured ───
+function normalizeObjectiveIssueList(issues) {
+  if (!Array.isArray(issues)) {
+    return [];
+  }
+
+  return issues.map(function (issue) {
+    if (!issue || typeof issue !== 'object') {
+      return null;
+    }
+
+    var message = String(issue.message || '').trim();
+    if (!message) {
+      return null;
+    }
+
+    var severity = String(issue.severity || 'medium').toLowerCase();
+    if (!['low', 'medium', 'high'].includes(severity)) {
+      severity = 'medium';
+    }
+
+    return {
+      type: String(issue.type || 'improvement_area').trim() || 'improvement_area',
+      severity: severity,
+      message: message,
+    };
+  }).filter(Boolean).slice(0, 5);
+}
+
+function normalizeObjectiveTemplateList(templates) {
+  if (!Array.isArray(templates)) {
+    return [];
+  }
+
+  return templates.map(function (template) {
+    if (!template || typeof template !== 'object') {
+      return null;
+    }
+
+    var templateText = String(template.template || '').trim();
+    var example = String(template.example || '').trim();
+    if (!templateText && !example) {
+      return null;
+    }
+
+    return {
+      template: templateText,
+      example: example,
+    };
+  }).filter(Boolean).slice(0, 3);
+}
+
+function normalizeObjectiveQualityAnalysis(parsed) {
+  if (!parsed || typeof parsed !== 'object') {
+    return null;
+  }
+
+  var issues = normalizeObjectiveIssueList(parsed.issues);
+  var strengths = Array.isArray(parsed.strengths)
+    ? parsed.strengths.map(function (item) { return String(item || '').trim(); }).filter(Boolean).slice(0, 4)
+    : [];
+  var smartScore = parsed.smartScore && typeof parsed.smartScore === 'object' ? parsed.smartScore : {};
+  var quality = String(parsed.quality || '').trim().toLowerCase();
+
+  if (quality !== 'good' && quality !== 'needs_improvement') {
+    quality = issues.some(function (issue) { return issue.severity === 'high'; }) ? 'needs_improvement' : 'good';
+  }
+
+  return {
+    quality: quality,
+    issues: issues,
+    strengths: strengths,
+    smartScore: {
+      specific: smartScore.specific !== false,
+      measurable: smartScore.measurable !== false,
+      achievable: smartScore.achievable !== false,
+      relevant: smartScore.relevant !== false,
+      timeBound: smartScore.timeBound !== false,
+    },
+  };
+}
+
+function normalizeObjectiveRefinement(parsed) {
+  if (!parsed || typeof parsed !== 'object') {
+    return null;
+  }
+
+  var suggestions = Array.isArray(parsed.suggestions)
+    ? parsed.suggestions.map(function (suggestion) {
+        if (!suggestion || typeof suggestion !== 'object') {
+          return null;
+        }
+
+        var message = String(suggestion.suggestion || '').trim();
+        if (!message) {
+          return null;
+        }
+
+        return {
+          type: String(suggestion.type || 'improvement_area').trim() || 'improvement_area',
+          suggestion: message,
+          example: String(suggestion.example || '').trim(),
+        };
+      }).filter(Boolean).slice(0, 5)
+    : [];
+
+  return {
+    recommendedFormat: String(parsed.recommendedFormat || '').trim(),
+    suggestions: suggestions,
+    refinementTemplates: normalizeObjectiveTemplateList(parsed.refinementTemplates),
+  };
+}
+
+async function generateObjectiveQualityAnalysis(objectiveInput) {
+  const contextStr = compactContext(objectiveInput, 4000);
+  const messages = [
+    {
+      role: 'system',
+      content: 'You are a senior performance-management coach. Review only the supplied objective text. Return concise, tailored SMART-quality feedback as valid JSON only.',
+    },
+    {
+      role: 'user',
+      content: `Analyze the following objective for SMART quality.
+Return ONLY valid JSON in this exact shape:
+{"quality":"good|needs_improvement","strengths":["short tailored strength"],"issues":[{"type":"snake_case","severity":"low|medium|high","message":"specific advice tied to the objective"}],"smartScore":{"specific":true,"measurable":true,"achievable":true,"relevant":true,"timeBound":true}}
+
+Rules:
+- Base every point on the supplied objective text.
+- Keep strengths and issues specific to the wording, not generic.
+- Return 0-4 strengths and 0-5 issues.
+- If something is missing, explain what is missing for this exact objective.
+
+Objective:
+${contextStr}`,
+    },
+  ];
+
+  try {
+    const text = await callAI(messages, 0.35);
+    return normalizeObjectiveQualityAnalysis(extractJson(text));
+  } catch (err) {
+    console.warn('AI objective quality analysis failed:', err.message);
+    return null;
+  }
+}
+
+async function generateObjectiveRefinement(objectiveInput) {
+  const contextStr = compactContext(objectiveInput, 4000);
+  const messages = [
+    {
+      role: 'system',
+      content: 'You are a senior performance-management coach. Rewrite vague objectives into actionable SMART wording. Return JSON only.',
+    },
+    {
+      role: 'user',
+      content: `Suggest refinements for this objective.
+Return ONLY valid JSON in this exact shape:
+{"recommendedFormat":"one sentence format guideline","suggestions":[{"type":"snake_case","suggestion":"specific improvement advice","example":"tailored rewrite example"}],"refinementTemplates":[{"template":"template text","example":"tailored example"}]}
+
+Rules:
+- Keep suggestions specific to the supplied objective text.
+- Give 2-5 concrete suggestions.
+- Examples must be tailored to this objective domain, not generic placeholders.
+- Keep templates concise and practical.
+
+Objective:
+${contextStr}`,
+    },
+  ];
+
+  try {
+    const text = await callAI(messages, 0.45);
+    return normalizeObjectiveRefinement(extractJson(text));
+  } catch (err) {
+    console.warn('AI objective refinement failed:', err.message);
+    return null;
+  }
+}
+
 function isConfigured() {
   try {
     getConfig();
@@ -338,6 +516,8 @@ module.exports = {
   generateManagerReview,
   generateDevelopmentPlan,
   generateGoalSuggestions,
+  generateObjectiveQualityAnalysis,
+  generateObjectiveRefinement,
   isConfigured,
   createFallback,
 };

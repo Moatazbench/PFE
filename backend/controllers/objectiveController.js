@@ -151,6 +151,11 @@ function canModifyObjective(objective, user) {
   return isAdmin || isOwner || (isLeader && isAssignedBy);
 }
 
+function useCompactObjectiveView(req) {
+  const compactValue = req?.query?.compact;
+  return compactValue === true || compactValue === 'true' || compactValue === '1';
+}
+
 function sameIdSet(left, right) {
   const leftSet = (left || []).map(String).sort();
   const rightSet = (right || []).map(String).sort();
@@ -340,11 +345,25 @@ exports.createObjective = async (req, res) => {
 // ========== GET MY OBJECTIVES ==========
 exports.getMyObjectives = async (req, res) => {
   try {
-    const objectives = await Objective.find({ owner: req.user.id })
-      .populate('owner', 'name email role')
-      .populate('cycle', 'name year status')
-      .populate('team', 'name')
-      .populate('assignedBy', 'name email');
+    const compactView = useCompactObjectiveView(req);
+    let objectivesQuery = Objective.find({ owner: req.user.id });
+
+    if (compactView) {
+      objectivesQuery = objectivesQuery
+        .select('title owner cycle team category status achievementPercent updatedAt createdAt weight kpis')
+        .populate('owner', 'name role profileImage')
+        .populate('cycle', 'name year status currentPhase')
+        .populate('team', 'name')
+        .lean();
+    } else {
+      objectivesQuery = objectivesQuery
+        .populate('owner', 'name email role')
+        .populate('cycle', 'name year status')
+        .populate('team', 'name')
+        .populate('assignedBy', 'name email');
+    }
+
+    const objectives = await objectivesQuery;
     res.json({ success: true, objectives });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
@@ -387,13 +406,26 @@ exports.getObjectives = async (req, res) => {
       }
     }
 
-    const objectives = await Objective.find(filter)
-      .populate('owner', 'name email role')
-      .populate('cycle', 'name year status')
-      .populate('team', 'name')
-      .populate('parentObjective', 'title')
-      .populate('assignedBy', 'name email')
-      .sort({ createdAt: -1 });
+    const compactView = useCompactObjectiveView(req);
+    let objectivesQuery = Objective.find(filter).sort({ createdAt: -1 });
+
+    if (compactView) {
+      objectivesQuery = objectivesQuery
+        .select('title owner cycle team category status achievementPercent updatedAt createdAt weight kpis')
+        .populate('owner', 'name role profileImage')
+        .populate('cycle', 'name year status currentPhase')
+        .populate('team', 'name')
+        .lean();
+    } else {
+      objectivesQuery = objectivesQuery
+        .populate('owner', 'name email role')
+        .populate('cycle', 'name year status')
+        .populate('team', 'name')
+        .populate('parentObjective', 'title')
+        .populate('assignedBy', 'name email');
+    }
+
+    const objectives = await objectivesQuery;
 
     if (targetUserId && req.query.cycle) {
       const individualObjectives = objectives.filter(o => o.category === 'individual');
