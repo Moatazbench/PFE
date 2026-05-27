@@ -1,7 +1,7 @@
 // AI Controller — Context-aware, randomized responses
 // Each function uses template pools + random selection to generate different outputs every time
 
-const aiService = require('../services/aiService');
+const aiService = require('../services/aiService'); // Demo update - v2 
 const reviewContextService = require('../services/reviewContextService');
 const Objective = require('../models/Objective');
 const User = require('../models/User');
