@@ -1,5 +1,5 @@
 const Competency = require('../models/Competency');
-const CareerPath = require('../models/CareerPath');
+const CareerPath = require('../models/CareerPath');// test devops 
 
 // === COMPETENCY CRUD ===
 
