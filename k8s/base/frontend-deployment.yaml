@@ -4,6 +4,8 @@ metadata:
   name: frontend
 spec:
   replicas: 2
+    revisionHistoryLimit: 2      # ← ADD THIS LINE HERE
+
   selector:
     matchLabels:
       app: frontend
