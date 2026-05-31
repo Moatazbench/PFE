@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxGraphModel dx="1200" dy="1300" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="1200" math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+
+    <!-- ================================================ -->
+    <!-- SYSTEM BOUNDARY (light blue background)          -->
+    <!-- ================================================ -->
+    <mxCell id="2" value="Système : Plateforme de Gestion de Performance RH" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;verticalAlign=top;fontSize=14;fontStyle=1;spacingTop=10;spacingLeft=12;align=left;" vertex="1" parent="1">
+      <mxGeometry x="220" y="30" width="640" height="1050" as="geometry" />
+    </mxCell>
+
+    <!-- ================================================ -->
+    <!-- ACTORS (left side, stacked vertically)           -->
+    <!-- ================================================ -->
+    <mxCell id="40" value="Administrateur" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="70" y="195" width="30" height="55" as="geometry" />
+    </mxCell>
+    <mxCell id="41" value="Chef d'Équipe" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="70" y="530" width="30" height="55" as="geometry" />
+    </mxCell>
+    <mxCell id="42" value="Collaborateur" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="70" y="865" width="30" height="55" as="geometry" />
+    </mxCell>
+
+    <!-- ================================================ -->
+    <!-- USE CASES — Administrateur group (5)             -->
+    <!-- ================================================ -->
+    <mxCell id="10" value="Gérer les utilisateurs" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;strokeWidth=1.5;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="310" y="75" width="195" height="46" as="geometry" />
+    </mxCell>
+    <mxCell id="11" value="Gérer les équipes" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;strokeWidth=1.5;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="310" y="140" width="195" height="46" as="geometry" />
+    </mxCell>
+    <mxCell id="12" value="Gérer les cycles de performance" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;strokeWidth=1.5;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="310" y="205" width="195" height="46" as="geometry" />
+    </mxCell>
+    <mxCell id="13" value="Consulter les rapports" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;strokeWidth=1.5;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="310" y="270" width="195" height="46" as="geometry" />
+    </mxCell>
+    <mxCell id="14" value="Consulter les journaux d'audit" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;strokeWidth=1.5;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="310" y="335" width="195" height="46" as="geometry" />
+    </mxCell>
+
+    <!-- ================================================ -->
+    <!-- USE CASES — Chef d'Équipe group (5)              -->
+    <!-- ================================================ -->
+    <mxCell id="15" value="Valider les objectifs" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;strokeWidth=1.5;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="310" y="415" width="195" height="46" as="geometry" />
+    </mxCell>
+    <mxCell id="16" value="Réviser les check-ins" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;strokeWidth=1.5;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="310" y="480" width="195" height="46" as="geometry" />
+    </mxCell>
+    <mxCell id="17" value="Évaluer un collaborateur" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;strokeWidth=1.5;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="310" y="545" width="195" height="46" as="geometry" />
+    </mxCell>
+    <mxCell id="18" value="Planifier des réunions" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;strokeWidth=1.5;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="310" y="610" width="195" height="46" as="geometry" />
+    </mxCell>
+    <mxCell id="19" value="Consulter la performance d'équipe" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;strokeWidth=1.5;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="310" y="675" width="195" height="46" as="geometry" />
+    </mxCell>
+
+    <!-- ================================================ -->
+    <!-- USE CASES — Collaborateur group (5)              -->
+    <!-- ================================================ -->
+    <mxCell id="20" value="Gérer les objectifs" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;strokeWidth=1.5;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="310" y="755" width="195" height="46" as="geometry" />
+    </mxCell>
+    <mxCell id="21" value="Effectuer le check-in mi-année" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;strokeWidth=1.5;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="310" y="820" width="195" height="46" as="geometry" />
+    </mxCell>
+    <mxCell id="22" value="Gérer les tâches" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;strokeWidth=1.5;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="310" y="885" width="195" height="46" as="geometry" />
+    </mxCell>
+    <mxCell id="23" value="Échanger des feedbacks" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;strokeWidth=1.5;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="310" y="950" width="195" height="46" as="geometry" />
+    </mxCell>
+    <mxCell id="24" value="Consulter le calendrier" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;strokeWidth=1.5;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="310" y="1015" width="195" height="46" as="geometry" />
+    </mxCell>
+
+    <!-- ================================================ -->
+    <!-- S'AUTHENTIFIER — far right, vertically centered  -->
+    <!-- ================================================ -->
+    <mxCell id="25" value="S'authentifier" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;strokeWidth=2;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="660" y="522" width="165" height="50" as="geometry" />
+    </mxCell>
+
+    <!-- ================================================ -->
+    <!-- ACTOR → USE CASE ASSOCIATIONS                    -->
+    <!-- ================================================ -->
+
+    <!-- Administrateur → 5 UCs -->
+    <mxCell id="50" style="endArrow=none;html=1;strokeWidth=1.5;strokeColor=#333333;" edge="1" source="40" target="10" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="51" style="endArrow=none;html=1;strokeWidth=1.5;strokeColor=#333333;" edge="1" source="40" target="11" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="52" style="endArrow=none;html=1;strokeWidth=1.5;strokeColor=#333333;" edge="1" source="40" target="12" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="53" style="endArrow=none;html=1;strokeWidth=1.5;strokeColor=#333333;" edge="1" source="40" target="13" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="54" style="endArrow=none;html=1;strokeWidth=1.5;strokeColor=#333333;" edge="1" source="40" target="14" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- Chef d'Équipe → 5 UCs -->
+    <mxCell id="55" style="endArrow=none;html=1;strokeWidth=1.5;strokeColor=#333333;" edge="1" source="41" target="15" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="56" style="endArrow=none;html=1;strokeWidth=1.5;strokeColor=#333333;" edge="1" source="41" target="16" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="57" style="endArrow=none;html=1;strokeWidth=1.5;strokeColor=#333333;" edge="1" source="41" target="17" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="58" style="endArrow=none;html=1;strokeWidth=1.5;strokeColor=#333333;" edge="1" source="41" target="18" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="59" style="endArrow=none;html=1;strokeWidth=1.5;strokeColor=#333333;" edge="1" source="41" target="19" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- Collaborateur → 5 UCs -->
+    <mxCell id="60" style="endArrow=none;html=1;strokeWidth=1.5;strokeColor=#333333;" edge="1" source="42" target="20" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="61" style="endArrow=none;html=1;strokeWidth=1.5;strokeColor=#333333;" edge="1" source="42" target="21" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="62" style="endArrow=none;html=1;strokeWidth=1.5;strokeColor=#333333;" edge="1" source="42" target="22" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="63" style="endArrow=none;html=1;strokeWidth=1.5;strokeColor=#333333;" edge="1" source="42" target="23" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="64" style="endArrow=none;html=1;strokeWidth=1.5;strokeColor=#333333;" edge="1" source="42" target="24" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ================================================ -->
+    <!-- <<include>> DASHED ARROWS → S'authentifier       -->
+    <!-- ================================================ -->
+
+    <!-- From Admin group -->
+    <mxCell id="70" style="dashed=1;dashPattern=8 4;endArrow=open;endFill=0;html=1;strokeWidth=1;strokeColor=#0066CC;" edge="1" source="10" target="25" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="70L" value="&#171;include&#187;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=2;fontColor=#0066CC;labelBackgroundColor=#FFFFFF;" vertex="1" connectable="0" parent="70">
+      <mxGeometry x="-0.15" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+    </mxCell>
+
+    <mxCell id="71" style="dashed=1;dashPattern=8 4;endArrow=open;endFill=0;html=1;strokeWidth=1;strokeColor=#0066CC;" edge="1" source="11" target="25" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="72" style="dashed=1;dashPattern=8 4;endArrow=open;endFill=0;html=1;strokeWidth=1;strokeColor=#0066CC;" edge="1" source="12" target="25" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="73" style="dashed=1;dashPattern=8 4;endArrow=open;endFill=0;html=1;strokeWidth=1;strokeColor=#0066CC;" edge="1" source="13" target="25" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="74" style="dashed=1;dashPattern=8 4;endArrow=open;endFill=0;html=1;strokeWidth=1;strokeColor=#0066CC;" edge="1" source="14" target="25" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- From TL group -->
+    <mxCell id="75" style="dashed=1;dashPattern=8 4;endArrow=open;endFill=0;html=1;strokeWidth=1;strokeColor=#0066CC;" edge="1" source="15" target="25" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="76" style="dashed=1;dashPattern=8 4;endArrow=open;endFill=0;html=1;strokeWidth=1;strokeColor=#0066CC;" edge="1" source="16" target="25" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="77" style="dashed=1;dashPattern=8 4;endArrow=open;endFill=0;html=1;strokeWidth=1;strokeColor=#0066CC;" edge="1" source="17" target="25" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="77L" value="&#171;include&#187;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=2;fontColor=#0066CC;labelBackgroundColor=#FFFFFF;" vertex="1" connectable="0" parent="77">
+      <mxGeometry x="-0.15" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+    </mxCell>
+    <mxCell id="78" style="dashed=1;dashPattern=8 4;endArrow=open;endFill=0;html=1;strokeWidth=1;strokeColor=#0066CC;" edge="1" source="18" target="25" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="79" style="dashed=1;dashPattern=8 4;endArrow=open;endFill=0;html=1;strokeWidth=1;strokeColor=#0066CC;" edge="1" source="19" target="25" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- From Collab group -->
+    <mxCell id="80" style="dashed=1;dashPattern=8 4;endArrow=open;endFill=0;html=1;strokeWidth=1;strokeColor=#0066CC;" edge="1" source="20" target="25" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="81" style="dashed=1;dashPattern=8 4;endArrow=open;endFill=0;html=1;strokeWidth=1;strokeColor=#0066CC;" edge="1" source="21" target="25" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="82" style="dashed=1;dashPattern=8 4;endArrow=open;endFill=0;html=1;strokeWidth=1;strokeColor=#0066CC;" edge="1" source="22" target="25" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="83" style="dashed=1;dashPattern=8 4;endArrow=open;endFill=0;html=1;strokeWidth=1;strokeColor=#0066CC;" edge="1" source="23" target="25" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="84" style="dashed=1;dashPattern=8 4;endArrow=open;endFill=0;html=1;strokeWidth=1;strokeColor=#0066CC;" edge="1" source="24" target="25" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="84L" value="&#171;include&#187;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=2;fontColor=#0066CC;labelBackgroundColor=#FFFFFF;" vertex="1" connectable="0" parent="84">
+      <mxGeometry x="-0.15" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+    </mxCell>
+
+  </root>
+</mxGraphModel>

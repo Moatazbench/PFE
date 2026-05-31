@@ -8,8 +8,8 @@ const ACCESS_TOKEN_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN || (process.
 const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || (process.env.NODE_ENV === 'production' ? '30d' : '365d');
 
 const generateTokens = (user) => {
-  const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_key';
-  const refreshSecret = process.env.JWT_REFRESH_SECRET || 'fallback_refresh_key';
+  const jwtSecret = process.env.JWT_SECRET;
+  const refreshSecret = process.env.JWT_REFRESH_SECRET;
 
   const accessToken = jwt.sign(
     { id: user._id, role: user.role },
@@ -81,7 +81,7 @@ router.post('/refresh', async function (req, res) {
       return res.status(401).json({ success: false, message: 'Refresh token required' });
     }
 
-    const refreshSecret = process.env.JWT_REFRESH_SECRET || 'fallback_refresh_key';
+    const refreshSecret = process.env.JWT_REFRESH_SECRET;
 
     let decoded;
     try {
@@ -142,7 +142,7 @@ router.get('/me', async function (req, res) {
     }
 
     const token = authHeader.split(' ')[1];
-    const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_key';
+    const jwtSecret = process.env.JWT_SECRET;
 
     const decoded = jwt.verify(token, jwtSecret);
 
