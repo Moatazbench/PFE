@@ -14,11 +14,23 @@ on:
 
 jobs:
 
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   # =========================
   # 1️⃣ Backend Tests
   # =========================
   backend-tests:
     runs-on: ubuntu-latest
+    needs: secret-scan
 
     steps:
       - uses: actions/checkout@v4
@@ -27,6 +39,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
+
+      - name: Cache backend node_modules
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules
+          key: backend-${{ runner.os }}-${{ hashFiles('backend/package-lock.json') }}
+          restore-keys: backend-${{ runner.os }}-
 
       - name: Install backend dependencies
         run: |
@@ -54,6 +73,13 @@ jobs:
         with:
           node-version: 18
 
+      - name: Cache frontend node_modules
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: frontend-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: frontend-${{ runner.os }}-
+
       - name: Install frontend dependencies
         run: |
           cd frontend
@@ -63,6 +89,11 @@ jobs:
         run: |
           cd frontend
           npm run build
+
+      - name: Run frontend tests
+        run: |
+          cd frontend
+          npm test
 
 
   # =========================
