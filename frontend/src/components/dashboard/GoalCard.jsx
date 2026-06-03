@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import ProgressDonut from './ProgressDonut';
 import UserAvatar from '../UserAvatar';
 import LoadingSkeleton from '../common/LoadingSkeleton';
@@ -73,13 +74,19 @@ function GoalCard({ objectives, loading, checkIns }) {
               </div>
             </div>
 
-            {(objectives || []).slice(0, 5).map(function (objective) {
+            {(objectives || []).slice(0, 5).map(function (objective, index) {
               var tone = statusTone(objective?.status, objective?.achievementPercent);
               var progress = getObjectiveProgress(objective);
               var lastTouched = objective?.updatedAt || objective?.createdAt;
 
               return (
-                <div key={objective._id} className="dash-goal-row">
+                <motion.div
+                  key={objective._id}
+                  className="dash-goal-row"
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.18, delay: index * 0.05, ease: 'easeOut' }}
+                >
                   <div className="dash-goal-row__lead">
                     <UserAvatar user={objective.owner} size={28} />
                     <div className="dash-goal-row__text">
@@ -106,7 +113,7 @@ function GoalCard({ objectives, loading, checkIns }) {
                       <div className="dash-goal-row__fill" style={{ width: progress + '%' }}></div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
 

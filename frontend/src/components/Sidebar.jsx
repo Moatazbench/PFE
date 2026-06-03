@@ -100,8 +100,8 @@ function Sidebar({ collapsed, setCollapsed }) {
         <aside className="ds-sidebar" data-collapsed={collapsed}>
             {/* Brand */}
             <div className="ds-sidebar__brand">
-                <div className="ds-sidebar__brand-logo">PM</div>
-                <span className="ds-sidebar__brand-name">PerfManager</span>
+                <div className="ds-sidebar__brand-logo">PT</div>
+                <span className="ds-sidebar__brand-name">Perf Track</span>
                 <button className="ds-sidebar__collapse-btn" onClick={function(){setCollapsed(!collapsed);}} title={collapsed ? 'Expand' : 'Collapse'}>
                     {getIcon(collapsed ? 'chevron-right' : 'chevron-left')}
                 </button>

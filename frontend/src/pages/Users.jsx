@@ -9,6 +9,12 @@ function Users() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Filtering & Pagination State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
   async function fetchUsers() {
     try {
       const res = await api.get('/users');
@@ -26,6 +32,11 @@ function Users() {
     fetchUsers();
   }, []);
 
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, roleFilter]);
+
   async function handleDeleteUser(id) {
     try {
       await api.delete('/users/' + id);
@@ -40,6 +51,17 @@ function Users() {
     return <div className="loading">Loading users...</div>;
   }
 
+  // Derived state for filtering
+  const filteredUsers = users.filter((u) => {
+    const matchesSearch = (u.name?.toLowerCase().includes(searchQuery.toLowerCase()) || '') || 
+                          (u.email?.toLowerCase().includes(searchQuery.toLowerCase()) || '');
+    const matchesRole = roleFilter === 'ALL' || u.role === roleFilter;
+    return matchesSearch && matchesRole;
+  });
+
+  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE) || 1;
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
   return (
     <div className="users-page">
       <div className="page-header">
@@ -47,6 +69,29 @@ function Users() {
       </div>
 
       {error && <div className="error-message">{error}</div>}
+
+      <div className="filters-container" style={{ marginBottom: '1rem', display: 'flex', gap: '1rem' }}>
+        <input 
+          type="text" 
+          placeholder="Search by name or email..." 
+          value={searchQuery} 
+          onChange={(e) => setSearchQuery(e.target.value)} 
+          style={{ flex: 1, padding: '0.5rem' }}
+        />
+        <select 
+          value={roleFilter} 
+          onChange={(e) => setRoleFilter(e.target.value)}
+          style={{ padding: '0.5rem' }}
+        >
+          <option value="ALL">All Roles</option>
+          <option value="EMPLOYEE">Employee</option>
+          <option value="MANAGER">Manager</option>
+          <option value="HR">HR</option>
+          <option value="ADMIN">Admin</option>
+          <option value="COLLABORATEUR">Collaborateur</option>
+          <option value="TEAM_LEADER">Team Leader</option>
+        </select>
+      </div>
 
       <div className="users-table-container">
         <table className="users-table">
@@ -59,12 +104,12 @@ function Users() {
             </tr>
           </thead>
           <tbody>
-            {users.length === 0 ? (
+            {paginatedUsers.length === 0 ? (
               <tr>
                 <td colSpan="4">No users found</td>
               </tr>
             ) : (
-              users.map(function (u) {
+              paginatedUsers.map(function (u) {
                 return (
                   <tr key={u._id}>
                     <td>{u.name}</td>
@@ -90,6 +135,26 @@ function Users() {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="pagination" style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+          <button 
+            disabled={currentPage === 1} 
+            onClick={() => setCurrentPage(p => p - 1)}
+            style={{ padding: '0.5rem 1rem' }}
+          >
+            Previous
+          </button>
+          <span style={{ padding: '0.5rem' }}>Page {currentPage} of {totalPages}</span>
+          <button 
+            disabled={currentPage === totalPages} 
+            onClick={() => setCurrentPage(p => p + 1)}
+            style={{ padding: '0.5rem 1rem' }}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }

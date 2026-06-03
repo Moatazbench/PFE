@@ -47,6 +47,6 @@ router.get('/objective/:objective_id/tasks', checkInController.getTasksForObject
 // Manager routes
 router.get('/by-objective', role('ADMIN', 'HR', 'TEAM_LEADER'), checkInController.getCheckInsByObjective);
 router.get('/team', role('ADMIN', 'HR', 'TEAM_LEADER'), checkInController.getTeamCheckIns);
-router.put('/:id/review', role('ADMIN', 'HR', 'TEAM_LEADER'), checkInController.reviewCheckIn);
+router.put('/:id/review', role('ADMIN', 'HR', 'TEAM_LEADER', 'COLLABORATOR'), checkInController.reviewCheckIn);
 
 module.exports = router;

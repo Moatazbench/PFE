@@ -77,8 +77,8 @@ function Login() {
       </button>
       <div className="auth-card">
         <div className="auth-header">
-          <div className="auth-logo">HR</div>
-          <h1>HR Management System</h1>
+          <div className="auth-logo">PT</div>
+          <h1>Perf Track</h1>
           <p>Sign in to your account</p>
         </div>
 

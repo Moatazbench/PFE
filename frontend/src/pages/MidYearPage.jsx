@@ -663,70 +663,23 @@ function MidYearPage() {
             )}
 
             {!isEmployee && (
-              <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--shell-border)' }}>
-                <h4 style={{ margin: '0 0 1rem 0' }}>General Manager Notes</h4>
-                {selectedObjective?.manager_notes?.length > 0 ? (
-                  selectedObjective.manager_notes.map((note, idx) => (
-                    <div key={idx} style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '4px', marginBottom: '0.5rem', border: '1px solid #e2e8f0', fontSize: '0.9rem' }}>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>{new Date(note.created_at).toLocaleString()}</div>
-                      {note.text}
-                    </div>
-                  ))
-                ) : (
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>No manager notes yet.</p>
-                )}
-                
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', marginBottom: '2rem' }}>
-                  <input type="text" className="ent-input" placeholder="Type a note and press Enter..." style={{ flex: 1 }} onKeyDown={async (e) => {
-                    if (e.key === 'Enter' && e.target.value.trim()) {
-                      e.preventDefault();
-                      try {
-                        const val = e.target.value.trim();
-                        e.target.value = '';
-                        const res = await api.put(`/objectives/${selectedObjective._id}/note`, { note: val });
-                        toast.success('Note added!');
-                        setSelectedObjective(res.data.objective);
-                        fetchObjectives();
-                      } catch (err) {
-                        toast.error('Failed to add note: ' + (err.response?.data?.message || err.message));
-                      }
-                    }
-                  }} />
-                  <button type="button" className="btn btn--primary btn--sm" onClick={async (e) => {
-                    const input = e.target.previousSibling;
-                    if (input && input.value.trim()) {
-                      try {
-                        const val = input.value.trim();
-                        input.value = '';
-                        const res = await api.put(`/objectives/${selectedObjective._id}/note`, { note: val });
-                        toast.success('Note added!');
-                        setSelectedObjective(res.data.objective);
-                        fetchObjectives();
-                      } catch (err) {
-                        toast.error('Failed to add note: ' + (err.response?.data?.message || err.message));
-                      }
-                    }
-                  }}>Add Note</button>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--shell-bg-inset)', padding: '1rem', borderRadius: '8px' }}>
-                  <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Need to discuss this check-in in person?</span>
-                  <button type="button" className="btn btn--secondary btn--sm" onClick={() => {
-                    const owner = selectedObjective?.owner;
-                    const employeeId = owner?._id || owner;
-                    const employeeName = owner?.name || 'Employee';
-                    navigate('/meetings', { state: { 
-                      createMeeting: true, 
-                      employee_id: String(employeeId),
-                      cycle_id: selectedCycleId,
-                      meeting_type: 'general',
-                      title: 'Mid-Year Review: ' + employeeName,
-                      participants: [String(employeeId)]
-                    }});
-                  }}>
-                    📅 Schedule 1-on-1 Meeting
-                  </button>
-                </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--shell-bg-inset)', padding: '1rem', borderRadius: '8px', marginTop: '1.5rem' }}>
+                <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Need to discuss this check-in in person?</span>
+                <button type="button" className="btn btn--secondary btn--sm" onClick={() => {
+                  const owner = selectedObjective?.owner;
+                  const employeeId = owner?._id || owner;
+                  const employeeName = owner?.name || 'Employee';
+                  navigate('/meetings', { state: { 
+                    createMeeting: true, 
+                    employee_id: String(employeeId),
+                    cycle_id: selectedCycleId,
+                    meeting_type: 'general',
+                    title: 'Mid-Year Review: ' + employeeName,
+                    participants: [String(employeeId)]
+                  }});
+                }}>
+                  📅 Schedule 1-on-1 Meeting
+                </button>
               </div>
             )}
           </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
@@ -154,6 +154,23 @@ function CalendarPage() {
   var [providerEvents, setProviderEvents] = useState([]);
   var [providers, setProviders] = useState([]);
   var [syncingKey, setSyncingKey] = useState('');
+  var [selectedEvent, setSelectedEvent] = useState(null);
+  var [popoverPos, setPopoverPos] = useState({ top: 0, left: 0 });
+  var popoverRef = useRef(null);
+
+  useEffect(function () {
+    function handleClickOutside(event) {
+      if (popoverRef.current && !popoverRef.current.contains(event.target)) {
+        setSelectedEvent(null);
+      }
+    }
+    if (selectedEvent) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return function () {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [selectedEvent]);
 
   var range = useMemo(function () {
     return getRange(selectedDate, layout);
@@ -315,7 +332,7 @@ function CalendarPage() {
   var todayKey = getCalendarDayKey(new Date());
 
   return (
-    <div className="page-container page-container--wide wm-page wm-page--calendar">
+    <div className="page-container page-container--wide wm-page wm-page--calendar" style={{ position: 'relative' }}>
       <div className="page-header wm-page__header">
         <div className="page-header__left">
           <h1 className="page-title">Calendar Workspace</h1>
@@ -369,7 +386,13 @@ function CalendarPage() {
                       <div className="wm-calendar-grid__events">
                         {visibleDayItems.map(function (item) {
                           return (
-                            <div key={item.id} className="wm-calendar-event wm-calendar-event--month" style={getEventStyle(item)} title={getEventTooltip(item)}>
+                            <div key={item.id} className="wm-calendar-event wm-calendar-event--month" style={getEventStyle(item)} title={getEventTooltip(item)}
+                              onClick={function (e) {
+                                var rect = e.currentTarget.getBoundingClientRect();
+                                setPopoverPos({ top: rect.bottom + 4, left: Math.min(rect.left, window.innerWidth - 300) });
+                                setSelectedEvent(item);
+                              }}
+                            >
                               <div className="wm-calendar-event__top">
                                 <span className="wm-calendar-event__type">{getEventTypeLabel(item)}</span>
                                 <span className="wm-calendar-event__time">{getEventTimeLabel(item)}</span>
@@ -402,7 +425,13 @@ function CalendarPage() {
                       ) : (
                         dayItems.map(function (item) {
                           return (
-                            <div key={item.id} className="wm-agenda-item" style={getEventStyle(item)} title={getEventTooltip(item)}>
+                            <div key={item.id} className="wm-agenda-item" style={getEventStyle(item)} title={getEventTooltip(item)}
+                              onClick={function (e) {
+                                var rect = e.currentTarget.getBoundingClientRect();
+                                setPopoverPos({ top: rect.bottom + 4, left: Math.min(rect.left, window.innerWidth - 300) });
+                                setSelectedEvent(item);
+                              }}
+                            >
                               <div className="wm-calendar-event__top">
                                 <span className="wm-calendar-event__type">{getEventTypeLabel(item)}</span>
                                 <span className="wm-calendar-event__time">{getEventTimeLabel(item)}</span>
@@ -521,6 +550,89 @@ function CalendarPage() {
       </div>
 
       <ToastContainer toasts={toast.toasts} removeToast={toast.removeToast} />
+
+      {selectedEvent ? (
+        <div
+          ref={popoverRef}
+          className="wm-event-popover"
+          style={{
+            position: 'fixed',
+            top: popoverPos.top,
+            left: popoverPos.left,
+            zIndex: 2000,
+            minWidth: 240,
+            maxWidth: 320,
+            background: '#fff',
+            border: '1px solid rgba(148, 163, 184, 0.28)',
+            borderRadius: 14,
+            boxShadow: '0 16px 40px rgba(15, 23, 42, 0.14)',
+            padding: '1rem 1.1rem',
+            animation: 'ent-slideUp 0.16s ease',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.6rem' }}>
+            <span
+              style={{
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                color: getEventTone(selectedEvent.type),
+                background: 'rgba(99, 102, 241, 0.08)',
+                padding: '0.28rem 0.55rem',
+                borderRadius: 999,
+              }}
+            >
+              {getEventTypeLabel(selectedEvent)}
+            </span>
+            <button
+              type="button"
+              onClick={function () { setSelectedEvent(null); }}
+              style={{ background: 'none', border: 'none', fontSize: '1.1rem', cursor: 'pointer', color: '#94a3b8', lineHeight: 1, padding: 0 }}
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
+          <strong style={{ display: 'block', fontSize: '0.95rem', color: '#0f172a', marginBottom: '0.35rem' }}>
+            {selectedEvent.title}
+          </strong>
+          <div style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '0.2rem' }}>
+            {new Date(selectedEvent.start).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+          </div>
+          <div style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '0.55rem' }}>
+            {getEventTimeLabel(selectedEvent)}
+          </div>
+          {selectedEvent.meta ? (
+            <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.55rem' }}>{selectedEvent.meta}</div>
+          ) : null}
+          {selectedEvent.type === 'meeting' ? (
+            <a
+              href="/meetings"
+              style={{ fontSize: '0.82rem', fontWeight: 700, color: '#4338ca', textDecoration: 'none' }}
+              onClick={function () { setSelectedEvent(null); }}
+            >
+              View full →
+            </a>
+          ) : selectedEvent.type === 'task' ? (
+            <a
+              href="/tasks"
+              style={{ fontSize: '0.82rem', fontWeight: 700, color: '#4338ca', textDecoration: 'none' }}
+              onClick={function () { setSelectedEvent(null); }}
+            >
+              View full →
+            </a>
+          ) : selectedEvent.type === 'objective' ? (
+            <a
+              href="/goals"
+              style={{ fontSize: '0.82rem', fontWeight: 700, color: '#4338ca', textDecoration: 'none' }}
+              onClick={function () { setSelectedEvent(null); }}
+            >
+              View full →
+            </a>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

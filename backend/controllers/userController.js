@@ -40,7 +40,7 @@ exports.getUsers = async (req, res) => {
     }
     
     const users = await User.find(filter)
-      .select('_id name email role')
+      .select('_id name email role team')
       .sort({ name: 1 });
     
     res.json({ success: true, users });

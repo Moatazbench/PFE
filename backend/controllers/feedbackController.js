@@ -45,34 +45,7 @@ exports.createFeedback = async (req, res) => {
   }
 };
 
-// Request feedback (360-degree)
-exports.requestFeedback = async (req, res) => {
-  try {
-    const { recipientId, respondentIds, message } = req.body;
-    if (!recipientId || !respondentIds || !respondentIds.length) {
-      return res.status(400).json({ success: false, message: 'Recipient and respondents are required' });
-    }
 
-    const feedbackRequests = [];
-    for (const respondentId of respondentIds) {
-      const fb = await Feedback.create({
-        sender: respondentId,
-        recipient: recipientId,
-        type: '360',
-        message: message || 'Feedback requested',
-        isRequested: true,
-        requestedBy: req.user._id,
-        status: 'active',
-        visibility: 'manager_only',
-      });
-      feedbackRequests.push(fb);
-    }
-
-    res.status(201).json({ success: true, feedbackRequests });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
 
 // Get feedback received by current user
 exports.getReceived = async (req, res) => {

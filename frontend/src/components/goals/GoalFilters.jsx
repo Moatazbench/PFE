@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../AuthContext';
 
-function GoalFilters({ activeTab, onTabChange, cycles, selectedCycle, onCycleChange, searchTerm, onSearchChange }) {
+function GoalFilters({ activeTab, onTabChange, cycles, selectedCycle, onCycleChange, searchTerm, onSearchChange, statusFilter, onStatusChange }) {
     var { user } = useAuth();
     var isManager = user && (user.role === 'TEAM_LEADER' || user.role === 'ADMIN' || user.role === 'HR');
 
@@ -43,10 +43,30 @@ function GoalFilters({ activeTab, onTabChange, cycles, selectedCycle, onCycleCha
                     className="goals-filters__search"
                 />
 
+                {typeof statusFilter !== 'undefined' && typeof onStatusChange !== 'undefined' && (
+                    <select
+                        className="goals-filters__cycle-select"
+                        value={statusFilter}
+                        onChange={function (event) { onStatusChange(event.target.value); }}
+                        style={{ marginLeft: '1rem' }}
+                    >
+                        <option value="ALL">All Statuses</option>
+                        <option value="draft">Draft</option>
+                        <option value="pending">Pending</option>
+                        <option value="submitted">Submitted</option>
+                        <option value="approved">Approved</option>
+                        <option value="validated">Validated</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="revision_requested">Revision Needed</option>
+                        <option value="pending_approval">Pending Approval</option>
+                    </select>
+                )}
+
                 <select
                     className="goals-filters__cycle-select"
                     value={selectedCycle}
                     onChange={function (event) { onCycleChange(event.target.value); }}
+                    style={{ marginLeft: '1rem' }}
                 >
                     <option value="">All Cycles</option>
                     {cycles.map(function (cycle) {

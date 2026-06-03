@@ -46,7 +46,7 @@ app.use(xss());
 app.use(mongoSanitize());
 
 app.use((req, res, next) => {
-  if (req.path.startsWith('/uploads/')) {
+  if (req.path.startsWith('/uploads/') || req.path.startsWith('/api/uploads/')) {
     return next();
   }
 
@@ -72,6 +72,15 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   }
 }));
 
+app.use('/api/uploads', express.static(path.join(__dirname, 'uploads'), {
+  etag: true,
+  maxAge: '7d',
+  immutable: true,
+  setHeaders: function setUploadCacheHeaders(res) {
+    res.set('Cache-Control', 'public, max-age=604800, immutable');
+  }
+}));
+
 // =======================
 // Health Endpoints
 // =======================
@@ -83,7 +92,7 @@ app.get('/', (req, res) => {
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'HR Evaluation API is running!'
+    message: 'Perf Track API is running!'
   });
 });
 
@@ -115,7 +124,8 @@ const routes = {
   '/api/pdf': './routes/pdf',
   '/api/checkins': './routes/checkins',
   '/api/final-evaluations': './routes/finalEvaluations',
-  '/api/improvement-plans': './routes/improvementPlans'
+  '/api/improvement-plans': './routes/improvementPlans',
+  '/api/bonus-penalty': './routes/bonusPenalty'
 };
 
 Object.entries(routes).forEach(([routePath, modulePath]) => {

@@ -40,14 +40,17 @@ function DashboardHeader({ activeTab, onTabChange, activeCycle, summary, onRefre
         <div className="dash-hero__tabs">
           {tabs.map(function (tab) {
             return (
-              <button
+              <motion.button
                 key={tab.key}
                 type="button"
                 className={'dash-hero__tab' + (activeTab === tab.key ? ' dash-hero__tab--active' : '')}
                 onClick={function () { onTabChange(tab.key); }}
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ duration: 0.12 }}
               >
                 {tab.label}
-              </button>
+              </motion.button>
             );
           })}
         </div>
@@ -61,9 +64,17 @@ function DashboardHeader({ activeTab, onTabChange, activeCycle, summary, onRefre
             <span>Completed</span>
             <strong>{summary?.completed || 0}</strong>
           </div>
-          <button type="button" className="dash-hero__refresh" onClick={onRefresh} disabled={loading}>
+          <motion.button
+            type="button"
+            className="dash-hero__refresh"
+            onClick={onRefresh}
+            disabled={loading}
+            whileHover={!loading ? { y: -2 } : {}}
+            whileTap={!loading ? { scale: 0.96 } : {}}
+            transition={{ duration: 0.12 }}
+          >
             {loading ? 'Refreshing...' : 'Refresh'}
-          </button>
+          </motion.button>
         </div>
       </div>
     </motion.div>

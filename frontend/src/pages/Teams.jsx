@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 function Teams() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [teams, setTeams] = useState([]);
   const [users, setUsers] = useState([]);
   const [myTeam, setMyTeam] = useState(null);
@@ -19,6 +21,10 @@ function Teams() {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   const isAdminLike = user && (user.role === 'ADMIN' || user.role === 'HR');
   const isTeamLeader = user && user.role === 'TEAM_LEADER';
@@ -85,11 +91,30 @@ function Teams() {
     return pool;
   }
 
-  function getChildTeams(parentId) {
-    return teams.filter(function (team) {
-      return String(team.parentTeam?._id || team.parentTeam || '') === String(parentId);
-    });
+  function getChildTeams(teamId) {
+    if (!teamId) return [];
+    return teams.filter(function (t) { return t.parentTeam === teamId || t.parentTeam?._id === teamId; });
   }
+
+  const filteredRootTeams = useMemo(() => {
+    let filtered = rootTeams;
+    if (searchQuery) {
+      const lower = searchQuery.toLowerCase();
+      filtered = filtered.filter(t => {
+        if (t.name?.toLowerCase().includes(lower)) return true;
+        const subTeams = getChildTeams(t._id);
+        return subTeams.some(sub => sub.name?.toLowerCase().includes(lower));
+      });
+    }
+    return filtered;
+  }, [rootTeams, searchQuery]);
+
+  const totalPages = Math.ceil(filteredRootTeams.length / ITEMS_PER_PAGE) || 1;
+  const paginatedRootTeams = filteredRootTeams.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   function openCreateModal(parentTeam) {
     setEditingTeam(null);
@@ -124,6 +149,13 @@ function Teams() {
 
   function getParentTeam() {
     return formData.parentTeamId ? teamMap[formData.parentTeamId] : null;
+  }
+
+  function isAlreadyLeader(personId) {
+    return teams.some(t => {
+      if (editingTeam && String(t._id) === String(editingTeam._id)) return false;
+      return String(t.leader?._id || t.leader) === String(personId);
+    });
   }
 
   function getLeaderOptions() {
@@ -240,7 +272,7 @@ function Teams() {
 
   function renderSubTeamCard(team) {
     return (
-      <div key={team._id} className="team-card" style={{ marginTop: '1rem', borderStyle: 'dashed' }}>
+      <div key={team._id} className="team-card" style={{ marginTop: '1rem', borderStyle: 'dashed', cursor: 'pointer' }} onClick={() => navigate(`/teams/${team._id}`)}>
         <div className="team-header">
           <h3>Sub-Team: {team.name}</h3>
         </div>
@@ -273,14 +305,14 @@ function Teams() {
         </div>
 
         {(canEditTeam(team) || canDeleteTeam(team)) && (
-          <div className="card-actions">
+          <div className="card-actions" onClick={(e) => e.stopPropagation()}>
             {canEditTeam(team) && (
-              <button onClick={function () { openEditModal(team); }} className="edit-btn">
+              <button onClick={function (e) { e.stopPropagation(); openEditModal(team); }} className="edit-btn">
                 Edit
               </button>
             )}
             {canDeleteTeam(team) && (
-              <button onClick={function () { handleDelete(team); }} className="delete-btn">
+              <button onClick={function (e) { e.stopPropagation(); handleDelete(team); }} className="delete-btn">
                 Delete
               </button>
             )}
@@ -312,15 +344,27 @@ function Teams() {
         </div>
       ) : (
         <div className="teams-grid">
-          {rootTeams.map(function (team) {
-            var subTeams = getChildTeams(team._id);
-            return (
-              <div key={team._id} className="team-card">
-                <div className="team-header">
-                  <h3>{team.name}</h3>
-                </div>
+          <div className="filters-container" style={{ marginBottom: '1rem', width: '100%' }}>
+            <input 
+              type="text" 
+              placeholder="Search teams by name..." 
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)} 
+              style={{ width: '100%', maxWidth: '400px', padding: '0.5rem' }}
+            />
+          </div>
+          {paginatedRootTeams.length === 0 ? (
+            <p style={{ width: '100%', textAlign: 'center' }}>No teams found matching "{searchQuery}"</p>
+          ) : (
+            paginatedRootTeams.map(function (team) {
+              var subTeams = getChildTeams(team._id);
+              return (
+                <div key={team._id} className="team-card" style={{ cursor: 'pointer' }} onClick={() => navigate(`/teams/${team._id}`)}>
+                  <div className="team-header">
+                    <h3>{team.name}</h3>
+                  </div>
 
-                <p className="team-description">{team.description || 'No description'}</p>
+                  <p className="team-description">{team.description || 'No description'}</p>
 
                 {team.leader && (
                   <div className="team-leader">
@@ -356,26 +400,27 @@ function Teams() {
                   )}
                 </div>
 
-                <div className="card-actions">
+                <div className="card-actions" onClick={(e) => e.stopPropagation()}>
                   {isAdminLike && !team.parentTeam && (
-                    <button onClick={function () { openEditModal(team); }} className="edit-btn">
+                    <button onClick={function (e) { e.stopPropagation(); openEditModal(team); }} className="edit-btn">
                       Edit
                     </button>
                   )}
                   {canManageSubteams(team) && (
-                    <button onClick={function () { openCreateModal(team); }} className="edit-btn">
+                    <button onClick={function (e) { e.stopPropagation(); openCreateModal(team); }} className="edit-btn">
                       + Create Sub-Team
                     </button>
                   )}
                   {isAdminLike && (
-                    <button onClick={function () { handleDelete(team); }} className="delete-btn">
+                    <button onClick={function (e) { e.stopPropagation(); handleDelete(team); }} className="delete-btn">
                       Delete
                     </button>
                   )}
                 </div>
               </div>
             );
-          })}
+          })
+        )}
         </div>
       )}
 
@@ -427,9 +472,10 @@ function Teams() {
                   >
                     <option value="">-- Select Leader --</option>
                     {getLeaderOptions().map(function (person) {
+                      const isLeaderOfOtherTeam = isAlreadyLeader(person._id);
                       return (
-                        <option key={person._id} value={person._id}>
-                          {person.name} ({person.email}){person.role ? ' - ' + person.role : ''}
+                        <option key={person._id} value={person._id} disabled={isLeaderOfOtherTeam}>
+                          {person.name} ({person.email}){person.role ? ' - ' + person.role : ''} {isLeaderOfOtherTeam ? '(Already leads another team)' : ''}
                         </option>
                       );
                     })}

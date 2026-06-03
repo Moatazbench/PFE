@@ -25,6 +25,9 @@ function GoalsPage() {
     var [activeTab, setActiveTab] = useState('my');
     var activeView = 'list';
     var [searchTerm, setSearchTerm] = useState('');
+    var [statusFilter, setStatusFilter] = useState('ALL');
+    var [currentPage, setCurrentPage] = useState(1);
+    var ITEMS_PER_PAGE = 10;
     var [selectedGoal, setSelectedGoal] = useState(null);
     var [showCreateModal, setShowCreateModal] = useState(false);
     var [loading, setLoading] = useState(true);
@@ -51,6 +54,10 @@ function GoalsPage() {
         hasFetchedRef.current = false;
         fetchObjectives();
     }, [selectedCycle, activeTab, cycles.length]);
+
+    useEffect(function () {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter, activeTab, selectedCycle]);
 
     async function fetchCycles() {
         try {
@@ -164,16 +171,21 @@ function GoalsPage() {
 
     // Apply filters
     var filteredObjectives = useMemo(function () {
-        if (!searchTerm) {
-            return objectives;
-        }
-        var lower = searchTerm.toLowerCase();
         return objectives.filter(function(o) {
-            return (o.title && o.title.toLowerCase().includes(lower)) ||
-                   (o.description && o.description.toLowerCase().includes(lower)) ||
-                   (o.owner && o.owner.name && o.owner.name.toLowerCase().includes(lower));
+            var matchesSearch = true;
+            if (searchTerm) {
+                var lower = searchTerm.toLowerCase();
+                matchesSearch = (o.title && o.title.toLowerCase().includes(lower)) ||
+                       (o.description && o.description.toLowerCase().includes(lower)) ||
+                       (o.owner && o.owner.name && o.owner.name.toLowerCase().includes(lower));
+            }
+            var matchesStatus = statusFilter === 'ALL' || o.status === statusFilter;
+            return matchesSearch && matchesStatus;
         });
-    }, [objectives, searchTerm]);
+    }, [objectives, searchTerm, statusFilter]);
+
+    var totalPages = Math.ceil(filteredObjectives.length / ITEMS_PER_PAGE) || 1;
+    var paginatedObjectives = filteredObjectives.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
     // Submission logic — only for unapproved objectives
     var unapprovedObjectives = useMemo(function () {
@@ -325,6 +337,7 @@ function GoalsPage() {
                 activeTab={activeTab} onTabChange={function(tab) { setActiveTab(tab); }}
                 cycles={cycles} selectedCycle={selectedCycle} onCycleChange={function(c) { setSelectedCycle(c); var cObj = cycles.find(function(cy) { return cy._id === c; }); if (cObj) setActiveCycleData(cObj); }}
                 searchTerm={searchTerm} onSearchChange={setSearchTerm}
+                statusFilter={statusFilter} onStatusChange={setStatusFilter}
             />
 
             {/* Submission Panel — only shows when conditions allow */}
@@ -535,7 +548,7 @@ function GoalsPage() {
                 <div className="goals-page__content">
                     {activeView === 'list' && (
                         <GoalTable
-                            objectives={filteredObjectives}
+                            objectives={paginatedObjectives}
                             onGoalClick={setSelectedGoal}
                             onStatusChange={fetchObjectives}
                             onDelete={openDeleteModal}
@@ -550,8 +563,8 @@ function GoalsPage() {
                     )}
                     {activeView === 'feed' && (
                         <div className="goals-page__feed">
-                            {filteredObjectives.length === 0 && <p className="goal-panel__empty">No activity to show.</p>}
-                            {filteredObjectives.map(function (obj) {
+                            {paginatedObjectives.length === 0 && <p className="goal-panel__empty">No activity to show.</p>}
+                            {paginatedObjectives.map(function (obj) {
                                 var badge = getStatusBadgeStyle(obj.status);
                                 return (
                                     <div key={obj._id} className="goals-feed-card" onClick={function () { setSelectedGoal(obj); }}>
@@ -577,6 +590,28 @@ function GoalsPage() {
                                     </div>
                                 );
                             })}
+                        </div>
+                    )}
+
+                    {totalPages > 1 && (
+                        <div className="pagination" style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+                            <button 
+                                disabled={currentPage === 1} 
+                                onClick={() => setCurrentPage(p => p - 1)}
+                                style={{ padding: '0.5rem 1rem' }}
+                                className="ds-btn ds-btn--secondary"
+                            >
+                                Previous
+                            </button>
+                            <span style={{ padding: '0.5rem' }}>Page {currentPage} of {totalPages}</span>
+                            <button 
+                                disabled={currentPage === totalPages} 
+                                onClick={() => setCurrentPage(p => p + 1)}
+                                style={{ padding: '0.5rem 1rem' }}
+                                className="ds-btn ds-btn--secondary"
+                            >
+                                Next
+                            </button>
                         </div>
                     )}
                 </div>

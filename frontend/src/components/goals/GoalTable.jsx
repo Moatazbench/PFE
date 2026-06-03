@@ -183,11 +183,7 @@ function GoalTable({ objectives, onGoalClick, onStatusChange, onDelete, onDuplic
 
                         <div className="goals-table__col goals-table__col--weight">
                             <span className={'goals-table__weight-badge goals-table__weight-badge--' + weightTone}>{goal.weight}</span>
-                            {goal.category === 'team' && goal.assignedUsers && goal.assignedUsers.length > 1 ? (
-                                <span className="goals-table__weight-note" title={'Per member: ' + Math.round(goal.weight / goal.assignedUsers.length) + '%'}>
-                                    ({Math.round(goal.weight / goal.assignedUsers.length)}/m)
-                                </span>
-                            ) : null}
+                            {/* Team weight is NOT divided per member */}
                         </div>
 
                         <div className="goals-table__col goals-table__col--status">
@@ -252,9 +248,7 @@ function GoalTable({ objectives, onGoalClick, onStatusChange, onDelete, onDuplic
                                 <div><strong>Description:</strong> {goal.description || 'No description'}</div>
                                 <div>
                                     <strong>Weight:</strong> {goal.weight}%
-                                    {goal.category === 'team' && goal.assignedUsers && goal.assignedUsers.length > 1 ? (
-                                        <span className="goals-table__weight-note">Per member: {Math.round(goal.weight / goal.assignedUsers.length)}%</span>
-                                    ) : null}
+                                    {/* Team weight is NOT divided per member */}
                                 </div>
                                 <div><strong>KPIs:</strong> {goal.kpis?.length || 0}</div>
                                 {goal.successIndicator ? <div><strong>Success indicator:</strong> {goal.successIndicator}</div> : null}

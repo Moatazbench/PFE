@@ -237,6 +237,8 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
           objectives.map((objective) => {
             const form = assessmentForms[objective._id] || { progressPercentage: 0, rating: '', comment: '' };
             const isSaving = savingObjectiveId === objective._id;
+            const isSubmitted = Boolean(objective.finalSelfSubmittedAt);
+            const isFieldDisabled = !canEditCycle || isSaving || isSubmitted;
             const pendingAttachments = attachments[objective._id] || [];
             const visibleAttachments = pendingAttachments.length > 0
               ? pendingAttachments
@@ -266,7 +268,7 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
                       max="100"
                       className="ent-input"
                       value={form.progressPercentage}
-                      disabled={!canEditCycle || isSaving}
+                      disabled={isFieldDisabled}
                       onChange={(e) => setAssessmentForms((prev) => ({
                         ...prev,
                         [objective._id]: { ...prev[objective._id], progressPercentage: e.target.value }
@@ -278,7 +280,7 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
                     <select
                       className="ent-select"
                       value={form.rating}
-                      disabled={!canEditCycle || isSaving}
+                      disabled={isFieldDisabled}
                       onChange={(e) => setAssessmentForms((prev) => ({
                         ...prev,
                         [objective._id]: { ...prev[objective._id], rating: e.target.value }
@@ -300,7 +302,7 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
                     className="ent-input"
                     style={{ minHeight: '110px' }}
                     value={form.comment}
-                    disabled={!canEditCycle || isSaving}
+                    disabled={isFieldDisabled}
                     onChange={(e) => setAssessmentForms((prev) => ({
                       ...prev,
                       [objective._id]: { ...prev[objective._id], comment: e.target.value }
@@ -336,7 +338,7 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
                                 </span>
                               )}
                             </div>
-                            {canEditCycle && pendingAttachments.length > 0 && (
+                            {!isFieldDisabled && pendingAttachments.length > 0 && (
                               <button
                                 type="button"
                                 onClick={() => setAttachments((prev) => ({
@@ -351,18 +353,18 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
                             )}
                           </div>
                         ))}
-                        {canEditCycle && (
+                        {!isFieldDisabled && (
                           <div>
                             <input
                               type="file"
                               id={`final-file-${objective._id}`}
                               style={{ display: 'none' }}
                               onChange={(e) => handleFileUpload(objective._id, e)}
-                              disabled={!canEditCycle}
+                              disabled={isFieldDisabled}
                               multiple
                               accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.txt,.csv,.zip"
                             />
-                            <label htmlFor={`final-file-${objective._id}`} style={{ cursor: canEditCycle ? 'pointer' : 'not-allowed', color: 'var(--primary)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <label htmlFor={`final-file-${objective._id}`} style={{ cursor: !isFieldDisabled ? 'pointer' : 'not-allowed', color: 'var(--primary)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
                               Add more files
                             </label>
                           </div>
@@ -370,8 +372,8 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
                       </div>
                     ) : (
                       <div>
-                        <input type="file" id={`final-file-${objective._id}`} style={{ display: 'none' }} onChange={(e) => handleFileUpload(objective._id, e)} disabled={!canEditCycle} multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.txt,.csv,.zip" />
-                        <label htmlFor={`final-file-${objective._id}`} style={{ cursor: canEditCycle ? 'pointer' : 'not-allowed', color: 'var(--primary)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input type="file" id={`final-file-${objective._id}`} style={{ display: 'none' }} onChange={(e) => handleFileUpload(objective._id, e)} disabled={isFieldDisabled} multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.txt,.csv,.zip" />
+                        <label htmlFor={`final-file-${objective._id}`} style={{ cursor: !isFieldDisabled ? 'pointer' : 'not-allowed', color: 'var(--primary)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
                           Choose file(s) to upload
                         </label>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Max 10MB each - PDF, Word, Excel, Images, etc.</div>
@@ -383,16 +385,16 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                   <div className="text-muted" style={{ fontSize: '0.88rem' }}>
                     {objective.finalSelfSubmittedAt
-                      ? `Last submitted on ${new Date(objective.finalSelfSubmittedAt).toLocaleDateString()}`
+                      ? `Submitted on ${new Date(objective.finalSelfSubmittedAt).toLocaleDateString()}. This assessment is now locked.`
                       : 'This objective still needs a final self-assessment.'}
                   </div>
                   <button
                     type="button"
                     className="btn btn--primary"
-                    disabled={isSaving || !canEditCycle}
+                    disabled={isSaving || isFieldDisabled}
                     onClick={() => handleSubmitAssessment(objective._id)}
                   >
-                    {isSaving ? 'Saving...' : objective.finalSelfSubmittedAt ? 'Update Self-Assessment' : 'Submit Self-Assessment'}
+                    {isSaving ? 'Saving...' : 'Submit Self-Assessment'}
                   </button>
                 </div>
               </div>

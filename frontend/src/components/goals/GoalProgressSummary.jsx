@@ -7,8 +7,10 @@ function GoalProgressSummary({ objectives }) {
         return o.status === 'approved' || o.status === 'validated';
     });
     
-    var total = approvedObjectives.length;
-    var avgProgress = total > 0 ? approvedObjectives.reduce(function (sum, o) { return sum + (o.achievementPercent || 0); }, 0) / total : 0;
+    var totalWeight = approvedObjectives.reduce(function(sum, o) { return sum + (o.weight || 0); }, 0);
+    var avgProgress = totalWeight > 0 ? approvedObjectives.reduce(function(sum, o) { 
+        return sum + ((o.achievementPercent || 0) * (o.weight || 0) / 100); 
+    }, 0) / (totalWeight / 100) : 0;
 
     return (
         <div className="goals-progress-summary" style={{ justifyContent: 'center' }}>

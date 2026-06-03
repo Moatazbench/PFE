@@ -28,10 +28,21 @@ exports.getCheckIns = async (req, res) => {
     if (phaseCheck.error) return res.status(phaseCheck.status).json({ success: false, message: phaseCheck.message });
 
     const filter = { employee_id: req.user.id };
+
+    // FIX 4: If team leader, also show check-ins for all team members
+    if (req.user.role === 'TEAM_LEADER') {
+      const Team = require('../models/Team');
+      const team = await Team.findOne({ leader: req.user.id });
+      if (team && team.members && team.members.length > 0) {
+        const memberIds = team.members.map(m => m._id || m);
+        filter.employee_id = { $in: [req.user.id, ...memberIds] };
+      }
+    }
+
     if (cycle_id) filter.cycle_id = cycle_id;
     if (objective_id) filter.objective_id = objective_id;
 
-    const checkIns = await CheckIn.find(filter).populate('objective_id', 'title dueDate').sort({ createdAt: -1 });
+    const checkIns = await CheckIn.find(filter).populate('objective_id', 'title dueDate').populate('employee_id', 'name email').sort({ createdAt: -1 });
     res.json({ success: true, checkIns });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -174,8 +185,8 @@ exports.reviewCheckIn = async (req, res) => {
     const employee = await User.findById(checkIn.employee_id);
     if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
 
-    // Check if manager supervises this employee
-    if (String(employee.manager) !== String(req.user.id) && req.user.role !== 'ADMIN' && req.user.role !== 'HR') {
+    // Check if user supervises this employee or is the employee themselves
+    if (String(employee.manager) !== String(req.user.id) && String(employee._id) !== String(req.user.id) && req.user.role !== 'ADMIN' && req.user.role !== 'HR' && req.user.role !== 'TEAM_LEADER') {
       return res.status(403).json({ success: false, message: 'You do not have permission to review this check-in' });
     }
 

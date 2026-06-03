@@ -179,6 +179,11 @@ function TasksPage() {
 
   var [tab, setTab] = useState('my');
   var [viewMode, setViewMode] = useState('list');
+  var [searchQuery, setSearchQuery] = useState('');
+  var [statusFilter, setStatusFilter] = useState('ALL');
+  var [priorityFilter, setPriorityFilter] = useState('ALL');
+  var [currentPage, setCurrentPage] = useState(1);
+  var ITEMS_PER_PAGE = 10;
   var [tasks, setTasks] = useState([]);
   var [objectives, setObjectives] = useState([]);
   var [stats, setStats] = useState(null);
@@ -193,6 +198,10 @@ function TasksPage() {
   useEffect(function () {
     loadData();
   }, [tab]);
+
+  useEffect(function () {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, priorityFilter, tab]);
 
   useEffect(function () {
     setSelectedTaskId(function (currentTaskId) {
@@ -526,7 +535,6 @@ function TasksPage() {
     return function () {
       window.removeEventListener('pagehide', handlePageHide);
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      persistTimerOnExit(false);
     };
   }, []);
 
@@ -545,13 +553,28 @@ function TasksPage() {
     return buildTimesheetEntries(tasks).slice(0, 10);
   }, [tasks]);
 
-  var visibleTasks = useMemo(function () {
-    return tasks.slice().sort(function (left, right) {
+  var filteredTasks = useMemo(function () {
+    var filtered = tasks.filter(function (t) {
+      var matchesSearch = true;
+      if (searchQuery) {
+        var lower = searchQuery.toLowerCase();
+        matchesSearch = (t.title && t.title.toLowerCase().includes(lower)) || 
+                        (t.description && t.description.toLowerCase().includes(lower));
+      }
+      var matchesStatus = statusFilter === 'ALL' || t.status === statusFilter || t.workflowStage === statusFilter;
+      var matchesPriority = priorityFilter === 'ALL' || t.priority === priorityFilter;
+      return matchesSearch && matchesStatus && matchesPriority;
+    });
+    return filtered.sort(function (left, right) {
       var leftDue = left?.dueDate ? new Date(left.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
       var rightDue = right?.dueDate ? new Date(right.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
       return leftDue - rightDue;
     });
-  }, [tasks]);
+  }, [tasks, searchQuery, statusFilter, priorityFilter]);
+
+  var totalPages = Math.ceil(filteredTasks.length / ITEMS_PER_PAGE) || 1;
+  var paginatedTasks = filteredTasks.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  var visibleTasks = viewMode === 'list' ? paginatedTasks : filteredTasks;
 
   var selectedTask = useMemo(function () {
     if (!selectedTaskId) {
@@ -707,6 +730,32 @@ function TasksPage() {
         })}
       </div>
 
+      <div className="filters-container" style={{ marginBottom: '1rem', display: 'flex', gap: '1rem' }}>
+        <input 
+          type="text" 
+          placeholder="Search tasks..." 
+          value={searchQuery} 
+          onChange={(e) => setSearchQuery(e.target.value)} 
+          style={{ flex: 1, padding: '0.5rem' }}
+        />
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ padding: '0.5rem' }}>
+          <option value="ALL">All Statuses</option>
+          <option value="todo">To Do</option>
+          <option value="in_progress">In Progress</option>
+          <option value="review">Review</option>
+          <option value="done">Done</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} style={{ padding: '0.5rem' }}>
+          <option value="ALL">All Priorities</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="urgent">Urgent</option>
+        </select>
+      </div>
+
       <div className="wm-view-banner">
         <div>
           <strong>{viewMode === 'kanban' ? 'Kanban board active' : 'List view active'}</strong>
@@ -772,7 +821,7 @@ function TasksPage() {
                           {task.dueDate ? <span className={'meta-tag' + (isOverdue ? ' meta-tag--danger' : '')}>{new Date(task.dueDate).toLocaleDateString()}</span> : null}
                           {task.linkedGoal ? <span className="meta-tag">{task.linkedGoal.title}</span> : null}
                           <span className="meta-tag">Tracked {formatDuration(trackedSeconds)}</span>
-                          <span className="meta-tag">Progress {Number(task.progress || (task.status === 'done' ? 100 : 0))}%</span>
+                          <span className="meta-tag">Progress {Number(task.status === 'todo' ? 0 : task.progress || (task.status === 'done' ? 100 : 0))}%</span>
                         </div>
                       </div>
                     </div>
@@ -812,6 +861,14 @@ function TasksPage() {
                   </article>
                 );
               })}
+            </div>
+          )}
+
+          {viewMode === 'list' && totalPages > 1 && (
+            <div className="pagination" style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="btn btn--secondary btn--sm">Previous</button>
+              <span style={{ padding: '0.25rem 0.5rem' }}>Page {currentPage} of {totalPages}</span>
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="btn btn--secondary btn--sm">Next</button>
             </div>
           )}
         </section>

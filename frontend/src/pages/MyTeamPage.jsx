@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import './MyTeamPage.css';
 
 function MyTeamPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const { id } = useParams();
     const [teamMembers, setTeamMembers] = useState([]);
     const [teamHierarchy, setTeamHierarchy] = useState({ team: null, subTeams: [] });
     const [loading, setLoading] = useState(true);
@@ -14,29 +15,49 @@ function MyTeamPage() {
 
     useEffect(() => {
         fetchTeamMembers();
-    }, []);
+    }, [id]);
 
     const fetchTeamMembers = async () => {
         setLoading(true);
         setError('');
         try {
-            const [res, hierarchyRes] = await Promise.all([
-                api.get('/team-members'),
-                api.get('/teams/my-team')
-            ]);
-
-            if (Array.isArray(res.data)) {
-                setTeamMembers(res.data);
-            } else if (res.data && res.data.members && Array.isArray(res.data.members)) {
-                setTeamMembers(res.data.members);
+            if (id) {
+                const teamRes = await api.get(`/teams/${id}`);
+                const data = teamRes.data;
+                setTeamHierarchy({
+                    team: data,
+                    subTeams: data.subTeams || []
+                });
+                
+                const allMembers = [];
+                if (data.leader) allMembers.push({ ...data.leader, role: 'TEAM_LEADER' });
+                if (Array.isArray(data.members)) {
+                    data.members.forEach(m => {
+                        if (m && m._id && String(m._id) !== String(data.leader?._id)) {
+                            allMembers.push(m);
+                        }
+                    });
+                }
+                setTeamMembers(allMembers);
             } else {
-                setTeamMembers([]);
-            }
+                const [res, hierarchyRes] = await Promise.all([
+                    api.get('/team-members'),
+                    api.get('/teams/my-team')
+                ]);
 
-            setTeamHierarchy({
-                team: hierarchyRes.data?.team || null,
-                subTeams: Array.isArray(hierarchyRes.data?.subTeams) ? hierarchyRes.data.subTeams : []
-            });
+                if (Array.isArray(res.data)) {
+                    setTeamMembers(res.data);
+                } else if (res.data && res.data.members && Array.isArray(res.data.members)) {
+                    setTeamMembers(res.data.members);
+                } else {
+                    setTeamMembers([]);
+                }
+
+                setTeamHierarchy({
+                    team: hierarchyRes.data?.team || null,
+                    subTeams: Array.isArray(hierarchyRes.data?.subTeams) ? hierarchyRes.data.subTeams : []
+                });
+            }
         } catch (err) {
             console.error('Failed to load team dashboard:', err);
             setError('Failed to load team information.');
@@ -123,7 +144,7 @@ function MyTeamPage() {
                     {teamHierarchy.subTeams.length > 0 && (
                         <div className="my-team-page__members-grid">
                             {teamHierarchy.subTeams.map((subTeam) => (
-                                <div key={subTeam._id} className="my-team-page__member-card">
+                                <div key={subTeam._id} className="my-team-page__member-card" onClick={() => navigate(`/teams/${subTeam._id}`)} style={{ cursor: 'pointer' }}>
                                     <div className="my-team-page__person-name">{subTeam.name}</div>
                                     <div className="my-team-page__person-email">
                                         {subTeam.leader ? `Leader: ${subTeam.leader.name}` : 'No leader assigned'}

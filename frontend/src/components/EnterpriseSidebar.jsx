@@ -69,8 +69,8 @@ function EnterpriseSidebar({ collapsed, setCollapsed, onNavigate }) {
             </button>
 
             <div className="ent-sidebar__brand">
-                <div className="ent-sidebar__logo">PM</div>
-                <span className="ent-sidebar__app-name">PerfManager</span>
+                <div className="ent-sidebar__logo">PT</div>
+                <span className="ent-sidebar__app-name">Perf Track</span>
             </div>
 
             <div className="ent-sidebar__phase" aria-label="Active cycle phase">

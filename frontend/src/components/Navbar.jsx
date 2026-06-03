@@ -21,7 +21,7 @@ function Navbar() {
     return (
       <nav className="navbar">
         <div className="navbar-brand">
-          <Link to="/login">HR Management</Link>
+          <Link to="/login">Perf Track</Link>
         </div>
         <div className="navbar-links">
           <Link to="/login" className={isActive('/login')}>Login</Link>
@@ -33,7 +33,7 @@ function Navbar() {
   return (
     <nav className="navbar">
       <div className="navbar-brand">
-        <Link to="/dashboard">HR Management</Link>
+        <Link to="/dashboard">Perf Track</Link>
       </div>
       <div className="navbar-links">
         <Link to="/dashboard" className={isActive('/dashboard')}>Dashboard</Link>

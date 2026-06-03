@@ -1,19 +1,25 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useTheme } from './ThemeContext';
 import Notifications from './Notifications';
 import useActiveCycle from '../hooks/useActiveCycle';
 import UserAvatar from './UserAvatar';
-import { getRouteMeta, preloadRoute } from '../routes/routeConfig';
+import { APP_ROUTES, getRouteMeta, preloadRoute } from '../routes/routeConfig';
 
 function TopHeader({ onMobileToggle }) {
     var location = useLocation();
+    var navigate = useNavigate();
     var { user, logout } = useAuth();
     var { darkMode, toggleDarkMode } = useTheme();
     var { activeCycle, currentPhase } = useActiveCycle();
     var [profileOpen, setProfileOpen] = useState(false);
     var profileRef = useRef(null);
+    var [searchQuery, setSearchQuery] = useState('');
+    var [searchResults, setSearchResults] = useState([]);
+    var [searchOpen, setSearchOpen] = useState(false);
+    var searchRef = useRef(null);
+    var debounceRef = useRef(null);
 
     var routeMeta = getRouteMeta(location.pathname);
     var title = routeMeta?.label || 'Page';
@@ -33,6 +39,9 @@ function TopHeader({ onMobileToggle }) {
             if (profileRef.current && !profileRef.current.contains(event.target)) {
                 setProfileOpen(false);
             }
+            if (searchRef.current && !searchRef.current.contains(event.target)) {
+                setSearchOpen(false);
+            }
         }
 
         document.addEventListener('mousedown', handleClickOutside);
@@ -40,6 +49,41 @@ function TopHeader({ onMobileToggle }) {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
+
+    var handleSearchChange = useCallback(function (e) {
+        var value = e.target.value;
+        setSearchQuery(value);
+
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+
+        if (!value.trim()) {
+            setSearchResults([]);
+            setSearchOpen(false);
+            return;
+        }
+
+        debounceRef.current = setTimeout(function () {
+            var query = value.toLowerCase().trim();
+            var matches = APP_ROUTES.filter(function (route) {
+                if (!route.showInSidebar) return false;
+                if (route.roles && user && !route.roles.includes(user.role)) return false;
+                return (
+                    route.label.toLowerCase().includes(query) ||
+                    route.section.toLowerCase().includes(query) ||
+                    route.path.toLowerCase().includes(query)
+                );
+            }).slice(0, 8);
+            setSearchResults(matches);
+            setSearchOpen(matches.length > 0);
+        }, 200);
+    }, [user]);
+
+    function handleSearchSelect(path) {
+        setSearchQuery('');
+        setSearchResults([]);
+        setSearchOpen(false);
+        navigate(path);
+    }
 
     function formatRole(role) {
         return String(role || 'User').replace(/_/g, ' ');
@@ -68,14 +112,66 @@ function TopHeader({ onMobileToggle }) {
             </div>
 
             <div className="ent-header__right">
-                <div className="ent-header__search">
+                <div className="ent-header__search" ref={searchRef} style={{ position: 'relative' }}>
                     <span className="ent-header__search-icon">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <circle cx="11" cy="11" r="8" />
                             <line x1="21" y1="21" x2="16.65" y2="16.65" />
                         </svg>
                     </span>
-                    <input type="text" placeholder="Search..." />
+                    <input
+                        type="text"
+                        placeholder="Search pages..."
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                        onFocus={function () { if (searchResults.length > 0) setSearchOpen(true); }}
+                    />
+                    {searchOpen && searchResults.length > 0 ? (
+                        <div style={{
+                            position: 'absolute',
+                            top: 'calc(100% + 6px)',
+                            left: 0,
+                            right: 0,
+                            minWidth: 220,
+                            background: 'var(--shell-bg-card, #fff)',
+                            border: '1px solid var(--shell-border, #e2e8f0)',
+                            borderRadius: 14,
+                            boxShadow: '0 16px 40px rgba(15, 23, 42, 0.14)',
+                            padding: 6,
+                            zIndex: 120,
+                            animation: 'ent-slideUp 0.16s ease',
+                        }}>
+                            {searchResults.map(function (route) {
+                                return (
+                                    <button
+                                        key={route.path}
+                                        type="button"
+                                        onClick={function () { handleSearchSelect(route.path); }}
+                                        onMouseEnter={function () { preloadRoute(route.path); }}
+                                        style={{
+                                            display: 'block',
+                                            width: '100%',
+                                            textAlign: 'left',
+                                            background: 'transparent',
+                                            border: 'none',
+                                            padding: '10px 12px',
+                                            borderRadius: 10,
+                                            cursor: 'pointer',
+                                            fontSize: 13,
+                                            fontWeight: 600,
+                                            color: 'var(--shell-text, #0f172a)',
+                                            transition: 'background 120ms',
+                                        }}
+                                        onMouseOver={function (e) { e.currentTarget.style.background = 'var(--shell-bg-hover, #f1f5f9)'; }}
+                                        onMouseOut={function (e) { e.currentTarget.style.background = 'transparent'; }}
+                                    >
+                                        <span style={{ display: 'block' }}>{route.label}</span>
+                                        <span style={{ display: 'block', fontSize: 11, color: 'var(--shell-text-secondary, #64748b)', fontWeight: 400 }}>{route.section}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    ) : null}
                 </div>
 
                 <Notifications />
@@ -133,3 +229,4 @@ function TopHeader({ onMobileToggle }) {
 }
 
 export default TopHeader;
+

@@ -82,7 +82,8 @@ router.get('/', rateLimiter, auth, async (req, res) => {
           $group: {
             _id: '$owner',
             activeObjectivesCount: { $sum: 1 },
-            totalProgress: { $sum: { $ifNull: ['$achievementPercent', 0] } }
+            totalWeightedScore: { $sum: { $ifNull: ['$weightedScore', 0] } },
+            totalWeight: { $sum: { $ifNull: ['$weight', 0] } }
           }
         }
       ]),
@@ -128,8 +129,8 @@ router.get('/', rateLimiter, auth, async (req, res) => {
         const pendingReviewsCount = userEvaluationStats.pendingReviewsCount || 0;
 
         let progress = 0;
-        if (activeObjectivesCount > 0) {
-          progress = Math.round((userObjectiveStats.totalProgress || 0) / activeObjectivesCount);
+        if (activeObjectivesCount > 0 && userObjectiveStats.totalWeight > 0) {
+          progress = Math.round((userObjectiveStats.totalWeightedScore / userObjectiveStats.totalWeight) * 100);
         } else if (tasksActiveCount > 0 || tasksCompletedCount > 0) {
           progress = Math.round((tasksCompletedCount / (tasksActiveCount + tasksCompletedCount)) * 100);
         }

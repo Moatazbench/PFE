@@ -25,6 +25,7 @@ const EvaluationScoringPage = lazyWithPreload(() => import('../pages/EvaluationS
 const AuditLogsPage = lazyWithPreload(() => import('../pages/AuditLogsPage'));
 const ManagerReviewPage = lazyWithPreload(() => import('../pages/ManagerReviewPage'));
 const HRValidation = lazyWithPreload(() => import('../pages/HRValidation'));
+const BonusPenaltyPage = lazyWithPreload(() => import('../pages/BonusPenaltyPage'));
 
 export const PUBLIC_ROUTES = [
   {
@@ -52,28 +53,31 @@ export const APP_ROUTES = [
     component: MidYearPage,
     showInSidebar: true,
     allowedPhases: ['phase2'],
+    phases: ['phase2'],
     phaseUnavailableTitle: 'Mid-Year Assessment is not open in this cycle',
     phaseUnavailableDescription: 'This workspace becomes interactive during Phase 2. Outside that phase, the dashboard and the backend rules remain unchanged.',
   },
   { path: '/manager-review', label: 'Goal Check-Up', section: 'Annual Cycle', icon: 'star', component: ManagerReviewPage, showInSidebar: true },
-  { path: '/final-evaluations', label: 'End-Year Review', section: 'Annual Cycle', icon: 'clipboard', component: FinalEvaluationPage, showInSidebar: true },
+  { path: '/final-evaluations', label: 'End-Year Review', section: 'Annual Cycle', icon: 'clipboard', component: FinalEvaluationPage, showInSidebar: true, allowedPhases: ['phase3'], phases: ['phase3'], phaseUnavailableTitle: 'End-Year Review is not open in this cycle' },
   { path: '/evaluation-scoring', label: 'Evaluation Scoring', section: 'Annual Cycle', icon: 'bar-chart', component: EvaluationScoringPage, showInSidebar: true },
   { path: '/performance', label: 'Performance', section: 'Annual Cycle', icon: 'trending-up', component: PerformancePage, showInSidebar: true },
 
   { path: '/my-team', label: 'My Team', section: 'People', icon: 'users', component: MyTeamPage, showInSidebar: true },
+  { path: '/teams/:id', label: 'Team Details', section: 'People', icon: 'users', component: MyTeamPage, showInSidebar: false },
   { path: '/feedback', label: 'Feedback', section: 'People', icon: 'message-circle', component: FeedbackPage, showInSidebar: true },
 
   { path: '/career', label: 'Career', section: 'Development', icon: 'compass', component: CareerPage, showInSidebar: true },
   { path: '/evaluations', label: 'Assessments', section: 'Development', icon: 'file-text', component: Evaluations, showInSidebar: true },
 
-  { path: '/validation', label: 'Validation', section: 'Management', icon: 'check-circle', component: Validation, showInSidebar: true },
-  { path: '/hr-validation', label: 'HR Validation', section: 'Management', icon: 'shield', component: HRValidation, showInSidebar: true },
-  { path: '/hr-decisions', label: 'HR Decisions', section: 'Management', icon: 'briefcase', component: HRDecisions, showInSidebar: true },
-  { path: '/teams', label: 'Teams', section: 'Management', icon: 'layers', component: Teams, showInSidebar: true },
-  { path: '/users', label: 'Users', section: 'Management', icon: 'user', component: Users, showInSidebar: true },
-  { path: '/analytics', label: 'Analytics', section: 'Management', icon: 'pie-chart', component: AnalyticsPage, showInSidebar: true },
-  { path: '/audit-logs', label: 'Audit Logs', section: 'Management', icon: 'shield', component: AuditLogsPage, showInSidebar: true },
-  { path: '/settings', label: 'Settings', section: 'Management', icon: 'settings', component: Settings, showInSidebar: true },
+  { path: '/validation', label: 'Validation', section: 'Management', icon: 'check-circle', component: Validation, showInSidebar: true, roles: ['ADMIN', 'HR'] },
+  { path: '/hr-validation', label: 'HR Validation', section: 'Management', icon: 'shield', component: HRValidation, showInSidebar: true, roles: ['ADMIN', 'HR'] },
+  { path: '/hr-decisions', label: 'HR Decisions', section: 'Management', icon: 'briefcase', component: HRDecisions, showInSidebar: true, roles: ['ADMIN', 'HR'] },
+  { path: '/teams', label: 'Teams', section: 'Management', icon: 'layers', component: Teams, showInSidebar: true, roles: ['ADMIN', 'HR'] },
+  { path: '/users', label: 'Users', section: 'Management', icon: 'user', component: Users, showInSidebar: true, roles: ['ADMIN', 'HR'] },
+  { path: '/analytics', label: 'Analytics', section: 'Management', icon: 'pie-chart', component: AnalyticsPage, showInSidebar: true, roles: ['ADMIN', 'HR'] },
+  { path: '/audit-logs', label: 'Audit Logs', section: 'Management', icon: 'shield', component: AuditLogsPage, showInSidebar: true, roles: ['ADMIN', 'HR'] },
+  { path: '/bonus-penalty', label: 'Bonus & Penalty', section: 'Management', icon: 'award', component: BonusPenaltyPage, showInSidebar: true, roles: ['ADMIN', 'HR'] },
+  { path: '/settings', label: 'Settings', section: 'Management', icon: 'settings', component: Settings, showInSidebar: true, roles: ['ADMIN', 'HR'] },
 ];
 
 const SIDEBAR_SECTIONS = (function buildSidebarSections() {

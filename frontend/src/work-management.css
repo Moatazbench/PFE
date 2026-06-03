@@ -286,6 +286,8 @@
 .wm-task-detail {
   display: grid;
   gap: 0.95rem;
+  max-height: 70vh;
+  overflow-y: auto;
 }
 
 .wm-task-detail__title {
@@ -388,14 +390,17 @@
 }
 
 .wm-kanban-board {
+  display: flex;
   gap: 1rem;
   overflow-x: auto;
   padding-bottom: 0.35rem;
+  min-width: 0;
 }
 
 .wm-kanban-column {
   min-width: 280px;
   max-width: 320px;
+  flex-shrink: 0;
   padding: 0.9rem;
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
 }
@@ -422,6 +427,8 @@
   display: grid;
   gap: 0.75rem;
   min-height: 420px;
+  max-height: 600px;
+  overflow-y: auto;
   margin-top: 0.9rem;
 }
 

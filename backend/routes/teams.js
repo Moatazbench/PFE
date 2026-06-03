@@ -104,6 +104,15 @@ async function validateMainTeamPayload(payload) {
     return { status: 400, message: 'All members must be valid users with the COLLABORATOR role.' };
   }
 
+  var existingTeamQuery = { leader: leader };
+  if (payload.excludeTeamId) {
+    existingTeamQuery._id = { $ne: payload.excludeTeamId };
+  }
+  var existingTeam = await Team.findOne(existingTeamQuery);
+  if (existingTeam) {
+    return { status: 400, message: 'This manager is already assigned to another team.' };
+  }
+
   return {
     name: name.trim(),
     description: payload.description || '',
@@ -134,6 +143,15 @@ async function validateSubTeamPayload(payload, parentTeam, creatorId) {
   var assignedUsers = await User.find({ _id: { $in: uniqueIds([leader].concat(members)) } }).select('_id');
   if (assignedUsers.length !== uniqueIds([leader].concat(members)).length) {
     return { status: 400, message: 'One or more selected users were not found.' };
+  }
+
+  var leaderTeamQuery = { leader: leader };
+  if (payload.excludeTeamId) {
+    leaderTeamQuery._id = { $ne: payload.excludeTeamId };
+  }
+  var existingLeaderTeam = await Team.findOne(leaderTeamQuery);
+  if (existingLeaderTeam) {
+    return { status: 400, message: 'This manager is already assigned to another team.' };
   }
 
   return {
@@ -314,7 +332,15 @@ router.post('/:id/subteams', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER
       return res.status(403).json({ message: 'You can only create sub-teams inside your own team structure.' });
     }
 
-    var validated = await validateSubTeamPayload(req.body, parentTeam, req.user.id || req.user._id);
+    var creatorId = String(req.user.id || req.user._id);
+    var currentParentPool = getParentPoolIds(parentTeam);
+    if (!currentParentPool.includes(creatorId)) {
+      parentTeam.members.push(creatorId);
+      await parentTeam.save();
+      parentTeam = await populateTeamQuery(Team.findById(req.params.id));
+    }
+
+    var validated = await validateSubTeamPayload(req.body, parentTeam, creatorId);
     if (validated.status) {
       return res.status(validated.status).json({ message: validated.message });
     }
@@ -328,6 +354,13 @@ router.post('/:id/subteams', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER
       createdBy: req.user.id
     });
     await team.save();
+
+    // FIX 2: Auto-add sub-team leader to parent team members if not already present
+    var parentMemberIds = (parentTeam.members || []).map(function (m) { return String(m._id || m); });
+    var subTeamLeaderId = String(validated.leader);
+    if (!parentMemberIds.includes(subTeamLeaderId) && String(parentTeam.leader?._id || parentTeam.leader) !== subTeamLeaderId) {
+      await Team.findByIdAndUpdate(parentTeam._id, { $addToSet: { members: subTeamLeaderId } });
+    }
 
     var populated = await populateTeamQuery(Team.findById(team._id));
     await notifyTeamAssignments(req.user, validated.leader, validated.members, validated.name);
@@ -371,14 +404,16 @@ router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), async 
       validated = await validateSubTeamPayload({
         name: req.body.name !== undefined ? req.body.name : team.name,
         description: req.body.description !== undefined ? req.body.description : team.description,
-        members: req.body.members !== undefined ? req.body.members : prevMembers
-      }, parentTeam, team.leader ? String(team.leader._id || team.leader) : (req.user.id || req.user._id));
+        members: req.body.members !== undefined ? req.body.members : prevMembers,
+        excludeTeamId: team._id
+      }, parentTeam, req.body.leader !== undefined ? req.body.leader : (team.leader ? String(team.leader._id || team.leader) : (req.user.id || req.user._id)));
     } else {
       validated = await validateMainTeamPayload({
         name: req.body.name !== undefined ? req.body.name : team.name,
         description: req.body.description !== undefined ? req.body.description : team.description,
         leader: req.body.leader !== undefined ? req.body.leader : prevLeader,
-        members: req.body.members !== undefined ? req.body.members : prevMembers
+        members: req.body.members !== undefined ? req.body.members : prevMembers,
+        excludeTeamId: team._id
       });
     }
 
@@ -405,6 +440,12 @@ router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), async 
     team.description = validated.description;
     team.leader = validated.leader;
     team.members = validated.members;
+    if (team.parentTeam && team.parentTeam._id) {
+      team.parentTeam = team.parentTeam._id;
+    }
+    if (team.createdBy && team.createdBy._id) {
+      team.createdBy = team.createdBy._id;
+    }
     await team.save();
 
     if (!isSubTeam) {

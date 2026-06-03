@@ -748,14 +748,35 @@
   box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
 }
 
+.notification-trigger {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.92));
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  font-size: 1.05rem;
+  cursor: pointer;
+  position: relative;
+  padding: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  min-width: 46px;
+  min-height: 46px;
+}
+
+.notification-trigger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+}
+
 .notification-trigger__icon {
   line-height: 1;
 }
 
 .notification-trigger__badge {
   position: absolute;
-  top: 2px;
-  right: 2px;
+  top: -5px;
+  right: -5px;
   font-size: 0.65rem;
   min-width: 19px;
   height: 19px;

@@ -1,5 +1,6 @@
 const Task = require('../models/Task');
 const User = require('../models/User');
+const Team = require('../models/Team');
 
 function clampProgress(value) {
   const numeric = Number(value);
@@ -223,6 +224,16 @@ exports.getMyTasks = async (req, res) => {
   try {
     const { status, priority, page = 1, limit = 50 } = req.query;
     const filter = { assignee: req.user._id };
+
+    // FIX 4: If team leader, also show tasks for all team members
+    if (req.user.role === 'TEAM_LEADER') {
+      const team = await Team.findOne({ leader: req.user._id });
+      if (team && team.members && team.members.length > 0) {
+        const memberIds = team.members.map(m => m._id || m);
+        filter.assignee = { $in: [req.user._id, ...memberIds] };
+      }
+    }
+
     if (status) filter.status = status;
     if (priority) filter.priority = priority;
 

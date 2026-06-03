@@ -405,11 +405,14 @@ const TeamModal = ({ isOpen, onClose, onSubmit, team = null, isLoading = false }
                 disabled={isLoading}
               >
                 <option value="">Select a manager</option>
-                {managers.map((manager) => (
-                  <option key={manager._id} value={manager._id}>
-                    {manager.name} ({manager.email})
-                  </option>
-                ))}
+                {managers.map((manager) => {
+                  const isAssignedToOther = manager.team && manager.team !== (team?._id || team?.id);
+                  return (
+                    <option key={manager._id} value={manager._id} disabled={isAssignedToOther}>
+                      {manager.name} ({manager.email}) {isAssignedToOther ? '(Already assigned)' : ''}
+                    </option>
+                  );
+                })}
               </select>
               {touched.manager && errors.manager && (
                 <span style={modalStyles.errorText}>{errors.manager}</span>
