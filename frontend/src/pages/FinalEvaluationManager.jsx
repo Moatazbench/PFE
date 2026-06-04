@@ -45,6 +45,7 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
     improvement_suggestions: '',
     manager_comments: ''
   });
+  const [aiDraftLoading, setAiDraftLoading] = useState(false);
 
   useEffect(() => {
     if (cycleId) fetchTeamData();
@@ -107,6 +108,39 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
     }
 
     setCareerRec({ suggested_path: '', skills_to_develop: '' });
+  }
+
+  async function handleGenerateAIDraft() {
+    if (!selectedEmployee || !selectedEvaluation) return;
+    setAiDraftLoading(true);
+    try {
+      const res = await api.post('/ai/generate-evaluation', {
+        employee_name: selectedEmployee.name,
+        objectives: employeeObjectives.map(function (o) {
+          return { title: o.title, achievementPercent: o.achievementPercent || 0, status: o.status };
+        }),
+        existing_score: selectedEvaluation.auto_score || null
+      });
+      const draft = res.data.draft;
+      if (draft) {
+        setFormData(function (prev) {
+          return {
+            ...prev,
+            strengths: Array.isArray(draft.strengths) ? draft.strengths.join('\n') : (draft.strengths || ''),
+            weaknesses: Array.isArray(draft.weaknesses) ? draft.weaknesses.join('\n') : (draft.weaknesses || ''),
+            improvement_suggestions: Array.isArray(draft.improvement_suggestions) ? draft.improvement_suggestions.join('\n') : (draft.improvement_suggestions || ''),
+            manager_comments: draft.manager_comments || prev.manager_comments,
+            rating_label: draft.rating_label || prev.rating_label,
+            manager_score: draft.manager_score !== undefined ? String(draft.manager_score) : prev.manager_score,
+          };
+        });
+        toast.success('AI draft generated! Review and adjust before saving.');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to generate AI draft');
+    } finally {
+      setAiDraftLoading(false);
+    }
   }
 
   async function handleGenerateCareerRec() {
@@ -501,6 +535,32 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
         )}
 
         <form id="evalForm">
+          {!readOnly && (
+            <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={handleGenerateAIDraft}
+                disabled={aiDraftLoading}
+                style={{
+                  background: aiDraftLoading ? '#94a3b8' : 'linear-gradient(135deg, #7C3AED, #4F46E5)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 12,
+                  padding: '11px 22px',
+                  fontWeight: 700,
+                  fontSize: '0.92rem',
+                  cursor: aiDraftLoading ? 'not-allowed' : 'pointer',
+                  boxShadow: aiDraftLoading ? 'none' : '0 4px 18px rgba(124,58,237,0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  transition: 'all 0.2s',
+                }}
+              >
+                {aiDraftLoading ? '⏳ Generating...' : '✨ Generate AI Draft'}
+              </button>
+            </div>
+          )}
           <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: '220px' }}>
               <label className="ent-label">Manager Final Rating Score (%)</label>

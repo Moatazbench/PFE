@@ -375,6 +375,7 @@ exports.getObjectives = async (req, res) => {
     if (req.query.cycle) baseFilter.cycle = req.query.cycle;
     if (req.query.label) baseFilter.labels = req.query.label;
     if (req.query.status && req.query.status !== 'all') baseFilter.status = req.query.status;
+    if (req.query.search) baseFilter.title = { $regex: req.query.search, $options: 'i' };
 
     const targetUserId = req.query.targetUserId;
     const currentUserId = req.user.id || req.user._id;

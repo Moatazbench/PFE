@@ -1156,3 +1156,81 @@ function buildDevelopmentPlanSummary(evaluation, goals, lowCompetencies, score) 
 
     return parts.join(' ');
 }
+
+// ============ AI EVALUATION DRAFT GENERATOR ============
+exports.generateEvaluationDraft = async (req, res) => {
+    try {
+        const { employee_name, objectives = [], existing_score } = req.body;
+
+        if (!employee_name) {
+            return res.status(400).json({ success: false, message: 'employee_name is required' });
+        }
+
+        const aiConfigured = aiService.isConfigured();
+        let draft = null;
+
+        if (aiConfigured && aiService.generateEvaluationDraft) {
+            try {
+                draft = await aiService.generateEvaluationDraft({ employee_name, objectives, existing_score });
+            } catch (_err) { /* fall through to template */ }
+        }
+
+        if (!draft) {
+            const completedCount = objectives.filter(function (o) {
+                return ['approved', 'validated', 'evaluated'].includes(o.status);
+            }).length;
+
+            const avgAchievement = objectives.length > 0
+                ? Math.round(objectives.reduce(function (sum, o) { return sum + (o.achievementPercent || 0); }, 0) / objectives.length)
+                : 0;
+
+            const score = existing_score || avgAchievement || 70;
+
+            let rating_label = 'meets_expectations';
+            if (score >= 90) rating_label = 'exceeds_expectations';
+            else if (score >= 75) rating_label = 'meets_expectations';
+            else if (score >= 60) rating_label = 'partially_meets_expectations';
+            else rating_label = 'does_not_meet_expectations';
+
+            const highObjectives = objectives.filter(function (o) { return (o.achievementPercent || 0) >= 80; });
+            const lowObjectives = objectives.filter(function (o) { return (o.achievementPercent || 0) < 50; });
+
+            const strengthPool = [
+                'Demonstrated consistent commitment to objectives throughout the cycle',
+                'Showed strong initiative in tracking progress and updating KPIs',
+                'Average achievement of ' + avgAchievement + '% across all objectives',
+                highObjectives.length > 0 ? 'Excelled in: ' + highObjectives.map(function (o) { return '"' + o.title + '"'; }).join(', ') : 'Maintained professional standards across all tasks',
+                'Proactive communication with the team',
+                'Delivered results on time with good quality'
+            ];
+
+            const weaknessPool = [
+                'Some objectives remain partially completed — additional focus is needed',
+                lowObjectives.length > 0 ? 'Struggled with: ' + lowObjectives.map(function (o) { return '"' + o.title + '"'; }).join(', ') : 'Occasional gaps in documentation and reporting',
+                'Could improve consistency in mid-cycle progress updates',
+                'Time management on complex, multi-stakeholder objectives needs development'
+            ];
+
+            const improvementPool = [
+                'Set clearer milestones for objectives exceeding 2 months in duration',
+                'Increase frequency of check-ins with team leader during execution phase',
+                'Develop skills in prioritization and deadline management',
+                'Document blockers earlier to enable timely support from management'
+            ];
+
+            draft = {
+                strengths: pickMultiple(strengthPool, 3),
+                weaknesses: pickMultiple(weaknessPool, 2),
+                improvement_suggestions: pickMultiple(improvementPool, 2),
+                manager_comments: employee_name + ' has demonstrated ' + (score >= 75 ? 'solid' : 'developing') + ' performance this cycle with an average achievement of ' + avgAchievement + '%. ' + completedCount + ' of ' + objectives.length + ' objectives were fully completed. ' + (score >= 80 ? 'Overall this was a commendable cycle.' : 'Continued improvement is expected next cycle.'),
+                rating_label: rating_label,
+                manager_score: score,
+                source: 'template'
+            };
+        }
+
+        return res.json({ success: true, draft });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};

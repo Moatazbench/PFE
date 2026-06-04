@@ -62,21 +62,64 @@ function TopHeader({ onMobileToggle }) {
             return;
         }
 
-        debounceRef.current = setTimeout(function () {
-            var query = value.toLowerCase().trim();
-            var matches = APP_ROUTES.filter(function (route) {
-                if (!route.showInSidebar) return false;
-                if (route.roles && user && !route.roles.includes(user.role)) return false;
-                return (
-                    route.label.toLowerCase().includes(query) ||
-                    route.section.toLowerCase().includes(query) ||
-                    route.path.toLowerCase().includes(query)
-                );
-            }).slice(0, 8);
-            setSearchResults(matches);
-            setSearchOpen(matches.length > 0);
-        }, 200);
-    }, [user]);
+        debounceRef.current = setTimeout(async function () {
+            var path = location.pathname;
+            var term = value.trim();
+            var token = localStorage.getItem('token');
+            var headers = { Authorization: 'Bearer ' + token };
+
+            try {
+                var results = [];
+                if (path.startsWith('/goals') || path.startsWith('/objectives')) {
+                    var res = await fetch('/api/objectives?search=' + encodeURIComponent(term), { headers: headers });
+                    var data = await res.json();
+                    results = (data.objectives || data.individualObjectives || []).slice(0, 8).map(function (o) {
+                        return { _id: o._id, label: o.title, sub: o.status || '', path: '/goals' };
+                    });
+                } else if (path.startsWith('/users')) {
+                    var res = await fetch('/api/users?search=' + encodeURIComponent(term), { headers: headers });
+                    var data = await res.json();
+                    results = (data.users || []).slice(0, 8).map(function (u) {
+                        return { _id: u._id, label: u.name, sub: u.email || u.role || '', path: '/users' };
+                    });
+                } else if (path.startsWith('/tasks')) {
+                    var res = await fetch('/api/tasks/my?search=' + encodeURIComponent(term), { headers: headers });
+                    var data = await res.json();
+                    results = (data.tasks || []).slice(0, 8).map(function (t) {
+                        return { _id: t._id, label: t.title, sub: t.status || '', path: '/tasks' };
+                    });
+                } else if (path.startsWith('/teams')) {
+                    var res = await fetch('/api/teams', { headers: headers });
+                    var data = await res.json();
+                    var list = Array.isArray(data) ? data : [];
+                    results = list.filter(function (t) {
+                        return t.name && t.name.toLowerCase().includes(term.toLowerCase());
+                    }).slice(0, 8).map(function (t) {
+                        return { _id: t._id, label: t.name, sub: '', path: '/teams' };
+                    });
+                } else {
+                    results = APP_ROUTES.filter(function (route) {
+                        if (!route.showInSidebar) return false;
+                        if (route.roles && user && !route.roles.includes(user.role)) return false;
+                        return route.label.toLowerCase().includes(term.toLowerCase());
+                    }).slice(0, 8).map(function (route) {
+                        return { _id: route.path, label: route.label, sub: route.section, path: route.path };
+                    });
+                }
+                setSearchResults(results);
+                setSearchOpen(results.length > 0);
+            } catch (_err) {
+                setSearchResults([]);
+                setSearchOpen(false);
+            }
+        }, 300);
+    }, [user, location.pathname]);
+
+    useEffect(function () {
+        setSearchQuery('');
+        setSearchResults([]);
+        setSearchOpen(false);
+    }, [location.pathname]);
 
     function handleSearchSelect(path) {
         setSearchQuery('');
@@ -84,6 +127,7 @@ function TopHeader({ onMobileToggle }) {
         setSearchOpen(false);
         navigate(path);
     }
+
 
     function formatRole(role) {
         return String(role || 'User').replace(/_/g, ' ');
@@ -121,7 +165,13 @@ function TopHeader({ onMobileToggle }) {
                     </span>
                     <input
                         type="text"
-                        placeholder="Search pages..."
+                        placeholder={
+                            location.pathname.startsWith('/goals') || location.pathname.startsWith('/objectives') ? 'Search objectives...' :
+                            location.pathname.startsWith('/users') ? 'Search users...' :
+                            location.pathname.startsWith('/tasks') ? 'Search tasks...' :
+                            location.pathname.startsWith('/teams') ? 'Search teams...' :
+                            'Search pages...'
+                        }
                         value={searchQuery}
                         onChange={handleSearchChange}
                         onFocus={function () { if (searchResults.length > 0) setSearchOpen(true); }}
@@ -141,13 +191,12 @@ function TopHeader({ onMobileToggle }) {
                             zIndex: 120,
                             animation: 'ent-slideUp 0.16s ease',
                         }}>
-                            {searchResults.map(function (route) {
+                    {searchResults.map(function (result) {
                                 return (
                                     <button
-                                        key={route.path}
+                                        key={result._id || result.path}
                                         type="button"
-                                        onClick={function () { handleSearchSelect(route.path); }}
-                                        onMouseEnter={function () { preloadRoute(route.path); }}
+                                        onClick={function () { handleSearchSelect(result.path); }}
                                         style={{
                                             display: 'block',
                                             width: '100%',
@@ -165,8 +214,8 @@ function TopHeader({ onMobileToggle }) {
                                         onMouseOver={function (e) { e.currentTarget.style.background = 'var(--shell-bg-hover, #f1f5f9)'; }}
                                         onMouseOut={function (e) { e.currentTarget.style.background = 'transparent'; }}
                                     >
-                                        <span style={{ display: 'block' }}>{route.label}</span>
-                                        <span style={{ display: 'block', fontSize: 11, color: 'var(--shell-text-secondary, #64748b)', fontWeight: 400 }}>{route.section}</span>
+                                        <span style={{ display: 'block' }}>{result.label}</span>
+                                        {result.sub ? <span style={{ display: 'block', fontSize: 11, color: 'var(--shell-text-secondary, #64748b)', fontWeight: 400 }}>{result.sub}</span> : null}
                                     </button>
                                 );
                             })}

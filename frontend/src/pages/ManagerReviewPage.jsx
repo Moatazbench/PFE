@@ -376,6 +376,55 @@ function ManagerReviewPage() {
                           </div>
                         )}
 
+                        {/* ── Final Self-Assessment Attachments (Division Lead view) ── */}
+                        {(() => {
+                          const selfAttachments =
+                            Array.isArray(goal.finalSelfAttachments) && goal.finalSelfAttachments.length > 0
+                              ? goal.finalSelfAttachments
+                              : goal.finalSelfAttachment
+                                ? [goal.finalSelfAttachment]
+                                : [];
+                          if (selfAttachments.length === 0) return null;
+                          return (
+                            <div style={{ marginTop: '1rem' }}>
+                              <div style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                                📎 Employee Evidence / Attachments ({selfAttachments.length})
+                              </div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                {selfAttachments.map((att, aIdx) => (
+                                  <div key={aIdx} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    <a
+                                      href={getAttachmentUrl(att)}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                                        padding: '0.3rem 0.6rem', borderRadius: '6px',
+                                        background: '#eff6ff', color: '#1d4ed8', fontSize: '0.8rem',
+                                        fontWeight: '500', textDecoration: 'none',
+                                        border: '1px solid #bfdbfe'
+                                      }}
+                                    >
+                                      View {att.name || `Attachment ${aIdx + 1}`}
+                                    </a>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDownloadAttachment(att)}
+                                      style={{
+                                        padding: '0.3rem 0.6rem', borderRadius: '6px',
+                                        background: '#1d4ed8', color: '#fff', fontSize: '0.8rem',
+                                        fontWeight: '500', border: '1px solid #1d4ed8', cursor: 'pointer'
+                                      }}
+                                    >
+                                      Download
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
                         {/* ── FIX 3: Expandable check-ins section ── */}
                         <div style={{ marginTop: '1rem' }}>
                           <button

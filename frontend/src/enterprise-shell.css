@@ -136,7 +136,8 @@ body {
   flex-direction: column;
   z-index: 100;
   transition: width var(--shell-transition);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .ent-shell--collapsed .ent-sidebar {

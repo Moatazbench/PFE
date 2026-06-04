@@ -269,7 +269,7 @@ function GoalsPage() {
     function getStatusBadgeStyle(status) {
         var map = {
             draft: { color: '#64748b', bg: '#f1f5f9', label: 'Draft' },
-            pending: { color: '#d97706', bg: '#fffbeb', label: 'Pending' },
+            pending: { color: '#3b82f6', bg: '#eff6ff', label: 'Submitted' },
             submitted: { color: '#3b82f6', bg: '#eff6ff', label: 'Submitted' },
             approved: { color: '#059669', bg: '#ecfdf5', label: 'Approved' },
             validated: { color: '#059669', bg: '#ecfdf5', label: 'Validated' },
@@ -443,15 +443,6 @@ function GoalsPage() {
                                 <div className="validation-stat"><span className="stat-label">Weight:</span><span className={'stat-value ' + (validation.isValidTeamWeight ? 'valid' : 'invalid')}>{validation.teamWeight} / {validation.requiredCategoryTotal}</span></div>
                                 <div className="validation-stat"><span className="stat-label">Validated:</span><span className="stat-value">{validation.teamValidatedCount} / {validation.teamCount}</span></div>
                                 <div className="validation-stat"><span className="stat-label">Score:</span><span className="stat-value">{validation.teamScore} / 100</span></div>
-                            </div>
-                        </div>
-                        <div className="validation-panel__box">
-                            <h4>Overall</h4>
-                            <div className="validation-stats">
-                                <div className="validation-stat"><span className="stat-label">Combined Weight</span><span className={'stat-value ' + ((validation.individualWeight === 100 && validation.teamWeight === 100) ? 'valid' : 'invalid')}>{validation.totalWeight} / 200</span></div>
-                                <div className="validation-stat"><span className="stat-label">Status</span><span className={'stat-value ' + (validation.isValidTotalWeight ? 'valid' : 'invalid')}>{validation.isValidTotalWeight ? 'Balanced' : 'Needs attention'}</span></div>
-                                <div className="validation-stat"><span className="stat-label">Final Score</span><span className="stat-value">{validation.compositeScore} / 100</span></div>
-                                <div className="validation-stat"><span className="stat-label">Team + Individual</span><span className="stat-value">{validation.individualScore} + {validation.teamScore}</span></div>
                             </div>
                         </div>
                     </div>

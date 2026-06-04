@@ -4,7 +4,10 @@ const bcrypt = require('bcryptjs');
 // ========== GET ALL (Admin Only) ==========
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({ isDeleted: false })
+    const { search } = req.query;
+    const filter = { isDeleted: false };
+    if (search) filter.$or = [{ name: { $regex: search, $options: 'i' } }, { email: { $regex: search, $options: 'i' } }];
+    const users = await User.find(filter)
       .select('-password')
       .populate('team', 'name')
       .sort({ createdAt: -1 });
@@ -26,7 +29,7 @@ exports.getUserById = async (req, res) => {
 // ========== FILTERED LIST (Dropdowns) ==========
 exports.getUsers = async (req, res) => {
   try {
-    const { role, excludeAssigned } = req.query;
+    const { role, excludeAssigned, search } = req.query;
     let filter = { isDeleted: false };
     
     if (role) {
@@ -38,6 +41,8 @@ exports.getUsers = async (req, res) => {
     if (excludeAssigned === 'true') {
       filter.team = { $in: [null, undefined] };
     }
+
+    if (search) filter.$or = [{ name: { $regex: search, $options: 'i' } }, { email: { $regex: search, $options: 'i' } }];
     
     const users = await User.find(filter)
       .select('_id name email role team')

@@ -222,8 +222,9 @@ exports.createTask = async (req, res) => {
 // Get my tasks (assigned to me)
 exports.getMyTasks = async (req, res) => {
   try {
-    const { status, priority, page = 1, limit = 50 } = req.query;
+    const { status, priority, search, page = 1, limit = 50 } = req.query;
     const filter = { assignee: req.user._id };
+    if (search) filter.title = { $regex: search, $options: 'i' };
 
     // FIX 4: If team leader, also show tasks for all team members
     if (req.user.role === 'TEAM_LEADER') {
@@ -321,10 +322,11 @@ exports.getTasksByTeams = async (req, res) => {
 // Get all tasks (admin)
 exports.getAllTasks = async (req, res) => {
   try {
-    const { status, priority, page = 1, limit = 50 } = req.query;
+    const { status, priority, search, page = 1, limit = 50 } = req.query;
     const filter = {};
     if (status) filter.status = status;
     if (priority) filter.priority = priority;
+    if (search) filter.title = { $regex: search, $options: 'i' };
 
     const tasks = (await Task.find(filter)
       .populate('assignee', 'name email role')
@@ -479,10 +481,11 @@ exports.deleteTask = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Task not found' });
     }
 
+    const isAssignee = task.assignee.toString() === req.user._id.toString();
     const isAssigner = task.assignedBy.toString() === req.user._id.toString();
     const isAdmin = ['ADMIN', 'HR'].includes(req.user.role);
 
-    if (!isAssigner && !isAdmin) {
+    if (!isAssignee && !isAssigner && !isAdmin) {
       return res.status(403).json({ success: false, message: 'Not authorized to delete this task' });
     }
 

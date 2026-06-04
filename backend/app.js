@@ -92,7 +92,7 @@ app.get('/', (req, res) => {
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Perf Track API is running!'
+    message: 'HR Evaluation API is running!'
   });
 });
 

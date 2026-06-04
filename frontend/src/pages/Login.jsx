@@ -125,15 +125,7 @@ function Login() {
           </button>
         </form>
 
-        <div className="demo-accounts">
-          <p className="demo-title">Demo Accounts:</p>
-          <div className="demo-list">
-            <span>Admin: admin@biat.com / Admin123!</span>
-            <span>HR: hr@biat.com / HR123!</span>
-            <span>Leader: leader@biat.com / Leader123!</span>
-            <span>Collaborator: collaborator@biat.com / Collab123!</span>
-          </div>
-        </div>
+
       </div>
     </div>
   );
