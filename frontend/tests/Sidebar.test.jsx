@@ -43,7 +43,7 @@ describe('Sidebar Component', () => {
       </BrowserRouter>
     );
 
-    expect(screen.getByText('PerfManager')).toBeInTheDocument();
+    expect(screen.getByText('Perf Track')).toBeInTheDocument();
   });
 
   it('shows key navigation links for ADMIN', () => {

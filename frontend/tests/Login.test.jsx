@@ -56,7 +56,8 @@ describe('Login Component', () => {
     );
 
     // Check headings and inputs
-    expect(screen.getByText('HR Management System')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Perf Track' })).toBeInTheDocument();
+    expect(screen.getByText('Sign in to your account')).toBeInTheDocument();
     expect(screen.getByText('Email Address')).toBeInTheDocument();
     expect(screen.getByText('Password')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('name@biat.com')).toBeInTheDocument();
