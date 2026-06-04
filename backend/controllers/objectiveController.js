@@ -318,7 +318,7 @@ exports.createObjective = async (req, res) => {
       const count = await Objective.countDocuments({ owner: ownerId, cycle });
       if (count >= 10) return res.status(400).json({ success: false, message: 'Maximum objectives reached for this cycle.' });
 
-      const existingObjs = await Objective.find({ owner: ownerId, cycle, category: category || 'individual' });
+      const existingObjs = await Objective.find({ owner: ownerId, cycle, category: category || 'individual', status: { $nin: ['rejected', 'cancelled', 'archived'] } });
       const usedWeight = sumObjectiveWeights(existingObjs);
       if (usedWeight + normalizedWeight > 100) return res.status(400).json({ success: false, message: 'Total weight would exceed 100%. Currently used: ' + usedWeight + '%, trying to add: ' + normalizedWeight + '%.' });
 
@@ -1093,6 +1093,7 @@ exports.finalSelfAssessmentObjective = async (req, res) => {
       }));
       objective.finalSelfAttachment = objective.finalSelfAttachments[0];
     } else if (!objective.finalSelfAttachments || objective.finalSelfAttachments.length === 0) {
+      objective.finalSelfAttachments = [];
       objective.finalSelfAttachment = null;
     }
     objective.achievementPercent = normalizedProgress;
@@ -1120,6 +1121,7 @@ exports.evaluateObjective = async (req, res) => {
   try {
     const objective = await Objective.findById(req.params.id);
     if (!objective) return res.status(404).json({ success: false, message: 'Objective not found.' });
+    if (['draft', 'cancelled', 'rejected'].includes(objective.status)) return res.status(400).json({ success: false, message: 'Cannot evaluate a goal with status: ' + objective.status + '.' });
     if (!['TEAM_LEADER', 'ADMIN', 'HR'].includes(req.user.role)) return res.status(403).json({ success: false, message: 'Only managers can evaluate.' });
 
     // Phase enforcement: evaluation only during Phase 3
@@ -1364,6 +1366,7 @@ exports.submitProgress = async (req, res) => {
     const { achievementPercent, selfAssessment } = req.body;
     const objective = await Objective.findById(req.params.id).populate('cycle');
     if (!objective) return res.status(404).json({ success: false, message: 'Objective not found.' });
+    if (['draft', 'cancelled', 'rejected'].includes(objective.status)) return res.status(400).json({ success: false, message: 'Cannot submit progress on a goal with status: ' + objective.status + '.' });
     if (String(objective.owner) !== String(req.user.id) && req.user.role !== 'ADMIN') return res.status(403).json({ success: false, message: 'Only the owner can submit progress.' });
     if (objective.cycle && objective.cycle.status === 'closed') return res.status(400).json({ success: false, message: 'Cycle is closed.' });
 

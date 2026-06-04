@@ -24,7 +24,7 @@ const finalEvaluationSchema = new mongoose.Schema({
   hr_validated_at: Date,
   performance_status: {
     type: String,
-    enum: ['excellent_performance', 'satisfactory', 'needs_improvement', 'critical_attention'],
+    enum: ['excellent_performance', 'satisfactory', 'needs_improvement', 'critical_attention', null],
     default: null
   },
   exported_at: Date,

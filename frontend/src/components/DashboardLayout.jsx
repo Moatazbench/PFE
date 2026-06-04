@@ -5,35 +5,51 @@ import TopHeader from './TopHeader';
 
 function DashboardLayout({ children }) {
     var { user } = useAuth();
-    var [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    var [sidebarCollapsed, setSidebarCollapsed] = useState(function() {
+        return localStorage.getItem('sidebarCollapsed') === 'true';
+    });
     var [mobileOpen, setMobileOpen] = useState(false);
+
+    function handleToggleSidebar(collapsed) {
+        setSidebarCollapsed(collapsed);
+        localStorage.setItem('sidebarCollapsed', collapsed);
+    }
 
     if (!user) {
         return <>{children}</>;
     }
 
-    var shellClass = 'ent-shell';
-    if (sidebarCollapsed) shellClass += ' ent-shell--collapsed';
-    if (mobileOpen) shellClass += ' ent-shell--mobile-open';
+    var sidebarWidth = sidebarCollapsed ? '64px' : '260px';
 
     return (
-        <div className={shellClass}>
-            <div
-                className="ent-sidebar-overlay"
-                onClick={function () { setMobileOpen(false); }}
-                aria-hidden="true"
-            ></div>
+        <div style={{ display: 'flex', minHeight: '100vh', width: '100%', backgroundColor: 'var(--shell-bg, #F8FAFC)' }}>
+            {mobileOpen && (
+                <div
+                    style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9998 }}
+                    onClick={function () { setMobileOpen(false); }}
+                    aria-hidden="true"
+                ></div>
+            )}
 
             <EnterpriseSidebar
                 collapsed={sidebarCollapsed}
-                setCollapsed={setSidebarCollapsed}
+                setCollapsed={handleToggleSidebar}
                 onNavigate={function () { setMobileOpen(false); }}
             />
 
-            <div className="ent-shell__content-wrapper">
+            <div style={{
+                flex: 1,
+                marginLeft: sidebarWidth,
+                width: `calc(100% - ${sidebarWidth})`,
+                display: 'flex',
+                flexDirection: 'column',
+                minHeight: '100vh',
+                minWidth: 0,
+                transition: 'margin-left 0.3s ease, width 0.3s ease'
+            }}>
                 <TopHeader onMobileToggle={function () { setMobileOpen(!mobileOpen); }} />
-                <main className="ent-main">
-                    <div className="page-enter">{children}</div>
+                <main style={{ flex: 1, padding: '24px', maxWidth: '1400px', margin: '0 auto', width: '100%', minWidth: 0 }}>
+                    <div style={{ width: '100%' }}>{children}</div>
                 </main>
             </div>
         </div>

@@ -612,7 +612,7 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
       {historyEvals.length > 1 && (
         <div className="card shadow-sm" style={{ padding: '1.5rem' }}>
           <h3 style={{ margin: '0 0 1rem 0' }}>Personal Growth History</h3>
-          <div style={{ height: '300px' }}>
+          <div style={{ width: '100%', minWidth: '200px', height: '300px', minHeight: '300px' }}>
             <Line data={chartData} options={chartOptions} />
           </div>
         </div>

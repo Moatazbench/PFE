@@ -143,11 +143,11 @@ function TopHeader({ onMobileToggle }) {
                         <line x1="3" y1="18" x2="21" y2="18" />
                     </svg>
                 </button>
-                <div>
+                <div style={{ minWidth: 0, overflow: 'hidden' }}>
                     {section ? <span className="ent-header__breadcrumb">{section} /</span> : null}
-                    <h1 className="ent-header__page-title">{title}</h1>
+                    <h1 className="ent-header__page-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h1>
                     {phaseLabel ? (
-                        <div className="ent-header__phase">
+                        <div className="ent-header__phase" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             <strong>{phaseLabel}</strong>
                             {activeCycle?.name ? ' - ' + activeCycle.name : ''}
                         </div>

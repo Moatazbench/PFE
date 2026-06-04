@@ -464,7 +464,7 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
           </div>
           <div>
             <h4 style={{ margin: '0 0 1rem 0' }}>Goal Completion Analysis</h4>
-            <div style={{ height: '140px', display: 'flex', justifyContent: 'center' }}>
+            <div style={{ width: '100%', minWidth: '200px', height: '140px', minHeight: '140px', display: 'flex', justifyContent: 'center' }}>
               <Pie data={completionChartData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }} />
             </div>
           </div>

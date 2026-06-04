@@ -34,7 +34,7 @@
   --sidebar-accent: #818CF8;
   --sidebar-border: rgba(255,255,255,0.06);
   --sidebar-group: rgba(255,255,255,0.35);
-  --sidebar-width: 260px;
+  --sidebar-width: 280px;
   --sidebar-width-collapsed: 72px;
 
   /* Text */
@@ -116,12 +116,13 @@ body {
   flex-direction: column;
   min-height: 100vh;
   min-width: 0;
-  width: 100%;
-  transition: margin-left var(--shell-transition);
+  width: calc(100% - var(--sidebar-width));
+  transition: margin-left var(--shell-transition), width var(--shell-transition);
 }
 
 .ent-shell--collapsed .ent-shell__content-wrapper {
   margin-left: var(--sidebar-width-collapsed);
+  width: calc(100% - var(--sidebar-width-collapsed));
 }
 
 /* ── Sidebar ── */

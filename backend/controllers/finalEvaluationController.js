@@ -332,6 +332,11 @@ exports.updateEvaluation = async (req, res) => {
     const { id } = req.params;
     const { manager_score, rating_label, recommendation, strengths, weaknesses, improvement_suggestions, manager_comments, status, hr_decision } = req.body;
 
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ success: false, message: 'Evaluation not found' });
+    }
+
     const evaluation = await FinalEvaluation.findById(id);
     if (!evaluation) return res.status(404).json({ success: false, message: 'Evaluation not found' });
     const phaseCheck = await enforcePhase3Evaluation(evaluation.cycle_id);
@@ -357,7 +362,7 @@ exports.updateEvaluation = async (req, res) => {
     if (manager_comments !== undefined) evaluation.manager_comments = manager_comments;
     if (recommendation) evaluation.recommendation = recommendation;
     if (status) evaluation.status = status; // e.g. 'pending_hr'
-    evaluation.evaluator_id = req.user.id;
+    evaluation.evaluator_id = req.user.id || req.user._id;
     evaluation.evaluator_role = req.user.role;
     evaluation.evaluated_at = new Date();
     
@@ -365,14 +370,14 @@ exports.updateEvaluation = async (req, res) => {
       evaluation.hr_decision = {
         action: hr_decision.action,
         notes: hr_decision.notes,
-        decided_by: req.user.id,
+        decided_by: req.user.id || req.user._id,
         decided_at: new Date()
       };
     }
 
     await evaluation.save();
 
-    await auditLogger.log(req.user.id, 'evaluation.updated', 'FinalEvaluation', evaluation._id, {
+    await auditLogger.log(req.user.id || req.user._id, 'evaluation.updated', 'FinalEvaluation', evaluation._id, {
       status: evaluation.status,
       manager_score,
       hr_decision_action: hr_decision ? hr_decision.action : null

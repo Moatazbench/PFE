@@ -10,6 +10,10 @@ const OpenAI = require('openai');
 
 // ─── Provider configs ───
 const PROVIDERS = {
+  gemini: {
+    envKey: 'GEMINI_API_KEY',
+    defaultModel: 'gemini-1.5-flash',
+  },
   grok: {
     baseURL: 'https://api.x.ai/v1',
     envKey: 'XAI_API_KEY',
@@ -24,7 +28,7 @@ const PROVIDERS = {
 
 const DEFAULT_TIMEOUT_MS = 15000;
 const DEFAULT_MAX_INPUT_CHARS = 12000;
-const MAX_TOKENS = 800;
+const MAX_TOKENS = 2500;
 
 // ─── Config ───
 function getConfig() {
@@ -57,11 +61,16 @@ function getClient() {
   const config = getConfig();
   // Rebuild client if provider changed
   if (!_client || _clientProvider !== config.provider) {
-    _client = new OpenAI({
-      apiKey: config.apiKey,
-      baseURL: config.baseURL,
-      timeout: config.timeoutMs,
-    });
+    if (config.provider === 'gemini') {
+      const { GoogleGenerativeAI } = require('@google/generative-ai');
+      _client = new GoogleGenerativeAI(config.apiKey);
+    } else {
+      _client = new OpenAI({
+        apiKey: config.apiKey,
+        baseURL: config.baseURL,
+        timeout: config.timeoutMs,
+      });
+    }
     _clientProvider = config.provider;
   }
   return _client;
@@ -168,15 +177,43 @@ async function callAI(messages, temperature = 0.2) {
   const config = getConfig();
   const client = getClient();
 
-  const completion = await client.chat.completions.create({
-    model: config.model,
-    messages,
-    max_tokens: MAX_TOKENS,
-    temperature,
-  });
+  if (config.provider === 'gemini') {
+    let systemInstruction = "";
+    const contents = [];
+    for (const msg of messages) {
+      if (msg.role === 'system') {
+        systemInstruction += msg.content + "\n";
+      } else {
+        contents.push({
+          role: msg.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: msg.content }]
+        });
+      }
+    }
+    
+    const modelConfig = { 
+      model: config.model, 
+      generationConfig: { temperature, maxOutputTokens: MAX_TOKENS } 
+    };
+    if (systemInstruction) {
+      modelConfig.systemInstruction = systemInstruction.trim();
+    }
+    
+    const genModel = client.getGenerativeModel(modelConfig);
+    const result = await genModel.generateContent({ contents });
+    const response = await result.response;
+    return response.text();
+  } else {
+    const completion = await client.chat.completions.create({
+      model: config.model,
+      messages,
+      max_tokens: MAX_TOKENS,
+      temperature,
+    });
 
-  const text = completion?.choices?.[0]?.message?.content || '';
-  return text;
+    const text = completion?.choices?.[0]?.message?.content || '';
+    return text;
+  }
 }
 
 // ─── Validate review output ───
