@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
 import ExportPDF from '../components/ExportPDF';
+import { formatRoleLabel } from '../utils/roles';
 
 function Users() {
   const { user } = useAuth();
@@ -53,8 +54,9 @@ function Users() {
 
   // Derived state for filtering
   const filteredUsers = users.filter((u) => {
-    const matchesSearch = (u.name?.toLowerCase().includes(searchQuery.toLowerCase()) || '') || 
-                          (u.email?.toLowerCase().includes(searchQuery.toLowerCase()) || '');
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+    const matchesSearch = [u.name, u.email, u.role, formatRoleLabel(u.role)]
+      .some((value) => String(value || '').toLowerCase().includes(normalizedSearch));
     const matchesRole = roleFilter === 'ALL' || u.role === roleFilter;
     return matchesSearch && matchesRole;
   });
@@ -87,7 +89,7 @@ function Users() {
           <option value="EMPLOYEE">Employee</option>
           <option value="MANAGER">Manager</option>
           <option value="HR">HR</option>
-          <option value="ADMIN">Admin</option>
+          <option value="ADMIN">Director</option>
           <option value="COLLABORATEUR">Collaborateur</option>
           <option value="TEAM_LEADER">Team Leader</option>
         </select>
@@ -114,7 +116,7 @@ function Users() {
                   <tr key={u._id}>
                     <td>{u.name}</td>
                     <td>{u.email}</td>
-                    <td>{u.role}</td>
+                    <td>{formatRoleLabel(u.role)}</td>
                     <td>
                       <div className="table-actions">
                         <ExportPDF type="user" id={u._id} label="PDF" />

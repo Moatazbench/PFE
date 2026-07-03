@@ -1,0 +1,241 @@
+<mxfile host="app.diagrams.net" modified="2026-06-11T18:00:00.000Z" agent="PerTrack UML" version="24.0.0" type="device">
+  <diagram name="Use Case Diagram" id="uc-pertrack">
+    <mxGraphModel dx="0" dy="0" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- ============================================ -->
+        <!-- SYSTEM BOUNDARY                              -->
+        <!-- ============================================ -->
+        <mxCell id="2" value="System: PerTrack — HR Performance Management Platform" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#333333;strokeWidth=2;dashed=0;verticalAlign=top;fontSize=15;fontStyle=1;fontFamily=Arial;spacingTop=8;align=center;" vertex="1" parent="1">
+          <mxGeometry x="260" y="10" width="1180" height="1150" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- ZONE SEPARATORS (dashed horizontal lines)    -->
+        <!-- ============================================ -->
+        <mxCell id="26" value="" style="endArrow=none;dashed=1;dashPattern=8 8;strokeColor=#BBBBBB;strokeWidth=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="280" y="260" as="sourcePoint"/>
+            <mxPoint x="1420" y="260" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="27" value="" style="endArrow=none;dashed=1;dashPattern=8 8;strokeColor=#BBBBBB;strokeWidth=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="280" y="450" as="sourcePoint"/>
+            <mxPoint x="1420" y="450" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="28" value="" style="endArrow=none;dashed=1;dashPattern=8 8;strokeColor=#BBBBBB;strokeWidth=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="280" y="750" as="sourcePoint"/>
+            <mxPoint x="1420" y="750" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- ZONE LABELS (right side, inside boundary)    -->
+        <!-- ============================================ -->
+        <mxCell id="22" value="Admin Zone" style="text;html=1;fontSize=11;fontStyle=2;fontFamily=Arial;fontColor=#999999;align=right;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1270" y="40" width="150" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="23" value="HR Manager Zone" style="text;html=1;fontSize=11;fontStyle=2;fontFamily=Arial;fontColor=#999999;align=right;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1270" y="270" width="150" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="24" value="Team Leader Zone" style="text;html=1;fontSize=11;fontStyle=2;fontFamily=Arial;fontColor=#999999;align=right;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1270" y="460" width="150" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="25" value="Collaborator Zone" style="text;html=1;fontSize=11;fontStyle=2;fontFamily=Arial;fontColor=#999999;align=right;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1270" y="760" width="150" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- ACTORS (stick figures, outside boundary)     -->
+        <!-- ============================================ -->
+        <mxCell id="3" value="Administrator" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=none;strokeColor=#333333;fontSize=13;fontStyle=1;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="100" y="100" width="40" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="4" value="HR Manager" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=none;strokeColor=#333333;fontSize=13;fontStyle=1;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="100" y="320" width="40" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="5" value="Team Leader" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=none;strokeColor=#333333;fontSize=13;fontStyle=1;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="100" y="560" width="40" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="6" value="Collaborator" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=none;strokeColor=#333333;fontSize=13;fontStyle=1;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="100" y="820" width="40" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- USE CASES — Administrator Zone               -->
+        <!-- ============================================ -->
+        <mxCell id="7" value="Manage Users" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontFamily=Arial;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="370" y="70" width="210" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="8" value="Manage Teams" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontFamily=Arial;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="660" y="70" width="210" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="9" value="Manage Performance&#xa;Cycles" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontFamily=Arial;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="370" y="170" width="240" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="10" value="Consult Reports" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontFamily=Arial;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="690" y="170" width="210" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- USE CASES — HR Manager Zone                  -->
+        <!-- ============================================ -->
+        <mxCell id="11" value="Consult Audit Logs" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontFamily=Arial;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="370" y="310" width="230" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="12" value="Apply Bonus / Penalty" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontFamily=Arial;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="680" y="310" width="240" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- USE CASES — Team Leader Zone                 -->
+        <!-- ============================================ -->
+        <mxCell id="13" value="Validate Objectives" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontFamily=Arial;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="370" y="500" width="230" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="14" value="Review Check-ins" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontFamily=Arial;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="680" y="500" width="220" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="15" value="Evaluate Collaborator" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontFamily=Arial;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="370" y="590" width="240" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="16" value="Schedule Meetings" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontFamily=Arial;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="690" y="590" width="220" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="17" value="Consult Team&#xa;Performance" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontFamily=Arial;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="510" y="680" width="240" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- USE CASES — Collaborator Zone                -->
+        <!-- ============================================ -->
+        <mxCell id="18" value="Manage Objectives" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontFamily=Arial;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="370" y="800" width="230" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="19" value="Perform Mid-Year&#xa;Check-in" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontFamily=Arial;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="680" y="800" width="240" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="20" value="Manage Tasks" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontFamily=Arial;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="510" y="910" width="210" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- USE CASE — Shared: Authenticate              -->
+        <!-- ============================================ -->
+        <mxCell id="21" value="Authenticate" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;fontFamily=Arial;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="530" width="210" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- EDGES — Administrator associations           -->
+        <!-- ============================================ -->
+        <mxCell id="30" value="" style="endArrow=none;html=1;strokeColor=#333333;strokeWidth=1.2;fontFamily=Arial;exitX=1;exitY=0.3;exitDx=0;exitDy=0;" edge="1" source="3" target="7" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="31" value="" style="endArrow=none;html=1;strokeColor=#333333;strokeWidth=1.2;fontFamily=Arial;" edge="1" source="3" target="8" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="32" value="" style="endArrow=none;html=1;strokeColor=#333333;strokeWidth=1.2;fontFamily=Arial;exitX=1;exitY=0.7;exitDx=0;exitDy=0;" edge="1" source="3" target="9" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="33" value="" style="endArrow=none;html=1;strokeColor=#333333;strokeWidth=1.2;fontFamily=Arial;" edge="1" source="3" target="10" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- EDGES — HR Manager associations              -->
+        <!-- ============================================ -->
+        <mxCell id="34" value="" style="endArrow=none;html=1;strokeColor=#333333;strokeWidth=1.2;fontFamily=Arial;" edge="1" source="4" target="11" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="35" value="" style="endArrow=none;html=1;strokeColor=#333333;strokeWidth=1.2;fontFamily=Arial;" edge="1" source="4" target="12" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="36" value="" style="endArrow=none;html=1;strokeColor=#6c8ebf;strokeWidth=1;dashed=0;dashPattern=5 5;fontFamily=Arial;" edge="1" source="4" target="9" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="37" value="" style="endArrow=none;html=1;strokeColor=#6c8ebf;strokeWidth=1;dashed=0;dashPattern=5 5;fontFamily=Arial;" edge="1" source="4" target="10" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- EDGES — Team Leader associations             -->
+        <!-- ============================================ -->
+        <mxCell id="38" value="" style="endArrow=none;html=1;strokeColor=#333333;strokeWidth=1.2;fontFamily=Arial;" edge="1" source="5" target="13" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="39" value="" style="endArrow=none;html=1;strokeColor=#333333;strokeWidth=1.2;fontFamily=Arial;" edge="1" source="5" target="14" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="40" value="" style="endArrow=none;html=1;strokeColor=#333333;strokeWidth=1.2;fontFamily=Arial;" edge="1" source="5" target="15" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="41" value="" style="endArrow=none;html=1;strokeColor=#333333;strokeWidth=1.2;fontFamily=Arial;" edge="1" source="5" target="16" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="42" value="" style="endArrow=none;html=1;strokeColor=#333333;strokeWidth=1.2;fontFamily=Arial;" edge="1" source="5" target="17" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- EDGES — Collaborator associations            -->
+        <!-- ============================================ -->
+        <mxCell id="43" value="" style="endArrow=none;html=1;strokeColor=#333333;strokeWidth=1.2;fontFamily=Arial;" edge="1" source="6" target="18" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="44" value="" style="endArrow=none;html=1;strokeColor=#333333;strokeWidth=1.2;fontFamily=Arial;" edge="1" source="6" target="19" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="45" value="" style="endArrow=none;html=1;strokeColor=#333333;strokeWidth=1.2;fontFamily=Arial;" edge="1" source="6" target="20" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- EDGES — All actors to Authenticate           -->
+        <!-- ============================================ -->
+        <mxCell id="46" value="" style="endArrow=none;html=1;strokeColor=#82b366;strokeWidth=1;fontFamily=Arial;entryX=0;entryY=0.2;entryDx=0;entryDy=0;" edge="1" source="3" target="21" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="47" value="" style="endArrow=none;html=1;strokeColor=#82b366;strokeWidth=1;fontFamily=Arial;entryX=0;entryY=0.4;entryDx=0;entryDy=0;" edge="1" source="4" target="21" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="48" value="" style="endArrow=none;html=1;strokeColor=#82b366;strokeWidth=1;fontFamily=Arial;entryX=0;entryY=0.6;entryDx=0;entryDy=0;" edge="1" source="5" target="21" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="49" value="" style="endArrow=none;html=1;strokeColor=#82b366;strokeWidth=1;fontFamily=Arial;entryX=0;entryY=0.8;entryDx=0;entryDy=0;" edge="1" source="6" target="21" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- INCLUDE RELATIONSHIPS (dashed arrows)        -->
+        <!-- ============================================ -->
+        <mxCell id="50" value="«include»" style="endArrow=open;endFill=0;dashed=1;html=1;strokeColor=#666666;strokeWidth=1.5;fontSize=11;fontStyle=2;fontFamily=Arial;edgeStyle=orthogonalEdgeStyle;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.2;entryY=0;entryDx=0;entryDy=0;" edge="1" source="7" target="21" parent="1">
+          <mxGeometry x="0.2" y="10" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="51" value="«include»" style="endArrow=open;endFill=0;dashed=1;html=1;strokeColor=#666666;strokeWidth=1.5;fontSize=11;fontStyle=2;fontFamily=Arial;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;" edge="1" source="13" target="21" parent="1">
+          <mxGeometry x="0.2" y="10" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="52" value="«include»" style="endArrow=open;endFill=0;dashed=1;html=1;strokeColor=#666666;strokeWidth=1.5;fontSize=11;fontStyle=2;fontFamily=Arial;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" edge="1" source="15" target="21" parent="1">
+          <mxGeometry x="0.2" y="10" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="53" value="«include»" style="endArrow=open;endFill=0;dashed=1;html=1;strokeColor=#666666;strokeWidth=1.5;fontSize=11;fontStyle=2;fontFamily=Arial;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.3;entryY=1;entryDx=0;entryDy=0;" edge="1" source="19" target="21" parent="1">
+          <mxGeometry x="0.2" y="10" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

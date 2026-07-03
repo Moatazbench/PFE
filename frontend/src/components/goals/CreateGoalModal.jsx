@@ -3,7 +3,7 @@ import api from '../../services/api';
 import { useAuth } from '../AuthContext';
 import { normalizeWeight, sumObjectiveWeights, sumTeamObjectiveWeights, validateObjectiveForm } from '../../utils/objectiveRules';
 
-function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoals, existingObjectives }) {
+function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, existingObjectives }) {
     var { user } = useAuth();
     var [form, setForm] = useState({
         title: '',
@@ -12,9 +12,8 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
         weight: 20,
         cycle: selectedCycle || '',
         category: 'individual',
-        labels: '',
+        priority: 'medium',
         visibility: 'team',
-        parentObjective: '',
         targetUser: '',
         targetTeam: ''
     });
@@ -24,7 +23,7 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
     var [availableUsers, setAvailableUsers] = useState([]);
     var [aiLoading, setAiLoading] = useState('');
     var [aiError, setAiError] = useState('');
-    var [analysisResult, setAnalysisResult] = useState(null);
+    var [analysisResult] = useState(null);
     var [refinementResult, setRefinementResult] = useState(null);
     var [fieldErrors, setFieldErrors] = useState({});
     var [capacityInfo, setCapacityInfo] = useState({ usedWeight: null, remainingWeight: null, message: '' });
@@ -150,19 +149,6 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
         };
     }
 
-    async function handleAnalyzeObjective() {
-        setAiLoading('analyze');
-        setAiError('');
-        try {
-            var res = await api.post('/ai/analyze-objective-quality', getObjectivePayload());
-            setAnalysisResult(res.data);
-        } catch (err) {
-            setAiError(err.response?.data?.message || 'Failed to analyze objective.');
-        } finally {
-            setAiLoading('');
-        }
-    }
-
     async function handleRefineObjective() {
         setAiLoading('refine');
         setAiError('');
@@ -206,11 +192,10 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
                 description: validation.sanitized.description,
                 successIndicator: validation.sanitized.successIndicator,
                 weight: validation.sanitized.weight,
+                priority: form.priority,
                 cycle: form.cycle,
                 category: form.category,
-                labels: form.labels ? form.labels.split(',').map(function (l) { return l.trim(); }).filter(Boolean) : [],
                 visibility: form.visibility,
-                parentObjective: form.parentObjective || null,
                 targetUser: form.targetUser || null,
                 targetTeam: form.targetTeam || null
             };
@@ -340,9 +325,6 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
                                 {fieldErrors.description && <div className="goal-modal__error" style={{ margin: 0 }}>{fieldErrors.description}</div>}
                             </div>
                             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
-                                <button type="button" className="btn btn--secondary btn--sm" onClick={handleAnalyzeObjective} disabled={aiLoading === 'analyze'}>
-                                    {aiLoading === 'analyze' ? 'Analyzing...' : 'Analyze Objective'}
-                                </button>
                                 <button type="button" className="btn btn--secondary btn--sm" onClick={handleRefineObjective} disabled={aiLoading === 'refine'}>
                                     {aiLoading === 'refine' ? 'Refining...' : 'Refine Objective'}
                                 </button>
@@ -432,8 +414,13 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, parentGoal
                             </div>
 
                             <div className="goal-modal__field">
-                                <label>Priority Labels</label>
-                                <input type="text" value={form.labels} onChange={function (e) { handleChange('labels', e.target.value); }} placeholder="e.g. High, Q1" disabled={isCreateLocked} />
+                                <label>Priority</label>
+                                <select value={form.priority} onChange={function (e) { handleChange('priority', e.target.value); }} disabled={isCreateLocked}>
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="critical">Critical</option>
+                                </select>
                             </div>
 
                             <div className="goal-modal__field">

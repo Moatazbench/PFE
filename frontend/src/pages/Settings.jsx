@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../components/AuthContext';
 import UserAvatar from '../components/UserAvatar';
+import { formatRoleLabel } from '../utils/roles';
 
 function Settings() {
   const { user, updateUser } = useAuth();
@@ -82,7 +83,7 @@ function Settings() {
   }
 
   function formatRole(role) {
-    return (role || 'User').replace(/_/g, ' ');
+    return formatRoleLabel(role);
   }
 
   var roleStyle = getRoleColor(user.role);
@@ -202,7 +203,7 @@ function Settings() {
               return (
                 <div key={item.label} style={{ borderBottom: '1px solid var(--shell-border, #f1f5f9)', paddingBottom: 12 }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--shell-text-secondary, #64748b)', marginBottom: 3 }}>{item.label}</div>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--shell-text, #0f172a)', fontFamily: item.mono ? 'monospace' : 'inherit', fontSize: item.mono ? '0.78rem' : '0.95rem', wordBreak: 'break-all' }}>{item.value}</div>
+                  <div style={{ fontWeight: 500, color: 'var(--shell-text, #0f172a)', fontFamily: item.mono ? 'monospace' : 'inherit', fontSize: item.mono ? '0.78rem' : '0.95rem', wordBreak: 'break-all' }}>{item.value}</div>
                 </div>
               );
             })}
@@ -274,7 +275,7 @@ SMTP_PASS=your-app-password`}
       {(user.role === 'admin' || user.role === 'ADMIN') && (
         <div style={{ background: 'linear-gradient(135deg, #fef2f2, #fff7ed)', border: '1px solid #fca5a5', borderRadius: 16, padding: '24px 28px', marginTop: 20, boxShadow: '0 2px 10px rgba(239,68,68,0.07)' }}>
           <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#991b1b', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: '1.2rem' }}>📢</span> Admin Actions
+            <span style={{ fontSize: '1.2rem' }}>📢</span> Director Actions
           </h2>
           <p style={{ fontSize: '0.88rem', color: '#b91c1c', margin: '0 0 16px' }}>Send a broadcast notification to all users in the system.</p>
           <button onClick={handleBroadcast} style={{ padding: '10px 22px', background: 'linear-gradient(135deg, #dc2626, #ef4444)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 3px 10px rgba(220,38,38,0.25)' }}>

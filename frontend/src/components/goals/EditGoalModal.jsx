@@ -3,7 +3,7 @@ import api from '../../services/api';
 import { useAuth } from '../AuthContext';
 import { normalizeWeight, sumObjectiveWeights, sumTeamObjectiveWeights, validateObjectiveForm } from '../../utils/objectiveRules';
 
-function EditGoalModal({ goal, onClose, onUpdated, cycles, parentGoals, existingObjectives }) {
+function EditGoalModal({ goal, onClose, onUpdated, cycles, existingObjectives }) {
     var { user } = useAuth();
     var [form, setForm] = useState({
         title: goal.title || '',
@@ -12,9 +12,8 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, parentGoals, existing
         weight: goal.weight || 20,
         cycle: goal.cycle?._id || goal.cycle || '',
         category: goal.category || 'individual',
-        labels: (goal.labels || []).join(', '),
+        priority: goal.priority || 'medium',
         visibility: goal.visibility || 'public',
-        parentObjective: goal.parentObjective?._id || goal.parentObjective || '',
     });
     var [error, setError] = useState('');
     var [loading, setLoading] = useState(false);
@@ -60,13 +59,6 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, parentGoals, existing
     var needsCorrectionReason = isPhase2Locked && anySoftFieldChanged;
     var correctionReasonValid = !needsCorrectionReason || (correctionReason.trim().length > 0);
     var showPhase2SaveButton = isPhase2Locked && anySoftFieldChanged;
-
-    // Resolve parent objective title for read-only display
-    var parentTitle = '';
-    if (form.parentObjective && parentGoals) {
-        var found = parentGoals.find(function(pg) { return pg._id === form.parentObjective; });
-        parentTitle = found ? found.title : 'Linked objective';
-    }
 
     useEffect(function () {
         if (form.category !== 'team' || !teamId || !form.cycle) {
@@ -145,7 +137,7 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, parentGoals, existing
             var payload;
             if (isPhase2Locked) {
                 payload = {
-                    labels: form.labels ? form.labels.split(',').map(function (l) { return l.trim(); }).filter(Boolean) : [],
+                    priority: form.priority,
                     visibility: form.visibility,
                 };
                 if (descriptionChanged) payload.description = form.description;
@@ -157,10 +149,9 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, parentGoals, existing
                     description: validation.sanitized.description,
                     successIndicator: validation.sanitized.successIndicator,
                     weight: validation.sanitized.weight,
+                    priority: form.priority,
                     cycle: form.cycle, category: form.category,
-                    labels: form.labels ? form.labels.split(',').map(function (l) { return l.trim(); }).filter(Boolean) : [],
                     visibility: form.visibility,
-                    parentObjective: form.parentObjective || null,
                 };
             }
             await api.put('/objectives/' + goal._id, payload);
@@ -233,7 +224,7 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, parentGoals, existing
                         </span>
                     </div>
                     <div style={{ marginTop: '0.45rem', fontSize: '0.85rem', color: '#475569' }}>
-                        {isPhaseThreeLocked ? 'All objective fields are read-only during Phase 3.' : isPhase2Locked ? 'Structural fields (title, weight, alignment) are locked. Description and success indicator can be edited with a correction reason.' : 'Objective fields are editable in Phase 1.'}
+                        {isPhaseThreeLocked ? 'All objective fields are read-only during Phase 3.' : isPhase2Locked ? 'Structural fields (title and weight) are locked. Description and success indicator can be edited with a correction reason.' : 'Objective fields are editable in Phase 1.'}
                     </div>
                 </div>
                 {goal.status === 'rejected' && goal.managerComments && (
@@ -329,9 +320,6 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, parentGoals, existing
 
                     {/* AI Buttons */}
                     <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '-0.25rem', marginBottom: '0.5rem' }}>
-                        <button type="button" className="btn btn--secondary btn--sm" onClick={handleAnalyzeObjective} disabled={aiLoading === 'analyze'}>
-                            {aiLoading === 'analyze' ? 'Analyzing...' : 'Analyze Objective'}
-                        </button>
                         <button type="button" className="btn btn--secondary btn--sm" onClick={handleRefineObjective} disabled={aiLoading === 'refine'}>
                             {aiLoading === 'refine' ? 'Refining...' : 'Refine Objective'}
                         </button>
@@ -410,11 +398,16 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, parentGoals, existing
                         )}
                     </div>
 
-                    {/* Labels & Visibility */}
+                    {/* Priority & Visibility */}
                     <div className="goal-modal__row">
                         <div className="goal-modal__field">
-                            <label>Labels (comma-separated)</label>
-                            <input type="text" value={form.labels} onChange={function (e) { handleChange('labels', e.target.value); }} disabled={isPhaseThreeLocked} />
+                            <label>Priority</label>
+                            <select value={form.priority} onChange={function (e) { handleChange('priority', e.target.value); }} disabled={isPhaseThreeLocked}>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                            </select>
                         </div>
                         <div className="goal-modal__field">
                             <label>Visibility</label>
@@ -428,26 +421,6 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, parentGoals, existing
                     </div>
 
                     {/* ─── PARENT OBJECTIVE — Hard-locked in Phase 2 ─── */}
-                    {parentGoals && parentGoals.length > 0 && (
-                        <div className="goal-modal__field">
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                Parent Objective
-                                {isPhase2Locked && <span title="Locked during Mid-Year Execution" style={{ display: 'inline-flex', cursor: 'help' }}>{lockIconSvg}</span>}
-                            </label>
-                            {isPhase2Locked ? (
-                                <div style={lockedFieldStyle}>
-                                    <span>{parentTitle || 'None (Top-Level Objective)'}</span>
-                                    <span style={lockTooltipStyle}>Locked during Mid-Year Execution</span>
-                                </div>
-                            ) : (
-                                <select value={form.parentObjective} onChange={function (e) { handleChange('parentObjective', e.target.value); }} disabled={isPhaseThreeLocked}>
-                                    <option value="">None (Top-Level Objective)</option>
-                                    {parentGoals.filter(function (pg) { return pg._id !== goal._id; }).map(function (pg) { return <option key={pg._id} value={pg._id}>{pg.title}</option>; })}
-                                </select>
-                            )}
-                        </div>
-                    )}
-
                     {/* Actions — hide save for phase2 if only hard-locked fields visible and nothing changed */}
                     <div className="goal-modal__actions">
                         {!isPhase2Locked && (

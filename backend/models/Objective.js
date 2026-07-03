@@ -78,6 +78,7 @@ const ObjectiveSchema = new mongoose.Schema({
   team: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', default: null, index: true },
   assignedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   weight: { type: Number, required: true, min: 1, max: 100 },
+  priority: { type: String, enum: ['low', 'medium', 'high', 'critical'], default: 'medium', index: true },
   achievementPercent: { type: Number, min: 0, max: 100, default: null },
   selfAssessment: { type: String, default: '' },
   finalSelfAssessment: { type: String, default: '' },

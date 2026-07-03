@@ -144,6 +144,7 @@ function AuditLogsPage() {
                     <td>
                       <div className="audit-logs__entity">
                         <strong>{getEntityLabel(log.entityType)}</strong>
+                        <span>{log.entityName || log.entityId || '—'}</span>
                       </div>
                       {getActionBadge(log.action)}
                     </td>

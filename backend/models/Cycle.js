@@ -68,10 +68,10 @@ CycleSchema.pre('save', function (next) {
       for (var i = 1; i < provided.length; i++) {
         var prev = new Date(provided[i - 1].val);
         var curr = new Date(provided[i].val);
-        if (curr < prev) {
+        if (curr <= prev) {
           return next(new Error(
-            'Phase dates must be sequential: ' + provided[i].name +
-            ' (' + curr.toISOString().slice(0, 10) + ') cannot be before ' +
+            'Phase dates must be strictly sequential and cannot overlap: ' + provided[i].name +
+            ' (' + curr.toISOString().slice(0, 10) + ') must be after ' +
             provided[i - 1].name + ' (' + prev.toISOString().slice(0, 10) + ')'
           ));
         }

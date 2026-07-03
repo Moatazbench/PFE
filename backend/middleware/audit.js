@@ -12,14 +12,13 @@ module.exports = function audit(action, resourceType) {
                 AuditLog.create({
                     user: req.user ? req.user.id : null,
                     action: action,
-                    resourceType: resourceType,
-                    resourceId: req.params.id || (data && data._id) || null,
-                    details: {
+                    entityType: resourceType,
+                    entityId: req.params.id || (data && data._id) || null,
+                    metadata: {
                         method: req.method,
                         path: req.originalUrl,
                         statusCode: res.statusCode
-                    },
-                    tenantId: (req.user && req.user.tenantId) || 'default'
+                    }
                 }).catch(function (err) {
                     console.error('Audit log error:', err.message);
                 });

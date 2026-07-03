@@ -174,10 +174,17 @@ function GoalsPage() {
         return objectives.filter(function(o) {
             var matchesSearch = true;
             if (searchTerm) {
-                var lower = searchTerm.toLowerCase();
-                matchesSearch = (o.title && o.title.toLowerCase().includes(lower)) ||
-                       (o.description && o.description.toLowerCase().includes(lower)) ||
-                       (o.owner && o.owner.name && o.owner.name.toLowerCase().includes(lower));
+                var lower = searchTerm.trim().toLowerCase();
+                matchesSearch = [
+                    o.title,
+                    o.description,
+                    o.successIndicator,
+                    o.owner?.name,
+                    o.owner?.email,
+                    o.status,
+                    o.category,
+                    o.priority,
+                ].some(function (value) { return String(value || '').toLowerCase().includes(lower); });
             }
             var matchesStatus = statusFilter === 'ALL' || o.status === statusFilter;
             return matchesSearch && matchesStatus;
@@ -228,8 +235,8 @@ function GoalsPage() {
     async function handleSubmitCycle() {
         setSubmittingAll(true);
         try {
-            await api.post('/objectives/submit', { cycle: selectedCycle });
-            toast.success('All objectives submitted for approval!');
+            var response = await api.post('/objectives/submit', { cycle: selectedCycle });
+            toast.success(response.data?.message || 'All objectives submitted for approval!');
             setShowSubmitDialog(false);
             fetchObjectives();
         } catch (err) {
@@ -617,14 +624,14 @@ function GoalsPage() {
             {canCreateObjectives && showCreateModal && (
                 <Suspense fallback={null}>
                     <CreateGoalModal onClose={function () { setShowCreateModal(false); }} onCreated={fetchObjectives} cycles={cycles} selectedCycle={selectedCycle}
-                        parentGoals={objectives.filter(function (o) { return !o.parentObjective; })} existingObjectives={[].concat(individualObjectives, teamObjectives)} />
+                        existingObjectives={[].concat(individualObjectives, teamObjectives)} />
                 </Suspense>
             )}
 
             {showEditModal && editingObjective && (
                 <Suspense fallback={null}>
                     <EditGoalModal goal={editingObjective} onClose={function () { setShowEditModal(false); setEditingObjective(null); }} onUpdated={onGoalUpdated}
-                        cycles={cycles} parentGoals={objectives.filter(function (o) { return !o.parentObjective; })} existingObjectives={[].concat(individualObjectives, teamObjectives)} />
+                        cycles={cycles} existingObjectives={[].concat(individualObjectives, teamObjectives)} />
                 </Suspense>
             )}
 

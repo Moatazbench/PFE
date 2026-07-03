@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../components/AuthContext';
+import { formatRoleLabel } from '../utils/roles';
 
 var API = '/api';
 
@@ -111,7 +112,7 @@ function CareerPage() {
         <div className="loading-state"><div className="spinner"></div><p>Loading...</p></div>
       ) : tab === 'competencies' ? (
         competencies.length === 0 ? (
-          <div className="empty-state"><div className="empty-state__icon">📚</div><h3>No competencies defined</h3><p>Admins can add competencies to build the framework.</p></div>
+          <div className="empty-state"><div className="empty-state__icon">📚</div><h3>No competencies defined</h3><p>Directors can add competencies to build the framework.</p></div>
         ) : (
           <div className="competency-grid">
             {competencies.map(function (c) {
@@ -150,7 +151,7 @@ function CareerPage() {
                     </div>
                     <span className="status-chip" style={{ background: p.status === 'active' ? '#10b98118' : '#6b728018', color: p.status === 'active' ? '#10b981' : '#6b7280' }}>{p.status}</span>
                   </div>
-                  {p.user && tab === 'all-paths' && <p className="career-item__user">👤 {p.user.name} ({p.user.role})</p>}
+                  {p.user && tab === 'all-paths' && <p className="career-item__user">👤 {p.user.name} ({formatRoleLabel(p.user.role)})</p>}
                   {p.targetDate && <p className="career-item__date">Target: {new Date(p.targetDate).toLocaleDateString()}</p>}
                   {devTotal > 0 && (
                     <div className="career-item__progress"><div className="progress-bar"><div className="progress-bar__fill" style={{ width: (devTotal ? (devCompleted / devTotal) * 100 : 0) + '%' }}></div></div><span className="career-item__progress-text">{devCompleted}/{devTotal} actions completed</span></div>

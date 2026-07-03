@@ -19,5 +19,6 @@ router.post('/review/final-self', auth, aiController.generateFinalSelfReview);
 router.post('/review/manager', auth, aiController.generateManagerReview);
 router.post('/development-plan', auth, aiController.generateDevelopmentPlan);
 router.post('/generate-evaluation', auth, aiController.generateEvaluationDraft);
+router.post('/predict-performance', auth, aiController.predictEmployeePerformance);
 
 module.exports = router;

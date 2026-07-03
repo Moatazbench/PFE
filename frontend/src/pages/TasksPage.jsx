@@ -28,7 +28,6 @@ var INITIAL_TASK_FORM = {
   description: '',
   priority: 'medium',
   dueDate: '',
-  labels: '',
   linkedGoal: '',
   notes: '',
   workflowStage: 'todo',
@@ -177,7 +176,6 @@ function TasksPage() {
   var currentUserId = String(user?._id || user?.id || '');
   var timer = usePersistentTimer(currentUserId);
 
-  var [tab, setTab] = useState('my');
   var [viewMode, setViewMode] = useState('list');
   var [searchQuery, setSearchQuery] = useState('');
   var [statusFilter, setStatusFilter] = useState('ALL');
@@ -197,11 +195,11 @@ function TasksPage() {
 
   useEffect(function () {
     loadData();
-  }, [tab]);
+  }, []);
 
   useEffect(function () {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, priorityFilter, tab]);
+  }, [searchQuery, statusFilter, priorityFilter]);
 
   useEffect(function () {
     setSelectedTaskId(function (currentTaskId) {
@@ -269,9 +267,8 @@ function TasksPage() {
   function loadData() {
     setLoading(true);
     dispatchWorkflow({ type: 'CLEAR_LOAD_ERROR' });
-    var url = tab === 'my' ? '/tasks/my' : tab === 'assigned' ? '/tasks/assigned' : '/tasks/all';
     Promise.all([
-      api.get(url),
+      api.get('/tasks/my'),
       api.get('/tasks/stats'),
       fetchLinkableObjectives(),
     ]).then(function (responses) {
@@ -294,7 +291,6 @@ function TasksPage() {
       title: workflowState.form.title,
       description: workflowState.form.description,
       priority: workflowState.form.priority,
-      labels: workflowState.form.labels ? workflowState.form.labels.split(',').map(function (label) { return label.trim(); }).filter(Boolean) : [],
       linkedGoal: workflowState.form.linkedGoal || null,
       dueDate: workflowState.form.dueDate || null,
       notes: workflowState.form.notes || '',
@@ -305,7 +301,7 @@ function TasksPage() {
   }
 
   function canTrackTask(task) {
-    return String(task?.assignee?._id || task?.assignee || '') === currentUserId;
+    return String(task?.assignedBy?._id || task?.assignedBy || '') === currentUserId;
   }
 
   function handleCreate() {
@@ -331,7 +327,6 @@ function TasksPage() {
         description: task.description || '',
         priority: task.priority || 'medium',
         dueDate: task.dueDate ? task.dueDate.substring(0, 10) : '',
-        labels: (task.labels || []).join(', '),
         linkedGoal: task.linkedGoal?._id || '',
         notes: task.notes || '',
         workflowStage: getWorkflowStage(task),
@@ -538,9 +533,6 @@ function TasksPage() {
     };
   }, []);
 
-  var tabs = [{ key: 'my', label: 'My Tasks' }, { key: 'assigned', label: 'Assigned by Me' }];
-  if (user.role === 'ADMIN' || user.role === 'HR') tabs.push({ key: 'all', label: 'All Tasks' });
-
   var productivity = useMemo(function () {
     return buildProductivitySummary(tasks);
   }, [tasks]);
@@ -557,9 +549,18 @@ function TasksPage() {
     var filtered = tasks.filter(function (t) {
       var matchesSearch = true;
       if (searchQuery) {
-        var lower = searchQuery.toLowerCase();
-        matchesSearch = (t.title && t.title.toLowerCase().includes(lower)) || 
-                        (t.description && t.description.toLowerCase().includes(lower));
+        var lower = searchQuery.trim().toLowerCase();
+        matchesSearch = [
+          t.title,
+          t.description,
+          t.notes,
+          t.status,
+          t.workflowStage,
+          t.priority,
+          t.assignee?.name,
+          t.assignee?.email,
+          t.linkedGoal?.title,
+        ].some(function (value) { return String(value || '').toLowerCase().includes(lower); });
       }
       var matchesStatus = statusFilter === 'ALL' || t.status === statusFilter || t.workflowStage === statusFilter;
       var matchesPriority = priorityFilter === 'ALL' || t.priority === priorityFilter;
@@ -706,10 +707,6 @@ function TasksPage() {
                 })}
               </select>
             </div>
-            <div className="form-group">
-              <label>Labels</label>
-              <input className="form-input" value={workflowState.form.labels} onChange={function (event) { dispatchWorkflow({ type: 'UPDATE_FORM_FIELD', field: 'labels', value: event.target.value }); }} />
-            </div>
           </div>
           <div className="form-actions">
             <button className="btn btn--secondary" onClick={closeForm}>Cancel</button>
@@ -719,16 +716,6 @@ function TasksPage() {
           </div>
         </div>
       ) : null}
-
-      <div className="tab-bar">
-        {tabs.map(function (item) {
-          return (
-            <button key={item.key} className={'tab-btn' + (tab === item.key ? ' tab-btn--active' : '')} onClick={function () { setTab(item.key); }}>
-              {item.label}
-            </button>
-          );
-        })}
-      </div>
 
       <div className="filters-container" style={{ marginBottom: '1rem', display: 'flex', gap: '1rem' }}>
         <input 

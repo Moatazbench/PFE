@@ -3,6 +3,7 @@ import { useAuth } from '../AuthContext';
 import api from '../../services/api';
 import { useToast } from '../common/Toast';
 import LoadingSkeleton from '../common/LoadingSkeleton';
+import { formatRoleLabel } from '../../utils/roles';
 
 function FeedbackCard({ feedbacks, loading, error }) {
   var auth = useAuth();
@@ -85,7 +86,7 @@ function FeedbackCard({ feedbacks, loading, error }) {
                 if (String(entry._id) === String(user?._id || user?.id)) return null;
                 return (
                   <option key={entry._id} value={entry._id}>
-                    {entry.name} ({entry.role})
+                    {entry.name} ({formatRoleLabel(entry.role)})
                   </option>
                 );
               })}

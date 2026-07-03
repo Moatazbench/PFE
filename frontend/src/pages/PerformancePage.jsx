@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
 import { useToast } from '../components/common/Toast';
+import AIPredictionSimulator from '../components/ai/AIPredictionSimulator';
 
 function PerformancePage() {
   const { user } = useAuth();
@@ -85,16 +86,19 @@ function PerformancePage() {
         <div className="empty-state">No cycles available.</div>
       ) : (
         <>
-          {['TEAM_LEADER', 'ADMIN', 'HR'].includes(user.role) && (
             <div style={{ display: 'flex', gap: '1rem', borderBottom: '2px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '2rem' }}>
               <button onClick={() => setViewMode('self')} style={{ background: 'none', border: 'none', fontSize: '1.1rem', fontWeight: viewMode === 'self' ? 'bold' : 'normal', color: viewMode === 'self' ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', paddingBottom: '0.5rem', borderBottom: viewMode === 'self' ? '3px solid var(--primary)' : '3px solid transparent' }}>
                 My Performance
               </button>
-              <button onClick={() => setViewMode('team')} style={{ background: 'none', border: 'none', fontSize: '1.1rem', fontWeight: viewMode === 'team' ? 'bold' : 'normal', color: viewMode === 'team' ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', paddingBottom: '0.5rem', borderBottom: viewMode === 'team' ? '3px solid var(--primary)' : '3px solid transparent' }}>
-                Team Summary
+              {['TEAM_LEADER', 'ADMIN', 'HR'].includes(user.role) && (
+                  <button onClick={() => setViewMode('team')} style={{ background: 'none', border: 'none', fontSize: '1.1rem', fontWeight: viewMode === 'team' ? 'bold' : 'normal', color: viewMode === 'team' ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', paddingBottom: '0.5rem', borderBottom: viewMode === 'team' ? '3px solid var(--primary)' : '3px solid transparent' }}>
+                    Team Summary
+                  </button>
+              )}
+              <button onClick={() => setViewMode('ai')} style={{ background: 'none', border: 'none', fontSize: '1.1rem', fontWeight: viewMode === 'ai' ? 'bold' : 'normal', color: viewMode === 'ai' ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', paddingBottom: '0.5rem', borderBottom: viewMode === 'ai' ? '3px solid var(--primary)' : '3px solid transparent' }}>
+                AI Simulator
               </button>
             </div>
-          )}
 
           {viewMode === 'self' && myStats && (
             <div>
@@ -171,6 +175,12 @@ function PerformancePage() {
                   </table>
                 </div>
               )}
+            </div>
+          )}
+
+          {viewMode === 'ai' && (
+            <div>
+              <AIPredictionSimulator />
             </div>
           )}
         </>

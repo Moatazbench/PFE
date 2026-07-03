@@ -11,34 +11,12 @@ const validate = require('../middleware/validate');
 const schemas = require('../validators/schemas');
 const { notifyAllActiveUsers } = require('../utils/notificationHelper');
 const { createAuditLog } = require('../utils/auditHelper');
+const { validatePhaseDates } = require('../utils/cycleRules');
 
 /**
  * Validate that phase dates are sequential when provided.
  * Returns an error message string or null if valid.
  */
-function validatePhaseDatesFromBody(body, existing) {
-  var fields = ['phase1Start', 'phase1End', 'phase2Start', 'phase2End', 'phase3Start', 'phase3End'];
-  var dates = {};
-
-  // Merge existing cycle dates with incoming body (body takes priority)
-  fields.forEach(function (f) {
-    if (body[f] !== undefined && body[f] !== null && body[f] !== '') {
-      dates[f] = new Date(body[f]);
-    } else if (existing && existing[f]) {
-      dates[f] = new Date(existing[f]);
-    }
-  });
-
-  // Check sequential ordering for all provided dates
-  var ordered = fields.filter(function (f) { return dates[f] != null; });
-  for (var i = 1; i < ordered.length; i++) {
-    if (dates[ordered[i]] < dates[ordered[i - 1]]) {
-      return 'Phase dates must be sequential: ' + ordered[i] + ' cannot be before ' + ordered[i - 1];
-    }
-  }
-  return null;
-}
-
 // ========== GET ALL CYCLES ==========
 router.get('/', rateLimiter, auth, async function (req, res) {
   try {
@@ -47,7 +25,15 @@ router.get('/', rateLimiter, auth, async function (req, res) {
     var qStatus = req.query.status;
     var qYear = req.query.year;
     if (search && search.trim()) {
-      filter.name = { $regex: search.trim(), $options: 'i' };
+      var searchTerm = search.trim();
+      filter.$or = [
+        { name: { $regex: searchTerm, $options: 'i' } },
+        { status: { $regex: searchTerm, $options: 'i' } },
+        { currentPhase: { $regex: searchTerm, $options: 'i' } },
+      ];
+      if (/^\d{4}$/.test(searchTerm)) {
+        filter.$or.push({ year: Number(searchTerm) });
+      }
     }
     if (qStatus) filter.status = qStatus;
     if (qYear) filter.year = Number(qYear);
@@ -88,34 +74,9 @@ router.post('/', rateLimiter, auth, role('ADMIN', 'HR'), validate(schemas.cycle.
     var { name, year, status,
           phase1Start, phase1End, phase2Start, phase2End, phase3Start, phase3End, currentPhase } = req.body;
 
-    if (req.user.role !== 'ADMIN') {
-      // Explicit field validation for non-admin
-      if (!name || !name.trim()) {
-        return res.status(400).json({ message: 'Cycle name is required.' });
-      }
-      if (name.trim().length > 100) {
-        return res.status(400).json({ message: 'Cycle name cannot exceed 100 characters.' });
-      }
-      if (!year) {
-        return res.status(400).json({ message: 'Year is required.' });
-      }
-      // Validate each phase pair: end must be after start
-      var phasePairs = [
-        { start: phase1Start, end: phase1End, label: 'Phase 1' },
-        { start: phase2Start, end: phase2End, label: 'Phase 2' },
-        { start: phase3Start, end: phase3End, label: 'Phase 3' },
-      ];
-      for (var pp = 0; pp < phasePairs.length; pp++) {
-        if (phasePairs[pp].start && phasePairs[pp].end) {
-          if (new Date(phasePairs[pp].end) <= new Date(phasePairs[pp].start)) {
-            return res.status(400).json({ message: phasePairs[pp].label + ' end date must be after start date.' });
-          }
-        }
-      }
-      var phaseError = validatePhaseDatesFromBody(req.body, null);
-      if (phaseError) {
-        return res.status(400).json({ message: phaseError });
-      }
+    var phaseError = validatePhaseDates(req.body, null);
+    if (phaseError) {
+      return res.status(400).json({ message: phaseError });
     }
 
     var cycle = new Cycle({
@@ -132,9 +93,12 @@ router.post('/', rateLimiter, auth, role('ADMIN', 'HR'), validate(schemas.cycle.
       createdBy: req.user.id
     });
     
-    if (req.user.role === 'ADMIN') cycle.$ignoreSequentialValidation = true;
-    
     await cycle.save();
+    await createAuditLog({
+      entityType: 'cycle', entityId: cycle._id, entityName: cycle.name,
+      action: 'created', performedBy: req.user.id,
+      description: 'Cycle "' + cycle.name + '" created.', ipAddress: req.ip,
+    });
     var populated = await Cycle.findById(cycle._id)
       .populate('createdBy', 'name email');
     res.status(201).json(populated);
@@ -160,31 +124,9 @@ router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), valida
       return res.status(400).json({ message: 'Cannot edit a closed cycle' });
     }
 
-    if (req.user.role !== 'ADMIN') {
-      // Explicit field validation for non-admin
-      if (name !== undefined && (!name || !name.trim())) {
-        return res.status(400).json({ message: 'Cycle name cannot be empty.' });
-      }
-      if (name && name.trim().length > 100) {
-        return res.status(400).json({ message: 'Cycle name cannot exceed 100 characters.' });
-      }
-      // Validate each phase pair: end must be after start
-      var phasePairsU = [
-        { start: phase1Start || (cycle.phase1Start && cycle.phase1Start.toISOString()), end: phase1End || (cycle.phase1End && cycle.phase1End.toISOString()), label: 'Phase 1' },
-        { start: phase2Start || (cycle.phase2Start && cycle.phase2Start.toISOString()), end: phase2End || (cycle.phase2End && cycle.phase2End.toISOString()), label: 'Phase 2' },
-        { start: phase3Start || (cycle.phase3Start && cycle.phase3Start.toISOString()), end: phase3End || (cycle.phase3End && cycle.phase3End.toISOString()), label: 'Phase 3' },
-      ];
-      for (var ppU = 0; ppU < phasePairsU.length; ppU++) {
-        if (phasePairsU[ppU].start && phasePairsU[ppU].end) {
-          if (new Date(phasePairsU[ppU].end) <= new Date(phasePairsU[ppU].start)) {
-            return res.status(400).json({ message: phasePairsU[ppU].label + ' end date must be after start date.' });
-          }
-        }
-      }
-      var phaseError = validatePhaseDatesFromBody(req.body, cycle);
-      if (phaseError) {
-        return res.status(400).json({ message: phaseError });
-      }
+    var phaseError = validatePhaseDates(req.body, cycle);
+    if (phaseError) {
+      return res.status(400).json({ message: phaseError });
     }
 
     if (name) cycle.name = name;
@@ -255,9 +197,12 @@ router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), valida
 
     if (status) cycle.status = status;
 
-    if (req.user.role === 'ADMIN') cycle.$ignoreSequentialValidation = true;
-
     await cycle.save();
+    await createAuditLog({
+      entityType: 'cycle', entityId: cycle._id, entityName: cycle.name,
+      action: 'updated', performedBy: req.user.id, newValue: req.body,
+      description: 'Cycle "' + cycle.name + '" updated.', ipAddress: req.ip,
+    });
     var populated = await Cycle.findById(cycle._id)
       .populate('createdBy', 'name email');
     res.json(populated);
@@ -284,11 +229,9 @@ router.patch('/:id', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), vali
     var { name, year, status,
           phase1Start, phase1End, phase2Start, phase2End, phase3Start, phase3End, currentPhase } = req.body;
 
-    if (req.user.role !== 'ADMIN') {
-      var phaseError = validatePhaseDatesFromBody(req.body, cycle);
-      if (phaseError) {
-        return res.status(400).json({ message: phaseError });
-      }
+    var phaseError = validatePhaseDates(req.body, cycle);
+    if (phaseError) {
+      return res.status(400).json({ message: phaseError });
     }
 
     // Apply updates (only fields that are provided)
@@ -303,9 +246,12 @@ router.patch('/:id', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), vali
     if (phase3End !== undefined) cycle.phase3End = phase3End || null;
     if (currentPhase !== undefined) cycle.currentPhase = currentPhase;
 
-    if (req.user.role === 'ADMIN') cycle.$ignoreSequentialValidation = true;
-
     await cycle.save();
+    await createAuditLog({
+      entityType: 'cycle', entityId: cycle._id, entityName: cycle.name,
+      action: 'updated', performedBy: req.user.id, newValue: req.body,
+      description: 'Cycle "' + cycle.name + '" updated.', ipAddress: req.ip,
+    });
     var populated = await Cycle.findById(cycle._id)
       .populate('createdBy', 'name email');
     res.json(populated);
@@ -520,6 +466,11 @@ router.delete('/:id', rateLimiter, auth, role('ADMIN', 'HR'), async function (re
     await Objective.deleteMany({ cycle: cycle._id });
     await HRDecision.deleteMany({ cycle: cycle._id });
     await Cycle.findByIdAndDelete(req.params.id);
+    await createAuditLog({
+      entityType: 'cycle', entityId: cycle._id, entityName: cycle.name,
+      action: 'deleted', performedBy: req.user.id,
+      description: 'Cycle "' + cycle.name + '" deleted.', ipAddress: req.ip,
+    });
     res.json({ message: 'Cycle and all associated data deleted successfully' });
   } catch (err) {
     console.error('Delete cycle error:', err);

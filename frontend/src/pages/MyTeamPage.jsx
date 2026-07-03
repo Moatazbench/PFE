@@ -3,6 +3,7 @@ import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import './MyTeamPage.css';
+import { formatRoleLabel } from '../utils/roles';
 
 function MyTeamPage() {
     const { user } = useAuth();
@@ -170,7 +171,7 @@ function MyTeamPage() {
                     {teamMembers.map((member) => {
                         const memberId = member.id || member._id;
                         const isMe = user && (String(memberId) === String(user.id || user._id));
-                        const roleText = (member.role || 'Employee').replace(/_/g, ' ');
+                        const roleText = formatRoleLabel(member.role || 'Employee');
                         const dept = member.department || 'General';
                         return (
                             <div key={memberId || Math.random()} className="user-card">

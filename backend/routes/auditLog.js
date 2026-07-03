@@ -7,15 +7,23 @@ const role = require('../middleware/role');
 router.get('/', auth, role('ADMIN', 'HR'), async function (req, res) {
   try {
     var query = {};
-    if (req.query.entityType) query.entityType = req.query.entityType;
+    if (req.query.entityType) {
+      query.$or = [{ entityType: req.query.entityType }, { entity_type: req.query.entityType }];
+    }
     if (req.query.action) query.action = req.query.action;
     if (req.query.userId) query.user = req.query.userId;
     if (req.query.entityId) query.entityId = req.query.entityId;
 
-    if (req.query.from || req.query.to) {
-      query.createdAt = {};
-      if (req.query.from) query.createdAt.$gte = new Date(req.query.from);
-      if (req.query.to) query.createdAt.$lte = new Date(req.query.to);
+    var from = req.query.from || req.query.startDate;
+    var to = req.query.to || req.query.endDate;
+    if (from || to) {
+      query.timestamp = {};
+      if (from) query.timestamp.$gte = new Date(from);
+      if (to) {
+        var endDate = new Date(to);
+        endDate.setHours(23, 59, 59, 999);
+        query.timestamp.$lte = endDate;
+      }
     }
 
     var page = parseInt(req.query.page) || 1;
@@ -25,13 +33,26 @@ router.get('/', auth, role('ADMIN', 'HR'), async function (req, res) {
     var total = await AuditLog.countDocuments(query);
     var logs = await AuditLog.find(query)
       .populate('user', 'name email role')
-      .sort({ createdAt: -1 })
+      .populate('user_id', 'name email role')
+      .sort({ timestamp: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
+    var normalizedLogs = logs.map(function (log) {
+      var item = log.toObject();
+      item.entityType = item.entityType || item.entity_type || 'record';
+      item.entityId = item.entityId || item.entity_id || null;
+      item.userName = item.userName || item.user?.name || item.user_id?.name || 'System';
+      item.userRole = item.userRole || item.user?.role || item.user_id?.role || '';
+      item.timestamp = item.timestamp || item.createdAt;
+      item.description = item.description || item.metadata?.description || '';
+      item.entityName = item.entityName || item.metadata?.entityName || item.metadata?.name || '';
+      return item;
+    });
+
     res.json({
       success: true,
-      logs: logs,
+      logs: normalizedLogs,
       pagination: { page: page, limit: limit, total: total, pages: Math.ceil(total / limit) }
     });
   } catch (err) {
@@ -46,7 +67,7 @@ router.get('/entity/:entityType/:entityId', auth, role('ADMIN', 'HR', 'TEAM_LEAD
       entityId: req.params.entityId
     })
       .populate('user', 'name email')
-      .sort({ createdAt: -1 })
+      .sort({ timestamp: -1, createdAt: -1 })
       .limit(100);
     res.json({ success: true, logs: logs });
   } catch (err) {

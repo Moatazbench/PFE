@@ -4,6 +4,7 @@ import { useAuth } from './AuthContext';
 import useActiveCycle from '../hooks/useActiveCycle';
 import UserAvatar from './UserAvatar';
 import { getSidebarSections, preloadRoute } from '../routes/routeConfig';
+import { formatRoleLabel } from '../utils/roles';
 
 function EnterpriseSidebar({ collapsed, setCollapsed, onNavigate }) {
     var location = useLocation();
@@ -296,7 +297,7 @@ function EnterpriseSidebar({ collapsed, setCollapsed, onNavigate }) {
                             {user.name}
                         </span>
                         <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', textTransform: 'capitalize' }}>
-                            {String(user.role || '').replace(/_/g, ' ')}
+                            {formatRoleLabel(user.role)}
                         </span>
                     </div>
                 </div>

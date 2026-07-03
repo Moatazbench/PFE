@@ -4,11 +4,12 @@ const AuditLog = require('../models/AuditLog');
  * Create an audit log entry.
  * Non-blocking — errors are logged but never thrown.
  */
-async function createAuditLog({ entityType, entityId, action, performedBy, oldValue, newValue, description, ipAddress, userName, userRole }) {
+async function createAuditLog({ entityType, entityId, entityName, action, performedBy, oldValue, newValue, description, ipAddress, userName, userRole }) {
   try {
     await AuditLog.create({
       entityType,
       entityId: entityId || null,
+      entityName: entityName || '',
       action,
       user: performedBy,
       userName: userName || '',

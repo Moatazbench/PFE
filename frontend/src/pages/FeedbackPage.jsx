@@ -4,6 +4,7 @@ import { useAuth } from '../components/AuthContext';
 import { useToast } from '../components/common/Toast';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
+import { formatRoleLabel } from '../utils/roles';
 
 function FeedbackPage() {
   var { user } = useAuth();
@@ -84,7 +85,7 @@ function FeedbackPage() {
               <label>Recipient</label>
               <select className="form-select" value={form.recipientId} onChange={function (e) { setForm(Object.assign({}, form, { recipientId: e.target.value })); }}>
                 <option value="">Select person...</option>
-                {users.filter(function (u) { return u._id !== user.id && u._id !== user._id; }).map(function (u) { return <option key={u._id} value={u._id}>{u.name} ({u.role})</option>; })}
+                {users.filter(function (u) { return u._id !== user.id && u._id !== user._id; }).map(function (u) { return <option key={u._id} value={u._id}>{u.name} ({formatRoleLabel(u.role)})</option>; })}
               </select>
             </div>
             <div className="form-group">

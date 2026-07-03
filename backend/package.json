@@ -21,8 +21,8 @@
     "jsonwebtoken": "^9.0.0",
     "mongoose": "^7.8.9",
     "multer": "^2.0.2",
-    "node-cron": "^3.0.0",
-    "nodemailer": "^8.0.1",
+    "node-cron": "^4.5.0",
+    "nodemailer": "^9.0.3",
     "openai": "^5.23.2",
     "pdfkit": "^0.13.0",
     "xss-clean": "^0.1.4"

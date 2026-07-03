@@ -3,3 +3,47 @@
 @import './apple-design.css';
 @import './enterprise-shell.css';
 @import './design-system.css';
+/* Jury-demo resilience: long content remains usable instead of clipping layouts. */
+.goal-modal,
+.ent-modal {
+  max-height: min(92vh, 900px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.users-table-container,
+.audit-logs__table-wrap,
+.table-container {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.users-table,
+.audit-logs__table {
+  min-width: 760px;
+}
+
+.goal-modal__split-layout,
+.form-grid {
+  min-width: 0;
+}
+
+.goal-modal input,
+.goal-modal select,
+.goal-modal textarea,
+.ent-modal input,
+.ent-modal select {
+  max-width: 100%;
+}
+
+@media (max-width: 900px) {
+  .goal-modal__split-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .goal-modal,
+  .ent-modal {
+    width: min(96vw, 720px);
+    margin: 2vh auto;
+  }
+}

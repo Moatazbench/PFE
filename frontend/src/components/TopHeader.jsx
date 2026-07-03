@@ -6,6 +6,7 @@ import Notifications from './Notifications';
 import useActiveCycle from '../hooks/useActiveCycle';
 import UserAvatar from './UserAvatar';
 import { APP_ROUTES, getRouteMeta, preloadRoute } from '../routes/routeConfig';
+import { formatRoleLabel } from '../utils/roles';
 
 function TopHeader({ onMobileToggle }) {
     var location = useLocation();
@@ -80,7 +81,7 @@ function TopHeader({ onMobileToggle }) {
                     var res = await fetch('/api/users?search=' + encodeURIComponent(term), { headers: headers });
                     var data = await res.json();
                     results = (data.users || []).slice(0, 8).map(function (u) {
-                        return { _id: u._id, label: u.name, sub: u.email || u.role || '', path: '/users' };
+                        return { _id: u._id, label: u.name, sub: u.email || formatRoleLabel(u.role), path: '/users' };
                     });
                 } else if (path.startsWith('/tasks')) {
                     var res = await fetch('/api/tasks/my?search=' + encodeURIComponent(term), { headers: headers });
@@ -130,7 +131,7 @@ function TopHeader({ onMobileToggle }) {
 
 
     function formatRole(role) {
-        return String(role || 'User').replace(/_/g, ' ');
+        return formatRoleLabel(role);
     }
 
     return (

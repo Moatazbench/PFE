@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useTheme } from './ThemeContext';
+import { formatRoleLabel } from '../utils/roles';
 
 function Sidebar({ collapsed, setCollapsed }) {
     var location = useLocation();
@@ -157,7 +158,7 @@ function Sidebar({ collapsed, setCollapsed }) {
                     <div className="ds-sidebar__user-avatar">{initials}</div>
                     <div className="ds-sidebar__user-info">
                         <span className="ds-sidebar__user-name">{user.name}</span>
-                        <span className="ds-sidebar__user-role">{user.role}</span>
+                        <span className="ds-sidebar__user-role">{formatRoleLabel(user.role)}</span>
                     </div>
                 </div>
             </div>

@@ -4,6 +4,7 @@ import { useAuth } from '../components/AuthContext';
 import { useToast } from '../components/common/Toast';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
+import { formatRoleLabel } from '../utils/roles';
 import { useLocation } from 'react-router-dom';
 
 function normalizeMeetingType(value) {
@@ -451,7 +452,7 @@ function MeetingsPage() {
                                                 <label key={u._id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px', cursor: 'pointer', borderRadius: '6px', background: isSelected ? 'var(--primary-light)' : 'transparent' }}>
                                                     <input type="checkbox" checked={isSelected} onChange={function () { toggleParticipant(u._id); }} />
                                                     <span>{u.name}</span>
-                                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>({u.role})</span>
+                                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>({formatRoleLabel(u.role)})</span>
                                                 </label>
                                             );
                                         })}

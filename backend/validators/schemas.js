@@ -42,6 +42,7 @@ const schemas = {
                 'string.min': 'Success Indicator must be descriptive (at least 10 characters).'
             }),
             weight: Joi.number().integer().min(1).max(100).required(),
+            priority: Joi.string().valid('low', 'medium', 'high', 'critical').default('medium'),
             cycle: objectId.required(),
             category: Joi.string().valid('individual', 'team').default('individual'),
             labels: Joi.array().items(Joi.string().trim()).default([]),
@@ -55,9 +56,12 @@ const schemas = {
             description: Joi.string().max(500).allow(''),
             successIndicator: Joi.string().trim().min(10).max(250),
             weight: Joi.number().integer().min(1).max(100),
+            priority: Joi.string().valid('low', 'medium', 'high', 'critical'),
             labels: Joi.array().items(Joi.string().trim()),
             visibility: Joi.string().valid('private', 'team', 'department', 'public'),
             parentObjective: objectId.allow(null, ''),
+            targetUser: objectId.allow(null, ''),
+            correctionReason: Joi.string().trim().min(1),
         }).min(1).required().messages({
             'object.min': 'At least one field must be provided for update.'
         }),
@@ -95,12 +99,12 @@ const schemas = {
             }),
             year: Joi.number().integer().min(2020).max(2100).required(),
             status: Joi.string().valid('draft', 'open', 'active', 'in_progress', 'closed').default('draft'),
-            phase1Start: Joi.date().iso().allow(null, ''),
-            phase1End: Joi.date().iso().allow(null, ''),
-            phase2Start: Joi.date().iso().allow(null, ''),
-            phase2End: Joi.date().iso().allow(null, ''),
-            phase3Start: Joi.date().iso().allow(null, ''),
-            phase3End: Joi.date().iso().allow(null, ''),
+            phase1Start: Joi.date().iso().required(),
+            phase1End: Joi.date().iso().required(),
+            phase2Start: Joi.date().iso().required(),
+            phase2End: Joi.date().iso().required(),
+            phase3Start: Joi.date().iso().required(),
+            phase3End: Joi.date().iso().required(),
             currentPhase: Joi.string().valid('phase1', 'phase2', 'phase3', 'closed').default('phase1')
         }),
         update: Joi.object({

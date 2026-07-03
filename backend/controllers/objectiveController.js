@@ -3,6 +3,7 @@ const CorrectionRequest = require('../models/CorrectionRequest');
 const User = require('../models/User');
 const Team = require('../models/Team');
 const Cycle = require('../models/Cycle');
+const { createAuditLog } = require('../utils/auditHelper');
 const { createNotification } = require('./notificationController');
 const {
   normalizeWeight,
@@ -229,12 +230,11 @@ async function enforceObjectivePhase(cycleId, requiredPhase) {
   if (cycle.status === 'draft') return { error: true, status: 403, message: 'Goal submission is not available. The cycle has not started yet.' };
   if (cycle.status === 'closed') return { error: true, status: 403, message: 'Cycle is closed.' };
   
-  // For Phase 1, check if phase1Start has actually begun
   const requiredPhases = Array.isArray(requiredPhase) ? requiredPhase : [requiredPhase];
-  if (requiredPhases.includes('phase1') && cycle.currentPhase === 'phase1' && cycle.phase1Start && new Date(cycle.phase1Start) > new Date()) {
-    return { error: true, status: 403, message: 'Goal submission is not available. The cycle has not started yet.' };
-  }
-  
+
+  // Once a cycle has explicitly moved out of draft, currentPhase is the workflow
+  // source of truth. Planned dates must not produce a false rejection for an
+  // already-started phase (legacy cycles may contain stale planned dates).
   if (!requiredPhases.includes(cycle.currentPhase)) {
     return { error: true, status: 403, message: `This action is only allowed during ${requiredPhases.join(' or ')}. Current phase: ${cycle.currentPhase}` };
   }
@@ -244,7 +244,7 @@ async function enforceObjectivePhase(cycleId, requiredPhase) {
 // ========== CREATE ==========
 exports.createObjective = async (req, res) => {
   try {
-    const { title, description, successIndicator, weight, cycle, category, labels, visibility, parentObjective, targetUser, targetTeam } = req.body;
+    const { title, description, successIndicator, weight, priority, cycle, category, labels, visibility, parentObjective, targetUser, targetTeam } = req.body;
     if (!cycle) return res.status(400).json({ success: false, message: 'Cycle is required.' });
     const targetedCycle = await Cycle.findById(cycle);
     if (!targetedCycle) return res.status(404).json({ success: false, message: 'Cycle not found.' });
@@ -300,7 +300,7 @@ exports.createObjective = async (req, res) => {
       }
 
       const memberObjectives = team.members.map(member => ({
-        owner: member._id, cycle, category: 'team', title, description, successIndicator: successIndicator || title, weight: normalizedWeight, status: 'assigned', source: 'manager_assigned', assignedBy: req.user.id,
+        owner: member._id, cycle, category: 'team', title, description, successIndicator: successIndicator || title, weight: normalizedWeight, priority: priority || 'medium', status: 'assigned', source: 'manager_assigned', assignedBy: req.user.id,
         team: team._id,
         assignedUsers: memberIds,
         labels: labels || [], visibility: visibility || 'public', parentObjective: parentObjective || null,
@@ -311,6 +311,12 @@ exports.createObjective = async (req, res) => {
       for (const member of team.members) {
         await createNotification(member._id, 'Objective Assigned', `Your manager assigned you a new objective: "${title}".`, '/goals', 'GOAL_ASSIGNED');
       }
+      await createAuditLog({
+        entityType: 'objective', entityName: title, action: 'created',
+        performedBy: req.user.id,
+        description: 'Team objective "' + title + '" distributed to ' + team.members.length + ' member(s).',
+        ipAddress: req.ip,
+      });
       res.status(201).json({ success: true, message: `Team Objective distributed to ${team.members.length} member(s)` });
     } else {
       const exists = await Objective.findOne({ owner: ownerId, cycle, title });
@@ -323,7 +329,7 @@ exports.createObjective = async (req, res) => {
       if (usedWeight + normalizedWeight > 100) return res.status(400).json({ success: false, message: 'Total weight would exceed 100%. Currently used: ' + usedWeight + '%, trying to add: ' + normalizedWeight + '%.' });
 
       const objective = await Objective.create({
-        owner: ownerId, cycle, category: 'individual', title, description, successIndicator, weight: normalizedWeight,
+        owner: ownerId, cycle, category: 'individual', title, description, successIndicator, weight: normalizedWeight, priority: priority || 'medium',
         status: initialStatus, source, assignedBy, labels: labels || [], visibility: visibility || 'public',
         team: null,
         assignedUsers: [ownerId],
@@ -334,6 +340,11 @@ exports.createObjective = async (req, res) => {
       if (source === 'manager_assigned') {
         await createNotification(ownerId, 'Objective Assigned', `Your manager assigned you a new objective: "${title}".`, '/goals', 'GOAL_ASSIGNED');
       }
+      await createAuditLog({
+        entityType: 'objective', entityId: objective._id, entityName: objective.title,
+        action: 'created', performedBy: req.user.id,
+        description: 'Objective "' + objective.title + '" created.', ipAddress: req.ip,
+      });
       res.status(201).json({ success: true, objective });
     }
   } catch (err) {
@@ -350,7 +361,7 @@ exports.getMyObjectives = async (req, res) => {
 
     if (compactView) {
       objectivesQuery = objectivesQuery
-        .select('title owner cycle team category status achievementPercent updatedAt createdAt weight kpis')
+        .select('title owner cycle team category status priority achievementPercent updatedAt createdAt weight kpis')
         .populate('owner', 'name role profileImage')
         .populate('cycle', 'name year status currentPhase')
         .populate('team', 'name')
@@ -375,25 +386,39 @@ exports.getObjectives = async (req, res) => {
     if (req.query.cycle) baseFilter.cycle = req.query.cycle;
     if (req.query.label) baseFilter.labels = req.query.label;
     if (req.query.status && req.query.status !== 'all') baseFilter.status = req.query.status;
-    if (req.query.search) baseFilter.title = { $regex: req.query.search, $options: 'i' };
+    if (req.query.search && String(req.query.search).trim()) {
+      const searchTerm = String(req.query.search).trim();
+      const matchingUsers = await User.find({
+        $or: [
+          { name: { $regex: searchTerm, $options: 'i' } },
+          { email: { $regex: searchTerm, $options: 'i' } },
+        ],
+      }).select('_id').lean();
+      baseFilter.$or = [
+        { title: { $regex: searchTerm, $options: 'i' } },
+        { description: { $regex: searchTerm, $options: 'i' } },
+        { successIndicator: { $regex: searchTerm, $options: 'i' } },
+        { status: { $regex: searchTerm, $options: 'i' } },
+        { priority: { $regex: searchTerm, $options: 'i' } },
+        { owner: { $in: matchingUsers.map(function (user) { return user._id; }) } },
+      ];
+    }
 
     const targetUserId = req.query.targetUserId;
     const currentUserId = req.user.id || req.user._id;
     let filter = { ...baseFilter };
     if (targetUserId) {
       const isSelf = String(targetUserId) === String(currentUserId);
-      const canIncludeAssignedTeam = isSelf && (req.user.role === 'TEAM_LEADER' || req.user.role === 'ADMIN');
-      if (canIncludeAssignedTeam) {
-        filter = {
-          ...baseFilter,
-          $or: [
-            { owner: targetUserId },
-            { assignedBy: currentUserId, category: 'team' }
-          ]
-        };
-      } else {
-        filter.owner = targetUserId;
+      if (!isSelf && !['ADMIN', 'HR', 'TEAM_LEADER'].includes(req.user.role)) {
+        return res.status(403).json({ success: false, message: 'You can only access your own objectives.' });
       }
+      if (!isSelf && req.user.role === 'TEAM_LEADER') {
+        const leaderTeam = await getTeamForLeader(currentUserId);
+        if (!leaderTeam || !isTeamMember(leaderTeam, targetUserId)) {
+          return res.status(403).json({ success: false, message: 'You can only access objectives for your own team.' });
+        }
+      }
+      filter.owner = targetUserId;
     } else {
       if (req.user.role === 'TEAM_LEADER') {
         if (req.query.scope === 'my') { filter.owner = req.user.id; }
@@ -412,7 +437,7 @@ exports.getObjectives = async (req, res) => {
 
     if (compactView) {
       objectivesQuery = objectivesQuery
-        .select('title owner cycle team category status achievementPercent updatedAt createdAt weight kpis')
+        .select('title owner cycle team category status priority achievementPercent updatedAt createdAt weight kpis')
         .populate('owner', 'name role profileImage')
         .populate('cycle', 'name year status currentPhase')
         .populate('team', 'name')
@@ -474,7 +499,7 @@ exports.getObjectives = async (req, res) => {
 exports.getObjectiveById = async (req, res) => {
   try {
     const objective = await Objective.findById(req.params.id)
-      .populate('owner', 'name email role').populate('cycle', 'name year status')
+      .populate('owner', 'name email role').populate('cycle', 'name year status currentPhase')
       .populate('team', 'name')
       .populate('parentObjective', 'title').populate('comments.user', 'name email')
       .populate('progressUpdates.user', 'name email').populate('assignedBy', 'name email')
@@ -628,15 +653,17 @@ exports.updateObjective = async (req, res) => {
     }
 
     // === FIELD UPDATE LOGIC ===
-    const { title, description, successIndicator, weight, labels, visibility, parentObjective, correctionReason } = req.body;
+    const { title, description, successIndicator, weight, priority, labels, visibility, parentObjective, targetUser, correctionReason } = req.body;
     const originalSnapshot = {
       title: objective.title,
       description: objective.description,
       successIndicator: objective.successIndicator,
       weight: objective.weight,
+      priority: objective.priority,
       labels: Array.isArray(objective.labels) ? [...objective.labels] : [],
       visibility: objective.visibility,
       parentObjective: objective.parentObjective || null,
+      owner: objective.owner,
       team: objective.team || null,
       cycle: objective.cycle?._id || objective.cycle,
     };
@@ -660,7 +687,31 @@ exports.updateObjective = async (req, res) => {
       objective.successIndicator = successIndicator;
     }
     if (weight !== undefined) objective.weight = normalizeWeight(weight);
+    if (priority !== undefined) objective.priority = priority;
     if (parentObjective !== undefined) objective.parentObjective = parentObjective;
+    if (targetUser && String(targetUser) !== String(objective.owner)) {
+      if (!['TEAM_LEADER', 'ADMIN', 'HR'].includes(req.user.role) || objective.source !== 'manager_assigned' || objective.category !== 'individual') {
+        return res.status(403).json({ success: false, message: 'Only a manager can reassign a manager-assigned individual objective.' });
+      }
+      if (req.user.role === 'TEAM_LEADER') {
+        const leaderTeam = await getTeamForLeader(req.user.id);
+        if (!leaderTeam || !isTeamMember(leaderTeam, targetUser)) {
+          return res.status(403).json({ success: false, message: 'You can only reassign objectives within your own team.' });
+        }
+      }
+      const targetObjectives = await Objective.find({
+        owner: targetUser,
+        cycle: objective.cycle,
+        category: 'individual',
+        status: { $nin: ['rejected', 'cancelled', 'archived'] },
+      });
+      const reassignedWeight = weight !== undefined ? normalizeWeight(weight) : normalizeWeight(objective.weight);
+      if (sumObjectiveWeights(targetObjectives) + reassignedWeight > 100) {
+        return res.status(400).json({ success: false, message: 'Reassignment would make the target employee exceed 100% objective weight.' });
+      }
+      objective.owner = targetUser;
+      objective.assignedUsers = [targetUser];
+    }
     
     // Metadata fields - always allowed (unless Phase 3)
     if (labels !== undefined) objective.labels = labels;
@@ -699,6 +750,12 @@ exports.updateObjective = async (req, res) => {
 
     addActivity(objective, req.user.id, 'updated', 'Goal details updated');
     await objective.save();
+    await createAuditLog({
+      entityType: 'objective', entityId: objective._id, entityName: objective.title,
+      action: 'updated', performedBy: req.user.id,
+      oldValue: originalSnapshot, newValue: req.body,
+      description: 'Objective "' + objective.title + '" updated.', ipAddress: req.ip,
+    });
 
     if ((objective.category || 'individual') === 'team') {
       const resolvedTeam = originalSnapshot.team || objective.team || (await resolveTeamForObjective(objective))?._id;
@@ -718,6 +775,7 @@ exports.updateObjective = async (req, res) => {
       if (description !== undefined) syncedFields.description = objective.description;
       if (successIndicator !== undefined) syncedFields.successIndicator = objective.successIndicator;
       if (weight !== undefined) syncedFields.weight = objective.weight;
+      if (priority !== undefined) syncedFields.priority = objective.priority;
       if (labels !== undefined) syncedFields.labels = objective.labels;
       if (visibility !== undefined) syncedFields.visibility = objective.visibility;
       if (parentObjective !== undefined) syncedFields.parentObjective = objective.parentObjective;
@@ -794,6 +852,12 @@ exports.submitObjective = async (req, res) => {
     const user = await User.findById(req.user.id);
     await createNotification(team.leader, 'Goal Submitted', `${user ? user.name : 'A team member'} submitted "${objective.title}" for approval.`, '/goals', 'GOAL_SUBMITTED');
 
+    await createAuditLog({
+      entityType: 'objective', entityId: objective._id, entityName: objective.title,
+      action: 'submitted', performedBy: req.user.id,
+      oldValue: { status: oldStatus }, newValue: { status: objective.status },
+      description: 'Objective "' + objective.title + '" submitted for approval.', ipAddress: req.ip,
+    });
     res.json({ success: true, objective });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
@@ -809,11 +873,43 @@ exports.submitObjectives = async (req, res) => {
     if (targetedCycle.currentPhase !== 'phase1' && targetedCycle.status !== 'draft') {
       return res.status(403).json({ success: false, message: 'Objectives can only be submitted during Phase 1 (Goal Setting).' });
     }
-    // Check if Phase 1 has actually started
-    if (targetedCycle.status === 'draft' || (targetedCycle.currentPhase === 'phase1' && targetedCycle.phase1Start && new Date(targetedCycle.phase1Start) > new Date())) {
+    // Draft cycles are not open. Once explicitly started, currentPhase is the
+    // source of truth even when a legacy planned start date is stale.
+    if (targetedCycle.status === 'draft') {
       return res.status(400).json({ success: false, message: 'Goal submission is not available. The cycle has not started yet.' });
     }
-    const objectives = await Objective.find({ owner: req.user.id, cycle, category: 'individual', status: { $nin: ['approved', 'validated'] } });
+    const objectives = await Objective.find({
+      owner: req.user.id,
+      cycle,
+      category: 'individual',
+      source: { $ne: 'manager_assigned' },
+      status: {
+        $in: [
+          'draft',
+          'revision_requested',
+          'rejected',
+          'pending',
+          'submitted',
+          'pending_approval',
+          'approved',
+          'validated',
+        ]
+      }
+    });
+
+    const submittableObjectives = objectives.filter(function (objective) {
+      return ['draft', 'revision_requested', 'rejected'].includes(objective.status);
+    });
+
+    if (submittableObjectives.length === 0 && objectives.length > 0) {
+      return res.json({
+        success: true,
+        alreadySubmitted: true,
+        count: objectives.length,
+        message: 'Your objectives have already been submitted for approval.'
+      });
+    }
+
     if (objectives.length < 3 || objectives.length > 10) return res.status(400).json({ success: false, message: 'You must have between 3 and 10 individual objectives.' });
     const totalWeight = objectives.reduce((sum, obj) => sum + (obj.weight || 0), 0);
     if (totalWeight !== 100) return res.status(400).json({ success: false, message: `Total weight must equal 100. Current: ${totalWeight}` });
@@ -829,11 +925,21 @@ exports.submitObjectives = async (req, res) => {
       { owner: req.user.id, cycle, status: { $in: ['draft', 'revision_requested', 'rejected'] } }, 
       { status: 'pending_approval', submittedTo: team.leader, submittedBy: req.user.id }
     );
+    await createAuditLog({
+      entityType: 'objective', entityName: targetedCycle.name,
+      action: 'submitted', performedBy: req.user.id,
+      description: submittableObjectives.length + ' objectives submitted for cycle "' + targetedCycle.name + '".',
+      ipAddress: req.ip,
+    });
 
     if (team && team.leader) {
       await createNotification(team.leader, 'Objectives Submitted', `${user ? user.name : 'A team member'} submitted their objectives for validation.`, '/goals', 'GOAL_SUBMITTED');
     }
-    res.json({ success: true });
+    res.json({
+      success: true,
+      count: submittableObjectives.length,
+      message: submittableObjectives.length + ' objectives submitted for approval.'
+    });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
@@ -1356,6 +1462,11 @@ exports.deleteObjective = async (req, res) => {
     if (objective.cycle && objective.cycle.status === 'closed') return res.status(400).json({ success: false, message: 'Cannot delete from a closed cycle.' });
     if (req.user.role === 'COLLABORATOR' && !['draft', 'rejected'].includes(objective.status)) return res.status(400).json({ success: false, message: 'Only draft/rejected objectives can be deleted.' });
     await Objective.deleteOne({ _id: objective._id });
+    await createAuditLog({
+      entityType: 'objective', entityId: objective._id, entityName: objective.title,
+      action: 'deleted', performedBy: req.user.id,
+      description: 'Objective "' + objective.title + '" deleted.', ipAddress: req.ip,
+    });
     res.json({ success: true, message: 'Objective deleted.' });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
@@ -1395,17 +1506,38 @@ exports.addKpi = async (req, res) => {
   try {
     const objective = await Objective.findById(req.params.id);
     if (!objective) return res.status(404).json({ success: false, message: 'Objective not found.' });
+    if (!canModifyObjective(objective, req.user)) {
+      return res.status(403).json({ success: false, message: 'Only the objective owner, assigning team leader, or Director can add a KPI.' });
+    }
 
-    // Phase enforcement: KPIs can only be added during Phase 1 (setup) or Phase 2 (tracking)
-    const kpiPhaseCheck = await enforceObjectivePhase(objective.cycle, ['phase1', 'phase2']);
-    if (kpiPhaseCheck.error) return res.status(kpiPhaseCheck.status).json({ success: false, message: kpiPhaseCheck.message });
+    const cycle = await Cycle.findById(objective.cycle);
+    if (!cycle) return res.status(404).json({ success: false, message: 'Cycle not found.' });
+    if (cycle.status === 'closed' || !['phase1', 'phase2'].includes(cycle.currentPhase)) {
+      return res.status(403).json({ success: false, message: 'KPIs can only be added during Goal Setting or Mid-Year Execution.' });
+    }
 
     const { title, metricType, initialValue, targetValue, currentValue, unit } = req.body;
     if (!title) return res.status(400).json({ success: false, message: 'KPI title is required.' });
-    objective.kpis.push({ title, metricType: metricType || 'percent', initialValue: initialValue || 0, targetValue: targetValue || 100, currentValue: currentValue || 0, unit: unit || '' });
+    objective.kpis.push({
+      title: String(title).trim(),
+      metricType: metricType || 'percent',
+      initialValue: initialValue ?? 0,
+      targetValue: targetValue ?? 100,
+      currentValue: currentValue ?? 0,
+      unit: unit || ''
+    });
     objective.achievementPercent = calculateKpiProgress(objective.kpis);
     objective.weightedScore = (objective.weight * objective.achievementPercent) / 100;
     await objective.save();
+    await createAuditLog({
+      entityType: 'objective',
+      entityId: objective._id,
+      entityName: objective.title,
+      action: 'kpi_created',
+      performedBy: req.user.id,
+      description: 'KPI "' + String(title).trim() + '" added to objective "' + objective.title + '".',
+      ipAddress: req.ip
+    });
     res.json({ success: true, objective });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
@@ -1414,6 +1546,9 @@ exports.updateKpi = async (req, res) => {
   try {
     const objective = await Objective.findById(req.params.id);
     if (!objective) return res.status(404).json({ success: false, message: 'Objective not found.' });
+    if (!canModifyObjective(objective, req.user)) {
+      return res.status(403).json({ success: false, message: 'You are not authorized to update this KPI.' });
+    }
 
     // Phase enforcement: KPI values can only be updated during Phase 2 or 3
     const kpiUpdatePhaseCheck = await enforceObjectivePhase(objective.cycle, ['phase2', 'phase3']);
@@ -1445,6 +1580,9 @@ exports.deleteKpi = async (req, res) => {
   try {
     const objective = await Objective.findById(req.params.id);
     if (!objective) return res.status(404).json({ success: false, message: 'Objective not found.' });
+    if (!canModifyObjective(objective, req.user)) {
+      return res.status(403).json({ success: false, message: 'You are not authorized to delete this KPI.' });
+    }
     objective.kpis = objective.kpis.filter(k => String(k._id) !== req.params.kpiId);
     objective.achievementPercent = objective.kpis.length > 0 ? calculateKpiProgress(objective.kpis) : null;
     if (objective.achievementPercent !== null) objective.weightedScore = (objective.weight * objective.achievementPercent) / 100;

@@ -1234,3 +1234,36 @@ exports.generateEvaluationDraft = async (req, res) => {
         res.status(500).json({ success: false, message: err.message });
     }
 };
+
+// ============ AI PERFORMANCE PREDICTOR (PYTHON ML) ============
+exports.predictEmployeePerformance = async (req, res) => {
+    try {
+        const metrics = req.body.metrics;
+        
+        if (!metrics) {
+            return res.status(400).json({ success: false, message: 'metrics object is required' });
+        }
+
+        // Call the Python AI service
+        const response = await fetch('http://localhost:5000/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(metrics)
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`AI Service returned ${response.status}: ${errText}`);
+        }
+
+        const prediction = await response.json();
+        return res.json({ success: true, prediction });
+    } catch (err) {
+        console.error('Python AI Prediction Error:', err);
+        return res.status(500).json({ 
+            success: false, 
+            message: 'Prediction service unavailable. Is the Python AI service running?',
+            error: err.message 
+        });
+    }
+};

@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import Notifications from './Notifications';
+import { formatRoleLabel } from '../utils/roles';
 
 function Navbar() {
   var { user, logout } = useAuth();
@@ -52,7 +53,7 @@ function Navbar() {
         <Link to="/settings" className={isActive('/settings')}>Settings</Link>
         <Notifications />
         <div className="user-menu">
-          <span className="user-info">{user.name} ({user.role})</span>
+          <span className="user-info">{user.name} ({formatRoleLabel(user.role)})</span>
           <button onClick={handleLogout} className="logout-btn">Logout</button>
         </div>
       </div>

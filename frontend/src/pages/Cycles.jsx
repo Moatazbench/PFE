@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../components/AuthContext';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import { useToast, ToastContainer } from '../components/common/Toast';
@@ -113,9 +113,8 @@ function Cycles() {
       }
     });
 
-    // Sequential phase order validation (non-admin only, admin bypasses)
-    if (!isAdmin) {
-      var orderedDates = [
+    // Every role must respect the same strict, non-overlapping phase order.
+    var orderedDates = [
         { key: 'phase1Start', label: 'Phase 1 Start' },
         { key: 'phase1End', label: 'Phase 1 End' },
         { key: 'phase2Start', label: 'Phase 2 Start' },
@@ -127,14 +126,13 @@ function Cycles() {
         var prev = orderedDates[i - 1];
         var curr = orderedDates[i];
         if (formData[prev.key] && formData[curr.key]) {
-          if (new Date(formData[curr.key]) < new Date(formData[prev.key])) {
+          if (new Date(formData[curr.key]) <= new Date(formData[prev.key])) {
             if (!errors[curr.key]) {
-              errors[curr.key] = curr.label + ' must be on or after ' + prev.label + '.';
+              errors[curr.key] = curr.label + ' must be after ' + prev.label + ' and phases cannot overlap.';
             }
           }
         }
       }
-    }
 
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -143,8 +141,7 @@ function Cycles() {
   async function handleSubmit(e) {
     e.preventDefault(); setError('');
 
-    // Admin bypasses frontend validation
-    if (!isAdmin && !validateForm()) {
+    if (!validateForm()) {
       setError('Please fix the highlighted errors before submitting.');
       return;
     }
@@ -408,12 +405,12 @@ async function handlePhasePreCheck(cycle) {
                       <div style={{ display:'flex', gap:'12px' }}>
                         <div style={{ flex:1 }}>
                           <label className="ent-label" style={{ fontSize:'12px', color:'var(--shell-text-secondary)' }}>Start</label>
-                          <input className="ent-input" type="date" value={formData[phase.startKey]} onChange={function(e){var upd = {}; upd[phase.startKey] = e.target.value; setFormData({...formData, ...upd}); if (fieldErrors[phase.startKey]) { var fe = {...fieldErrors}; delete fe[phase.startKey]; setFieldErrors(fe); }}} style={inputErrorStyle(phase.startKey)} />
+                          <input className="ent-input" type="date" required value={formData[phase.startKey]} onChange={function(e){var upd = {}; upd[phase.startKey] = e.target.value; setFormData({...formData, ...upd}); if (fieldErrors[phase.startKey]) { var fe = {...fieldErrors}; delete fe[phase.startKey]; setFieldErrors(fe); }}} style={inputErrorStyle(phase.startKey)} />
                           {renderFieldError(phase.startKey)}
                         </div>
                         <div style={{ flex:1 }}>
                           <label className="ent-label" style={{ fontSize:'12px', color:'var(--shell-text-secondary)' }}>End</label>
-                          <input className="ent-input" type="date" value={formData[phase.endKey]} onChange={function(e){var upd = {}; upd[phase.endKey] = e.target.value; setFormData({...formData, ...upd}); if (fieldErrors[phase.endKey]) { var fe = {...fieldErrors}; delete fe[phase.endKey]; setFieldErrors(fe); }}} style={inputErrorStyle(phase.endKey)} />
+                          <input className="ent-input" type="date" required value={formData[phase.endKey]} onChange={function(e){var upd = {}; upd[phase.endKey] = e.target.value; setFormData({...formData, ...upd}); if (fieldErrors[phase.endKey]) { var fe = {...fieldErrors}; delete fe[phase.endKey]; setFieldErrors(fe); }}} style={inputErrorStyle(phase.endKey)} />
                           {renderFieldError(phase.endKey)}
                         </div>
                       </div>

@@ -1,0 +1,511 @@
+<mxfile host="app.diagrams.net" modified="2026-06-11T18:00:00.000Z" agent="PerTrack UML" version="24.0.0" type="device">
+  <diagram name="Class Diagram" id="cd-pertrack">
+    <mxGraphModel dx="0" dy="0" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1500" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- ================================================ -->
+        <!-- CLASS: User  (Row 1, Col 2)                      -->
+        <!-- ================================================ -->
+        <mxCell id="100" value="User" style="swimlane;fontStyle=1;align=center;startSize=28;html=1;collapsible=0;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=14;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="500" y="30" width="280" height="240" as="geometry"/>
+        </mxCell>
+        <mxCell id="101" value="- _id: ObjectId&#xa;- name: String&#xa;- email: String&#xa;- passwordHash: String&#xa;- role: UserRole&#xa;- teamId: ObjectId ref: Team&#xa;- createdAt: Date" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="100">
+          <mxGeometry y="28" width="280" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="102" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#666666;" vertex="1" parent="100">
+          <mxGeometry y="168" width="280" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="103" value="+ authenticate(): Boolean&#xa;+ updateProfile(): void" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="100">
+          <mxGeometry y="176" width="280" height="64" as="geometry"/>
+        </mxCell>
+
+        <!-- ================================================ -->
+        <!-- CLASS: PerformanceCycle  (Row 1, Col 1)          -->
+        <!-- ================================================ -->
+        <mxCell id="108" value="PerformanceCycle" style="swimlane;fontStyle=1;align=center;startSize=28;html=1;collapsible=0;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=14;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="50" y="30" width="310" height="220" as="geometry"/>
+        </mxCell>
+        <mxCell id="109" value="- _id: ObjectId&#xa;- name: String&#xa;- startDate: Date&#xa;- endDate: Date&#xa;- status: CycleStatus&#xa;- createdBy: ObjectId ref: User" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="108">
+          <mxGeometry y="28" width="310" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="110" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#666666;" vertex="1" parent="108">
+          <mxGeometry y="148" width="310" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="111" value="+ activate(): void&#xa;+ close(): void" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="108">
+          <mxGeometry y="156" width="310" height="64" as="geometry"/>
+        </mxCell>
+
+        <!-- ================================================ -->
+        <!-- CLASS: CheckIn  (Row 1, Col 3)                   -->
+        <!-- ================================================ -->
+        <mxCell id="116" value="CheckIn" style="swimlane;fontStyle=1;align=center;startSize=28;html=1;collapsible=0;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=14;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="920" y="30" width="290" height="240" as="geometry"/>
+        </mxCell>
+        <mxCell id="117" value="- _id: ObjectId&#xa;- userId: ObjectId ref: User&#xa;- cycleId: ObjectId ref: PerformanceCycle&#xa;- date: Date&#xa;- notes: String&#xa;- type: CheckInType&#xa;- reviewedBy: ObjectId ref: User" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="116">
+          <mxGeometry y="28" width="290" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="118" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#666666;" vertex="1" parent="116">
+          <mxGeometry y="168" width="290" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="119" value="+ submit(): void&#xa;+ review(): void" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="116">
+          <mxGeometry y="176" width="290" height="64" as="geometry"/>
+        </mxCell>
+
+        <!-- ================================================ -->
+        <!-- CLASS: Task  (Row 1, Col 4)                      -->
+        <!-- ================================================ -->
+        <mxCell id="124" value="Task" style="swimlane;fontStyle=1;align=center;startSize=28;html=1;collapsible=0;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=14;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="1370" y="30" width="270" height="210" as="geometry"/>
+        </mxCell>
+        <mxCell id="125" value="- _id: ObjectId&#xa;- title: String&#xa;- status: TaskStatus&#xa;- assignedTo: ObjectId ref: User&#xa;- dueDate: Date&#xa;- priority: TaskPriority" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="124">
+          <mxGeometry y="28" width="270" height="115" as="geometry"/>
+        </mxCell>
+        <mxCell id="126" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#666666;" vertex="1" parent="124">
+          <mxGeometry y="143" width="270" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="127" value="+ updateStatus(): void&#xa;+ assign(userId): void" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="124">
+          <mxGeometry y="151" width="270" height="59" as="geometry"/>
+        </mxCell>
+
+        <!-- ================================================ -->
+        <!-- CLASS: Team  (Row 2, Col 1)                      -->
+        <!-- ================================================ -->
+        <mxCell id="104" value="Team" style="swimlane;fontStyle=1;align=center;startSize=28;html=1;collapsible=0;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=14;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="50" y="360" width="290" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="105" value="- _id: ObjectId&#xa;- name: String&#xa;- managerId: ObjectId ref: User&#xa;- memberIds: ObjectId[] ref: User&#xa;- createdAt: Date" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="104">
+          <mxGeometry y="28" width="290" height="105" as="geometry"/>
+        </mxCell>
+        <mxCell id="106" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#666666;" vertex="1" parent="104">
+          <mxGeometry y="133" width="290" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="107" value="+ addMember(userId): void&#xa;+ removeMember(userId): void" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="104">
+          <mxGeometry y="141" width="290" height="59" as="geometry"/>
+        </mxCell>
+
+        <!-- ================================================ -->
+        <!-- CLASS: Objective  (Row 2, Col 2)                 -->
+        <!-- ================================================ -->
+        <mxCell id="112" value="Objective" style="swimlane;fontStyle=1;align=center;startSize=28;html=1;collapsible=0;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=14;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="500" y="360" width="300" height="260" as="geometry"/>
+        </mxCell>
+        <mxCell id="113" value="- _id: ObjectId&#xa;- title: String&#xa;- description: String&#xa;- assignedTo: ObjectId ref: User&#xa;- cycleId: ObjectId ref: PerformanceCycle&#xa;- status: ObjectiveStatus&#xa;- validatedBy: ObjectId ref: User&#xa;- dueDate: Date" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="112">
+          <mxGeometry y="28" width="300" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="114" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#666666;" vertex="1" parent="112">
+          <mxGeometry y="188" width="300" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="115" value="+ validate(): void&#xa;+ reject(): void" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="112">
+          <mxGeometry y="196" width="300" height="64" as="geometry"/>
+        </mxCell>
+
+        <!-- ================================================ -->
+        <!-- CLASS: Evaluation  (Row 2, Col 3)                -->
+        <!-- ================================================ -->
+        <mxCell id="120" value="Evaluation" style="swimlane;fontStyle=1;align=center;startSize=28;html=1;collapsible=0;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=14;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="920" y="360" width="290" height="240" as="geometry"/>
+        </mxCell>
+        <mxCell id="121" value="- _id: ObjectId&#xa;- evaluatorId: ObjectId ref: User&#xa;- evaluateeId: ObjectId ref: User&#xa;- cycleId: ObjectId ref: PerformanceCycle&#xa;- score: Number&#xa;- comments: String&#xa;- submittedAt: Date" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="120">
+          <mxGeometry y="28" width="290" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="122" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#666666;" vertex="1" parent="120">
+          <mxGeometry y="168" width="290" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="123" value="+ submit(): void&#xa;+ calculateScore(): Number" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="120">
+          <mxGeometry y="176" width="290" height="64" as="geometry"/>
+        </mxCell>
+
+        <!-- ================================================ -->
+        <!-- CLASS: AuditLog  (Row 2, Col 4)                  -->
+        <!-- ================================================ -->
+        <mxCell id="128" value="AuditLog" style="swimlane;fontStyle=1;align=center;startSize=28;html=1;collapsible=0;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=14;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="1370" y="360" width="280" height="210" as="geometry"/>
+        </mxCell>
+        <mxCell id="129" value="- _id: ObjectId&#xa;- action: String&#xa;- performedBy: ObjectId ref: User&#xa;- targetEntity: String&#xa;- targetId: ObjectId&#xa;- timestamp: Date" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="128">
+          <mxGeometry y="28" width="280" height="115" as="geometry"/>
+        </mxCell>
+        <mxCell id="130" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#666666;" vertex="1" parent="128">
+          <mxGeometry y="143" width="280" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="131" value="+ create(): void&#xa;+ query(filters): AuditLog[]" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="128">
+          <mxGeometry y="151" width="280" height="59" as="geometry"/>
+        </mxCell>
+
+        <!-- ================================================ -->
+        <!-- CLASS: BonusPenalty  (Row 3, Col 1)              -->
+        <!-- ================================================ -->
+        <mxCell id="132" value="BonusPenalty" style="swimlane;fontStyle=1;align=center;startSize=28;html=1;collapsible=0;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=14;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="170" y="720" width="290" height="240" as="geometry"/>
+        </mxCell>
+        <mxCell id="133" value="- _id: ObjectId&#xa;- userId: ObjectId ref: User&#xa;- type: BonusPenaltyType&#xa;- amount: Number&#xa;- reason: String&#xa;- appliedBy: ObjectId ref: User&#xa;- date: Date" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="132">
+          <mxGeometry y="28" width="290" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="134" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#666666;" vertex="1" parent="132">
+          <mxGeometry y="168" width="290" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="135" value="+ apply(): void&#xa;+ revoke(): void" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="132">
+          <mxGeometry y="176" width="290" height="64" as="geometry"/>
+        </mxCell>
+
+        <!-- ================================================ -->
+        <!-- CLASS: Meeting  (Row 3, Col 2)                   -->
+        <!-- ================================================ -->
+        <mxCell id="136" value="Meeting" style="swimlane;fontStyle=1;align=center;startSize=28;html=1;collapsible=0;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=14;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="700" y="720" width="280" height="220" as="geometry"/>
+        </mxCell>
+        <mxCell id="137" value="- _id: ObjectId&#xa;- title: String&#xa;- scheduledBy: ObjectId ref: User&#xa;- attendees: ObjectId[] ref: User&#xa;- date: Date&#xa;- notes: String" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="136">
+          <mxGeometry y="28" width="280" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="138" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#666666;" vertex="1" parent="136">
+          <mxGeometry y="148" width="280" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="139" value="+ schedule(): void&#xa;+ cancel(): void" style="text;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="136">
+          <mxGeometry y="156" width="280" height="64" as="geometry"/>
+        </mxCell>
+
+        <!-- ================================================ -->
+        <!-- ENUMERATION: UserRole                            -->
+        <!-- ================================================ -->
+        <mxCell id="200" value="&lt;i&gt;«enumeration»&lt;/i&gt;&lt;br&gt;&lt;b&gt;UserRole&lt;/b&gt;" style="swimlane;fontStyle=0;align=center;startSize=40;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#333333;fontSize=12;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="30" y="1080" width="200" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="201" value="ADMIN&#xa;HR_MANAGER&#xa;TEAM_LEADER&#xa;COLLABORATOR" style="text;strokeColor=#d6b656;fillColor=#fff2cc;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="200">
+          <mxGeometry y="40" width="200" height="90" as="geometry"/>
+        </mxCell>
+
+        <!-- ================================================ -->
+        <!-- ENUMERATION: CycleStatus                         -->
+        <!-- ================================================ -->
+        <mxCell id="202" value="&lt;i&gt;«enumeration»&lt;/i&gt;&lt;br&gt;&lt;b&gt;CycleStatus&lt;/b&gt;" style="swimlane;fontStyle=0;align=center;startSize=40;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#333333;fontSize=12;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="270" y="1080" width="200" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="203" value="DRAFT&#xa;ACTIVE&#xa;CLOSED" style="text;strokeColor=#d6b656;fillColor=#fff2cc;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="202">
+          <mxGeometry y="40" width="200" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- ================================================ -->
+        <!-- ENUMERATION: ObjectiveStatus                     -->
+        <!-- ================================================ -->
+        <mxCell id="204" value="&lt;i&gt;«enumeration»&lt;/i&gt;&lt;br&gt;&lt;b&gt;ObjectiveStatus&lt;/b&gt;" style="swimlane;fontStyle=0;align=center;startSize=40;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#333333;fontSize=12;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="510" y="1080" width="220" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="205" value="PENDING&#xa;IN_PROGRESS&#xa;VALIDATED&#xa;REJECTED" style="text;strokeColor=#d6b656;fillColor=#fff2cc;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="204">
+          <mxGeometry y="40" width="220" height="90" as="geometry"/>
+        </mxCell>
+
+        <!-- ================================================ -->
+        <!-- ENUMERATION: CheckInType                         -->
+        <!-- ================================================ -->
+        <mxCell id="206" value="&lt;i&gt;«enumeration»&lt;/i&gt;&lt;br&gt;&lt;b&gt;CheckInType&lt;/b&gt;" style="swimlane;fontStyle=0;align=center;startSize=40;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#333333;fontSize=12;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="770" y="1080" width="200" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="207" value="MID_YEAR&#xa;ANNUAL&#xa;INFORMAL" style="text;strokeColor=#d6b656;fillColor=#fff2cc;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="206">
+          <mxGeometry y="40" width="200" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- ================================================ -->
+        <!-- ENUMERATION: TaskStatus                          -->
+        <!-- ================================================ -->
+        <mxCell id="208" value="&lt;i&gt;«enumeration»&lt;/i&gt;&lt;br&gt;&lt;b&gt;TaskStatus&lt;/b&gt;" style="swimlane;fontStyle=0;align=center;startSize=40;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#333333;fontSize=12;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="1080" width="190" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="209" value="TODO&#xa;IN_PROGRESS&#xa;DONE" style="text;strokeColor=#d6b656;fillColor=#fff2cc;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="208">
+          <mxGeometry y="40" width="190" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- ================================================ -->
+        <!-- ENUMERATION: TaskPriority                        -->
+        <!-- ================================================ -->
+        <mxCell id="210" value="&lt;i&gt;«enumeration»&lt;/i&gt;&lt;br&gt;&lt;b&gt;TaskPriority&lt;/b&gt;" style="swimlane;fontStyle=0;align=center;startSize=40;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#333333;fontSize=12;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="1080" width="190" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="211" value="LOW&#xa;MEDIUM&#xa;HIGH" style="text;strokeColor=#d6b656;fillColor=#fff2cc;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="210">
+          <mxGeometry y="40" width="190" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- ================================================ -->
+        <!-- ENUMERATION: BonusPenaltyType                    -->
+        <!-- ================================================ -->
+        <mxCell id="212" value="&lt;i&gt;«enumeration»&lt;/i&gt;&lt;br&gt;&lt;b&gt;BonusPenaltyType&lt;/b&gt;" style="swimlane;fontStyle=0;align=center;startSize=40;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#333333;fontSize=12;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="1470" y="1080" width="210" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="213" value="BONUS&#xa;PENALTY" style="text;strokeColor=#d6b656;fillColor=#fff2cc;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontColor=#333333;html=0;fontSize=12;fontFamily=Arial;" vertex="1" parent="212">
+          <mxGeometry y="40" width="210" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- ================================================ -->
+        <!-- ASSOCIATION EDGES (ObjectId references)          -->
+        <!-- ================================================ -->
+
+        <!-- User → Team  (belongs to) -->
+        <mxCell id="300" value="belongs to" style="endArrow=open;endFill=0;html=1;strokeColor=#333333;strokeWidth=1.2;fontSize=11;fontFamily=Arial;fontColor=#555555;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.3;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;rounded=1;" edge="1" source="100" target="104" parent="1">
+          <mxGeometry x="-0.2" y="-10" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="300s" value="0..*" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="300">
+          <mxGeometry x="-0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="-5" y="-15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="300t" value="0..1" style="edgeLabel;html=1;align=right;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="300">
+          <mxGeometry x="0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="5" y="-15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Team → User  (manages) -->
+        <mxCell id="301" value="manages" style="endArrow=open;endFill=0;html=1;strokeColor=#333333;strokeWidth=1.2;fontSize=11;fontFamily=Arial;fontColor=#555555;exitX=1;exitY=0.15;exitDx=0;exitDy=0;entryX=0;entryY=0.8;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;rounded=1;" edge="1" source="104" target="100" parent="1">
+          <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="301s" value="1" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="301">
+          <mxGeometry x="-0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="-5" y="15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="301t" value="1" style="edgeLabel;html=1;align=right;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="301">
+          <mxGeometry x="0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="5" y="15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- PerformanceCycle → User  (created by) -->
+        <mxCell id="302" value="created by" style="endArrow=open;endFill=0;html=1;strokeColor=#333333;strokeWidth=1.2;fontSize=11;fontFamily=Arial;fontColor=#555555;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;" edge="1" source="108" target="100" parent="1">
+          <mxGeometry x="-0.3" y="-15" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="302s" value="0..*" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="302">
+          <mxGeometry x="-0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="-5" y="-15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="302t" value="1" style="edgeLabel;html=1;align=right;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="302">
+          <mxGeometry x="0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="5" y="-15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Objective → User  (assigned to) -->
+        <mxCell id="303" value="assigned to" style="endArrow=open;endFill=0;html=1;strokeColor=#333333;strokeWidth=1.2;fontSize=11;fontFamily=Arial;fontColor=#555555;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" source="112" target="100" parent="1">
+          <mxGeometry x="0.3" y="15" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="303s" value="0..*" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="303">
+          <mxGeometry x="-0.7" y="0" relative="1" as="geometry">
+            <mxPoint x="15" y="0" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="303t" value="1" style="edgeLabel;html=1;align=right;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="303">
+          <mxGeometry x="0.7" y="0" relative="1" as="geometry">
+            <mxPoint x="15" y="0" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Objective → PerformanceCycle  (in cycle) -->
+        <mxCell id="304" value="in cycle" style="endArrow=open;endFill=0;html=1;strokeColor=#333333;strokeWidth=1.2;fontSize=11;fontFamily=Arial;fontColor=#555555;exitX=0;exitY=0.3;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;rounded=1;" edge="1" source="112" target="108" parent="1">
+          <mxGeometry x="-0.3" y="10" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="304s" value="0..*" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="304">
+          <mxGeometry x="-0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="-5" y="-15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="304t" value="1" style="edgeLabel;html=1;align=right;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="304">
+          <mxGeometry x="0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="5" y="-15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- CheckIn → User  (checked in by) -->
+        <mxCell id="305" value="checked in by" style="endArrow=open;endFill=0;html=1;strokeColor=#333333;strokeWidth=1.2;fontSize=11;fontFamily=Arial;fontColor=#555555;exitX=0;exitY=0.3;exitDx=0;exitDy=0;entryX=1;entryY=0.3;entryDx=0;entryDy=0;" edge="1" source="116" target="100" parent="1">
+          <mxGeometry x="-0.3" y="-15" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="305s" value="0..*" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="305">
+          <mxGeometry x="-0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="-5" y="-15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="305t" value="1" style="edgeLabel;html=1;align=right;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="305">
+          <mxGeometry x="0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="5" y="-15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- CheckIn → PerformanceCycle  (in cycle) -->
+        <mxCell id="306" value="in cycle" style="endArrow=open;endFill=0;html=1;strokeColor=#333333;strokeWidth=1.2;fontSize=11;fontFamily=Arial;fontColor=#555555;exitX=0;exitY=0.7;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;rounded=1;" edge="1" source="116" target="108" parent="1">
+          <mxGeometry x="0.2" y="15" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="306s" value="0..*" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="306">
+          <mxGeometry x="-0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="-5" y="15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="306t" value="1" style="edgeLabel;html=1;align=right;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="306">
+          <mxGeometry x="0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="5" y="15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Evaluation → User  (evaluates) -->
+        <mxCell id="307" value="evaluates" style="endArrow=open;endFill=0;html=1;strokeColor=#333333;strokeWidth=1.2;fontSize=11;fontFamily=Arial;fontColor=#555555;exitX=0;exitY=0.3;exitDx=0;exitDy=0;entryX=1;entryY=0.7;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;rounded=1;" edge="1" source="120" target="100" parent="1">
+          <mxGeometry x="-0.3" y="-10" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="307s" value="0..*" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="307">
+          <mxGeometry x="-0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="-5" y="-15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="307t" value="1" style="edgeLabel;html=1;align=right;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="307">
+          <mxGeometry x="0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="5" y="-15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Evaluation → PerformanceCycle  (in cycle) -->
+        <mxCell id="308" value="in cycle" style="endArrow=open;endFill=0;html=1;strokeColor=#333333;strokeWidth=1.2;fontSize=11;fontFamily=Arial;fontColor=#555555;exitX=0;exitY=0.7;exitDx=0;exitDy=0;entryX=1;entryY=0.7;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;rounded=1;" edge="1" source="120" target="108" parent="1">
+          <mxGeometry x="0.2" y="15" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+            <Array as="points">
+              <mxPoint x="880" y="528"/>
+              <mxPoint x="880" y="290"/>
+              <mxPoint x="400" y="290"/>
+              <mxPoint x="400" y="184"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="308s" value="0..*" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="308">
+          <mxGeometry x="-0.85" y="0" relative="1" as="geometry">
+            <mxPoint x="-5" y="15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="308t" value="1" style="edgeLabel;html=1;align=right;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="308">
+          <mxGeometry x="0.85" y="0" relative="1" as="geometry">
+            <mxPoint x="5" y="-15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Task → User  (assigned to) -->
+        <mxCell id="309" value="assigned to" style="endArrow=open;endFill=0;html=1;strokeColor=#333333;strokeWidth=1.2;fontSize=11;fontFamily=Arial;fontColor=#555555;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;rounded=1;" edge="1" source="124" target="100" parent="1">
+          <mxGeometry x="0.3" y="-15" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="309s" value="0..*" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="309">
+          <mxGeometry x="-0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="-5" y="-15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="309t" value="1" style="edgeLabel;html=1;align=right;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="309">
+          <mxGeometry x="0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="5" y="-15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- AuditLog → User  (performed by) -->
+        <mxCell id="310" value="performed by" style="endArrow=open;endFill=0;html=1;strokeColor=#333333;strokeWidth=1.2;fontSize=11;fontFamily=Arial;fontColor=#555555;exitX=0;exitY=0.3;exitDx=0;exitDy=0;entryX=1;entryY=0.85;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;rounded=1;" edge="1" source="128" target="100" parent="1">
+          <mxGeometry x="0.3" y="10" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="310s" value="0..*" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="310">
+          <mxGeometry x="-0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="-5" y="-15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="310t" value="1" style="edgeLabel;html=1;align=right;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="310">
+          <mxGeometry x="0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="5" y="-15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- BonusPenalty → User  (applies to) -->
+        <mxCell id="311" value="applies to" style="endArrow=open;endFill=0;html=1;strokeColor=#333333;strokeWidth=1.2;fontSize=11;fontFamily=Arial;fontColor=#555555;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.2;entryY=1;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;rounded=1;" edge="1" source="132" target="100" parent="1">
+          <mxGeometry x="0.3" y="-15" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="311s" value="0..*" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="311">
+          <mxGeometry x="-0.7" y="0" relative="1" as="geometry">
+            <mxPoint x="15" y="0" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="311t" value="1" style="edgeLabel;html=1;align=right;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="311">
+          <mxGeometry x="0.7" y="0" relative="1" as="geometry">
+            <mxPoint x="15" y="0" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Meeting → User  (scheduled by) -->
+        <mxCell id="312" value="scheduled by" style="endArrow=open;endFill=0;html=1;strokeColor=#333333;strokeWidth=1.2;fontSize=11;fontFamily=Arial;fontColor=#555555;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.8;entryY=1;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;rounded=1;" edge="1" source="136" target="100" parent="1">
+          <mxGeometry x="0.3" y="15" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="312s" value="0..*" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="312">
+          <mxGeometry x="-0.7" y="0" relative="1" as="geometry">
+            <mxPoint x="-15" y="0" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="312t" value="1" style="edgeLabel;html=1;align=right;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontFamily=Arial;fontColor=#333333;" vertex="1" connectable="0" parent="312">
+          <mxGeometry x="0.7" y="0" relative="1" as="geometry">
+            <mxPoint x="-15" y="0" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ================================================ -->
+        <!-- ENUM DEPENDENCY EDGES (dashed arrows)            -->
+        <!-- ================================================ -->
+
+        <!-- User → UserRole -->
+        <mxCell id="350" value="" style="endArrow=open;endFill=0;dashed=1;html=1;strokeColor=#d6b656;strokeWidth=1;fontSize=10;fontFamily=Arial;exitX=0.2;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="100" target="200" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- PerformanceCycle → CycleStatus -->
+        <mxCell id="351" value="" style="endArrow=open;endFill=0;dashed=1;html=1;strokeColor=#d6b656;strokeWidth=1;fontSize=10;fontFamily=Arial;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="108" target="202" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Objective → ObjectiveStatus -->
+        <mxCell id="352" value="" style="endArrow=open;endFill=0;dashed=1;html=1;strokeColor=#d6b656;strokeWidth=1;fontSize=10;fontFamily=Arial;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="112" target="204" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- CheckIn → CheckInType -->
+        <mxCell id="353" value="" style="endArrow=open;endFill=0;dashed=1;html=1;strokeColor=#d6b656;strokeWidth=1;fontSize=10;fontFamily=Arial;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="116" target="206" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Task → TaskStatus -->
+        <mxCell id="354" value="" style="endArrow=open;endFill=0;dashed=1;html=1;strokeColor=#d6b656;strokeWidth=1;fontSize=10;fontFamily=Arial;exitX=0.3;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="124" target="208" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Task → TaskPriority -->
+        <mxCell id="355" value="" style="endArrow=open;endFill=0;dashed=1;html=1;strokeColor=#d6b656;strokeWidth=1;fontSize=10;fontFamily=Arial;exitX=0.7;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="124" target="210" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- BonusPenalty → BonusPenaltyType -->
+        <mxCell id="356" value="" style="endArrow=open;endFill=0;dashed=1;html=1;strokeColor=#d6b656;strokeWidth=1;fontSize=10;fontFamily=Arial;exitX=0.8;exitY=1;exitDx=0;exitDy=0;entryX=0.3;entryY=0;entryDx=0;entryDy=0;" edge="1" source="132" target="212" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

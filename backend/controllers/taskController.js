@@ -1,6 +1,6 @@
 const Task = require('../models/Task');
 const User = require('../models/User');
-const Team = require('../models/Team');
+const { createAuditLog } = require('../utils/auditHelper');
 
 function clampProgress(value) {
   const numeric = Number(value);
@@ -112,14 +112,24 @@ function isDuplicateSession(left, right) {
 }
 
 function canManageTask(task, user) {
-  const isAssignee = task.assignee.toString() === user._id.toString();
-  const isAssigner = task.assignedBy.toString() === user._id.toString();
-  const isAdmin = ['ADMIN', 'HR'].includes(user.role);
-  return isAssignee || isAssigner || isAdmin;
+  return String(task?.assignedBy?._id || task?.assignedBy || '') === String(user?._id || user?.id || '');
 }
 
 function canTrackTask(task, user) {
-  return String(task?.assignee?._id || task?.assignee || '') === String(user?._id || user?.id || '');
+  return canManageTask(task, user);
+}
+
+function addTaskSearch(filter, search) {
+  const term = String(search || '').trim();
+  if (!term) return filter;
+  filter.$or = [
+    { title: { $regex: term, $options: 'i' } },
+    { description: { $regex: term, $options: 'i' } },
+    { notes: { $regex: term, $options: 'i' } },
+    { status: { $regex: term, $options: 'i' } },
+    { priority: { $regex: term, $options: 'i' } },
+  ];
+  return filter;
 }
 
 function syncTaskTimerFields(task) {
@@ -154,7 +164,6 @@ exports.createTask = async (req, res) => {
       workflowStage,
       priority,
       progress,
-      labels,
       dueDate,
       recurring,
       linkedGoal,
@@ -194,7 +203,6 @@ exports.createTask = async (req, res) => {
       workflowStage: resolveWorkflowStage(workflowStage, status),
       priority: priority || 'medium',
       progress: clampProgress(progress),
-      labels: labels || [],
       dueDate: dueDate || null,
       recurring: recurring || 'none',
       linkedGoal: linkedGoal || null,
@@ -213,27 +221,22 @@ exports.createTask = async (req, res) => {
       .populate('linkedGoal', 'title')
       .populate('linkedMeeting', 'title'));
 
+    await createAuditLog({
+      entityType: 'task', entityId: task._id, entityName: task.title,
+      action: 'created', performedBy: req.user.id,
+      description: 'Task "' + task.title + '" created.', ipAddress: req.ip,
+    });
     res.status(201).json({ success: true, task: populated });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// Get my tasks (assigned to me)
+// Task data is private to its creator, regardless of assignee or role.
 exports.getMyTasks = async (req, res) => {
   try {
     const { status, priority, search, page = 1, limit = 50 } = req.query;
-    const filter = { assignee: req.user._id };
-    if (search) filter.title = { $regex: search, $options: 'i' };
-
-    // FIX 4: If team leader, also show tasks for all team members
-    if (req.user.role === 'TEAM_LEADER') {
-      const team = await Team.findOne({ leader: req.user._id });
-      if (team && team.members && team.members.length > 0) {
-        const memberIds = team.members.map(m => m._id || m);
-        filter.assignee = { $in: [req.user._id, ...memberIds] };
-      }
-    }
+    const filter = addTaskSearch({ assignedBy: req.user._id }, search);
 
     if (status) filter.status = status;
     if (priority) filter.priority = priority;
@@ -275,7 +278,7 @@ exports.getAssignedByMe = async (req, res) => {
 exports.getTeamTasks = async (req, res) => {
   try {
     const { teamId } = req.params;
-    const tasks = (await Task.find({ team: teamId })
+    const tasks = (await Task.find({ team: teamId, assignedBy: req.user._id })
       .populate('assignee', 'name email role')
       .populate('assignedBy', 'name email role')
       .populate('linkedGoal', 'title')
@@ -301,7 +304,7 @@ exports.getTasksByTeams = async (req, res) => {
     }
 
     const limit = Number.parseInt(req.query.limit, 10);
-    let query = Task.find({ team: { $in: teamIds } })
+    let query = Task.find({ team: { $in: teamIds }, assignedBy: req.user._id })
       .populate('assignee', 'name email role')
       .populate('assignedBy', 'name email role')
       .populate('linkedGoal', 'title')
@@ -319,14 +322,14 @@ exports.getTasksByTeams = async (req, res) => {
   }
 };
 
-// Get all tasks (admin)
+// Kept for API compatibility; privacy rules still restrict results to the creator.
 exports.getAllTasks = async (req, res) => {
   try {
     const { status, priority, search, page = 1, limit = 50 } = req.query;
-    const filter = {};
+    const filter = { assignedBy: req.user._id };
     if (status) filter.status = status;
     if (priority) filter.priority = priority;
-    if (search) filter.title = { $regex: search, $options: 'i' };
+    addTaskSearch(filter, search);
 
     const tasks = (await Task.find(filter)
       .populate('assignee', 'name email role')
@@ -347,7 +350,7 @@ exports.getAllTasks = async (req, res) => {
 // Update task
 exports.updateTask = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id);
+    const task = await Task.findOne({ _id: req.params.id, assignedBy: req.user._id });
     if (!task) {
       return res.status(404).json({ success: false, message: 'Task not found' });
     }
@@ -407,6 +410,11 @@ exports.updateTask = async (req, res) => {
       }
     }
 
+    await createAuditLog({
+      entityType: 'task', entityId: updated._id, entityName: updated.title,
+      action: 'updated', performedBy: req.user.id, newValue: updates,
+      description: 'Task "' + updated.title + '" updated.', ipAddress: req.ip,
+    });
     res.json({ success: true, task: updated });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -415,7 +423,7 @@ exports.updateTask = async (req, res) => {
 
 exports.appendTimeEntry = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id)
+    const task = await Task.findOne({ _id: req.params.id, assignedBy: req.user._id })
       .populate('assignee', 'name email role')
       .populate('assignedBy', 'name email role')
       .populate('linkedGoal', 'title achievementPercent')
@@ -476,20 +484,17 @@ exports.appendTimeEntry = async (req, res) => {
 // Delete task
 exports.deleteTask = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id);
+    const task = await Task.findOne({ _id: req.params.id, assignedBy: req.user._id });
     if (!task) {
       return res.status(404).json({ success: false, message: 'Task not found' });
     }
 
-    const isAssignee = task.assignee.toString() === req.user._id.toString();
-    const isAssigner = task.assignedBy.toString() === req.user._id.toString();
-    const isAdmin = ['ADMIN', 'HR'].includes(req.user.role);
-
-    if (!isAssignee && !isAssigner && !isAdmin) {
-      return res.status(403).json({ success: false, message: 'Not authorized to delete this task' });
-    }
-
     await Task.findByIdAndDelete(req.params.id);
+    await createAuditLog({
+      entityType: 'task', entityId: task._id, entityName: task.title,
+      action: 'deleted', performedBy: req.user.id,
+      description: 'Task "' + task.title + '" deleted.', ipAddress: req.ip,
+    });
     res.json({ success: true, message: 'Task deleted' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -502,11 +507,11 @@ exports.getStats = async (req, res) => {
     const userId = req.user._id;
     const [byStatus, overdue, total] = await Promise.all([
       Task.aggregate([
-        { $match: { assignee: userId } },
+        { $match: { assignedBy: userId } },
         { $group: { _id: '$status', count: { $sum: 1 } } }
       ]),
-      Task.countDocuments({ assignee: userId, status: { $in: ['todo', 'in_progress'] }, dueDate: { $lt: new Date() } }),
-      Task.countDocuments({ assignee: userId })
+      Task.countDocuments({ assignedBy: userId, status: { $in: ['todo', 'in_progress'] }, dueDate: { $lt: new Date() } }),
+      Task.countDocuments({ assignedBy: userId })
     ]);
 
     const statusMap = {};
@@ -527,4 +532,10 @@ exports.getStats = async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
+};
+
+exports._private = {
+  canManageTask,
+  canTrackTask,
+  addTaskSearch,
 };

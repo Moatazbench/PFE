@@ -99,19 +99,8 @@ function GoalTable({ objectives, onGoalClick, onStatusChange, onDelete, onDuplic
         return className;
     }
 
-    var goalMap = {};
-    objectives.forEach(function (goal) {
-        goalMap[goal._id] = Object.assign({}, goal, { children: [] });
-    });
-
-    var roots = [];
-    objectives.forEach(function (goal) {
-        var parentId = goal.parentObjective?._id || goal.parentObjective;
-        if (parentId && goalMap[parentId]) {
-            goalMap[parentId].children.push(goalMap[goal._id]);
-        } else {
-            roots.push(goalMap[goal._id]);
-        }
+    var roots = objectives.map(function (goal) {
+        return Object.assign({}, goal, { children: [] });
     });
 
     if (sortConfig.key && sortConfig.direction) {
@@ -165,7 +154,7 @@ function GoalTable({ objectives, onGoalClick, onStatusChange, onDelete, onDuplic
                     <div className="goals-table__row" onClick={function () { onGoalClick(goal); }}>
                         <div className="goals-table__col goals-table__col--title">
                             <button type="button" className="goals-table__expand" onClick={function (event) { event.stopPropagation(); toggleRow(goal._id); }}>
-                                {goal.children && goal.children.length > 0 ? (expanded ? '-' : '+') : <span className="goals-table__empty-expand"></span>}
+                                {expanded ? '-' : '+'}
                             </button>
                             {showOwner !== false ? (
                                 <div className="goals-table__avatar" title={goal.owner?.name || 'Unknown'}>
@@ -251,6 +240,7 @@ function GoalTable({ objectives, onGoalClick, onStatusChange, onDelete, onDuplic
                                     {/* Team weight is NOT divided per member */}
                                 </div>
                                 <div><strong>KPIs:</strong> {goal.kpis?.length || 0}</div>
+                                <div><strong>Priority:</strong> <span style={{ textTransform: 'capitalize' }}>{goal.priority || 'medium'}</span></div>
                                 {goal.successIndicator ? <div><strong>Success indicator:</strong> {goal.successIndicator}</div> : null}
                                 {goal.source === 'manager_assigned' && goal.assignedBy ? <div><strong>Assigned by:</strong> {goal.assignedBy?.name || goal.assignedBy}</div> : null}
                                 {goal.evaluationRating ? <div><strong>Evaluation:</strong> {goal.evaluationRating.replace('_', ' ')}</div> : null}
@@ -278,11 +268,6 @@ function GoalTable({ objectives, onGoalClick, onStatusChange, onDelete, onDuplic
                     ) : null}
                 </div>
 
-                {goal.children && goal.children.length > 0 && expanded ? (
-                    <div className="goals-table__children">
-                        {goal.children.map(function (childGoal) { return renderRow(childGoal, level + 1); })}
-                    </div>
-                ) : null}
             </React.Fragment>
         );
     }
