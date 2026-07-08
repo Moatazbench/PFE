@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useToast } from '../components/common/Toast';
 import { Pie } from 'react-chartjs-2';
@@ -22,8 +23,26 @@ function getFinalObjectiveAttachments(objective) {
   return [];
 }
 
-function FinalEvaluationManager({ cycleId, activeCycle }) {
+function ratingForScore(score) {
+  const value = Math.max(0, Math.min(100, Number(score) || 0));
+  if (value >= 90) return 'exceptional';
+  if (value >= 75) return 'strong';
+  if (value >= 50) return 'meets_expectations';
+  if (value >= 30) return 'needs_improvement';
+  return 'unsatisfactory';
+}
+
+function evaluationRatingForPercent(percent) {
+  const value = Number(percent) || 0;
+  if (value >= 100) return 'exceeded';
+  if (value >= 75) return 'met';
+  if (value >= 40) return 'partially_met';
+  return 'not_met';
+}
+
+function FinalEvaluationManager({ cycleId, activeCycle, reportEmployeeId = '' }) {
   const toast = useToast();
+  const navigate = useNavigate();
   const canEditCycle = activeCycle?.currentPhase === 'phase3';
 
   const [evaluations, setEvaluations] = useState([]);
@@ -34,6 +53,8 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [selectedEvaluation, setSelectedEvaluation] = useState(null);
   const [employeeObjectives, setEmployeeObjectives] = useState([]);
+  const [objectiveAssessments, setObjectiveAssessments] = useState({});
+  const [savingObjectiveId, setSavingObjectiveId] = useState('');
   const [careerRec, setCareerRec] = useState({ suggested_path: '', skills_to_develop: '' });
 
   const [formData, setFormData] = useState({
@@ -43,9 +64,14 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
     strengths: '',
     weaknesses: '',
     improvement_suggestions: '',
-    manager_comments: ''
+    manager_comments: '',
+    manager_adjustment_justification: ''
   });
   const [aiDraftLoading, setAiDraftLoading] = useState(false);
+  const [generatingEvaluation, setGeneratingEvaluation] = useState(false);
+  const [generationError, setGenerationError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [validationErrors, setValidationErrors] = useState([]);
 
   useEffect(() => {
     if (cycleId) fetchTeamData();
@@ -55,9 +81,26 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
     setLoading(true);
     try {
       const res = await api.get(`/final-evaluations/team/${cycleId}`);
-      setEvaluations(res.data.evaluations || []);
-      setTeamMembers(res.data.teamMembers || []);
-    } catch (err) {
+      const nextEvaluations = res.data.evaluations || [];
+      const nextTeamMembers = res.data.teamMembers || [];
+      setEvaluations(nextEvaluations);
+      setTeamMembers(nextTeamMembers);
+      if (reportEmployeeId) {
+        const employee = nextTeamMembers.find((item) => String(item._id) === String(reportEmployeeId));
+        if (!employee) {
+          toast.error('This employee is not available in your report scope.');
+        } else {
+          const evaluation = nextEvaluations.find((item) => String(item.employee_id?._id || item.employee_id) === String(reportEmployeeId));
+          if (evaluation) {
+            await openEditor(employee, evaluation);
+          } else {
+            setSelectedEmployee(employee);
+            setSelectedEvaluation(null);
+            setEmployeeObjectives([]);
+          }
+        }
+      }
+    } catch {
       toast.error('Failed to load team evaluations');
     } finally {
       setLoading(false);
@@ -65,23 +108,30 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
   }
 
   async function handleGenerateEvaluation(employee) {
+    if (!employee || generatingEvaluation) return;
+    setGenerationError('');
     try {
+      setGeneratingEvaluation(true);
       const res = await api.post(`/final-evaluations/generate/${cycleId}/${employee._id}`);
       const generatedEvaluation = res.data?.evaluation;
 
       if (res.data?.aiGenerated) {
-        toast.success(res.data?.message || 'AI final report generated successfully.');
+        toast.success(res.data?.message || 'AI-assisted evaluation draft generated successfully.');
       } else {
         toast.success(res.data?.message || 'Final report draft generated successfully.');
       }
 
       await fetchTeamData();
 
-      if (generatedEvaluation) {
+      if (generatedEvaluation && !reportEmployeeId) {
         await openEditor(employee, generatedEvaluation);
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to generate evaluation');
+      const message = err.response?.data?.message || 'Failed to generate evaluation';
+      setGenerationError(message);
+      toast.error(message);
+    } finally {
+      setGeneratingEvaluation(false);
     }
   }
 
@@ -95,7 +145,8 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
       strengths: (evaluation.strengths || []).join('\n'),
       weaknesses: (evaluation.weaknesses || []).join('\n'),
       improvement_suggestions: (evaluation.improvement_suggestions || []).join('\n'),
-      manager_comments: evaluation.manager_comments || ''
+      manager_comments: evaluation.manager_comments || '',
+      manager_adjustment_justification: evaluation.manager_adjustment_justification || ''
     });
 
     try {
@@ -103,11 +154,61 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
       const list = [...(objRes.data.individualObjectives || []), ...(objRes.data.teamObjectives || [])]
         .filter((objective) => isEvaluationObjectiveStatus(objective.status));
       setEmployeeObjectives(list);
-    } catch (err) {
+      setObjectiveAssessments(list.reduce((result, objective) => {
+        result[objective._id] = {
+          percent: objective.managerAdjustedPercent ?? objective.finalSelfPercent ?? objective.achievementPercent ?? 0,
+          comment: objective.evaluationComment || objective.managerComments || ''
+        };
+        return result;
+      }, {}));
+    } catch {
       toast.error('Failed to load employee objectives');
     }
 
     setCareerRec({ suggested_path: '', skills_to_develop: '' });
+  }
+
+  async function handleConfirmObjective(objective) {
+    const assessment = objectiveAssessments[objective._id] || {};
+    const percent = Number(assessment.percent);
+    if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
+      toast.error('Manager-confirmed achievement must be between 0 and 100.');
+      return;
+    }
+
+    try {
+      setSavingObjectiveId(objective._id);
+      const objectiveResponse = await api.post(`/objectives/${objective._id}/evaluate`, {
+        evaluationRating: evaluationRatingForPercent(percent),
+        evaluationComment: String(assessment.comment || '').trim(),
+        managerAdjustedPercent: percent,
+        evidence: 'Reviewed during end-year evaluation'
+      });
+
+      setEmployeeObjectives((current) => current.map((item) => (
+        item._id === objective._id ? objectiveResponse.data.objective : item
+      )));
+
+      const previousAutoScore = Number(selectedEvaluation.auto_score || 0);
+      const recalculateResponse = await api.post(`/final-evaluations/${selectedEvaluation._id}/recalculate`);
+      const recalculated = recalculateResponse.data.evaluation;
+      setSelectedEvaluation(recalculated);
+      setFormData((current) => {
+        const currentManagerScore = Number(current.manager_score);
+        const followsSuggestedScore = !Number.isFinite(currentManagerScore) || Math.abs(currentManagerScore - previousAutoScore) < 0.01;
+        const nextManagerScore = followsSuggestedScore ? recalculated.auto_score : current.manager_score;
+        return {
+          ...current,
+          manager_score: String(nextManagerScore),
+          rating_label: ratingForScore(nextManagerScore)
+        };
+      });
+      toast.success('Objective achievement confirmed and suggested score recalculated.');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to confirm objective achievement.');
+    } finally {
+      setSavingObjectiveId('');
+    }
   }
 
   async function handleGenerateAIDraft() {
@@ -117,9 +218,20 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
       const res = await api.post('/ai/generate-evaluation', {
         employee_name: selectedEmployee.name,
         objectives: employeeObjectives.map(function (o) {
-          return { title: o.title, achievementPercent: o.achievementPercent || 0, status: o.status };
+          return {
+            title: o.title,
+            weight: o.weight || 0,
+            category: o.category || 'individual',
+            employeeAchievement: o.finalSelfPercent ?? o.achievementPercent ?? 0,
+            managerConfirmedAchievement: o.managerAdjustedPercent ?? null,
+            achievementPercent: o.managerAdjustedPercent ?? o.finalSelfPercent ?? o.achievementPercent ?? 0,
+            selfAssessment: o.finalSelfAssessment || '',
+            managerComment: o.evaluationComment || '',
+            status: o.status
+          };
         }),
-        existing_score: selectedEvaluation.auto_score || null
+        existing_score: Number(formData.manager_score || selectedEvaluation.auto_score || 0),
+        rating_label: ratingForScore(formData.manager_score || selectedEvaluation.auto_score)
       });
       const draft = res.data.draft;
       if (draft) {
@@ -130,8 +242,6 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
             weaknesses: Array.isArray(draft.weaknesses) ? draft.weaknesses.join('\n') : (draft.weaknesses || ''),
             improvement_suggestions: Array.isArray(draft.improvement_suggestions) ? draft.improvement_suggestions.join('\n') : (draft.improvement_suggestions || ''),
             manager_comments: draft.manager_comments || prev.manager_comments,
-            rating_label: draft.rating_label || prev.rating_label,
-            manager_score: draft.manager_score !== undefined ? String(draft.manager_score) : prev.manager_score,
           };
         });
         toast.success('AI draft generated! Review and adjust before saving.');
@@ -157,16 +267,36 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
         });
         toast.success('Career suggestions generated.');
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to generate career suggestions');
     }
   }
 
   async function handleSave(submitToHR = false) {
+    setValidationErrors([]);
+    if (submitToHR) {
+      const errors = [];
+      const score = formData.manager_score === '' ? Number(selectedEvaluation.auto_score) : Number(formData.manager_score);
+      const difference = Math.abs(score - Number(selectedEvaluation.auto_score || 0));
+      if (!String(formData.manager_comments || '').trim()) errors.push('Add final manager comments.');
+      if (difference >= 10 && !String(formData.manager_adjustment_justification || '').trim()) {
+        errors.push('Explain the manager score adjustment of 10 points or more.');
+      }
+      employeeObjectives.forEach((objective) => {
+        if (!objective.finalSelfSubmittedAt) errors.push(`${objective.title}: employee self-assessment is missing.`);
+        if (objective.managerAdjustedPercent == null) errors.push(`${objective.title}: manager achievement confirmation is missing.`);
+      });
+      if (errors.length) {
+        setValidationErrors(errors);
+        toast.error('Complete the highlighted report requirements before HR submission.');
+        return;
+      }
+    }
     try {
+      setSaving(true);
       const payload = {
-        manager_score: formData.manager_score ? Number(formData.manager_score) : selectedEvaluation.auto_score,
-        rating_label: formData.rating_label,
+        manager_score: formData.manager_score === '' ? selectedEvaluation.auto_score : Number(formData.manager_score),
+        manager_adjustment_justification: formData.manager_adjustment_justification,
         strengths: formData.strengths.split('\n').map((item) => item.trim()).filter(Boolean),
         weaknesses: formData.weaknesses.split('\n').map((item) => item.trim()).filter(Boolean),
         improvement_suggestions: formData.improvement_suggestions.split('\n').map((item) => item.trim()).filter(Boolean),
@@ -188,10 +318,14 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
       }
 
       toast.success(submitToHR ? 'Evaluation submitted to HR.' : 'Draft saved successfully.');
-      setSelectedEmployee(null);
-      fetchTeamData();
+      if (!reportEmployeeId) setSelectedEmployee(null);
+      await fetchTeamData();
     } catch (err) {
+      const backendErrors = (err.response?.data?.errors || []).map((item) => item.message).filter(Boolean);
+      setValidationErrors(backendErrors);
       toast.error(err.response?.data?.message || 'Failed to save evaluation');
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -208,7 +342,7 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
       document.body.appendChild(link);
       link.click();
       link.remove();
-    } catch (err) {
+    } catch {
       toast.error('Failed to export PDF');
     }
   }
@@ -384,10 +518,10 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
 
                   <div>
                     {!evaluation ? (
-                      <button className="btn btn--primary" onClick={() => handleGenerateEvaluation(employee)} disabled={!canEditCycle}>Generate Final Report</button>
+                      <button className="btn btn--primary" onClick={() => navigate(`/final-evaluations/${cycleId}/${employee._id}/report`)}>Prepare Final Report</button>
                     ) : (
-                      <button className="btn btn--outline" onClick={() => openEditor(employee, evaluation)}>
-                        {['validated', 'closed'].includes(evaluation.status) ? 'View Final Report' : 'Review Final Report'}
+                      <button className="btn btn--outline" onClick={() => navigate(`/final-evaluations/${cycleId}/${employee._id}/report`)}>
+                        Open Report
                       </button>
                     )}
                   </div>
@@ -406,7 +540,48 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
     );
   }
 
-  const readOnly = ['validated', 'closed'].includes(selectedEvaluation.status) || !canEditCycle;
+  if (!selectedEvaluation) {
+    return (
+      <div className="card shadow-sm" style={{ padding: '2rem', animation: 'reportReveal 260ms ease-out' }}>
+        <button className="btn btn--secondary" onClick={() => navigate('/final-evaluations')} style={{ marginBottom: '1.5rem' }}>
+          Back to Team List
+        </button>
+        <div style={{ maxWidth: '760px' }}>
+          <div className="badge" style={{ background: '#eef2ff', color: '#4338ca', marginBottom: '1rem' }}>Report workspace</div>
+          <h2 style={{ margin: '0 0 0.65rem' }}>No final report generated yet.</h2>
+          <p className="text-muted" style={{ lineHeight: 1.65 }}>
+            Review the evaluation data, then generate an AI-assisted draft report.
+          </p>
+          <div style={{ margin: '1.25rem 0', padding: '1rem', borderRadius: '8px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+            <div style={{ fontWeight: 700, marginBottom: '0.35rem' }}>Prepared report page for {selectedEmployee.name}</div>
+            <div className="text-muted" style={{ lineHeight: 1.55 }}>
+              The draft will use objectives, task evidence, check-ins, self-assessment details, and the built-in fallback summary if the AI provider is unavailable.
+            </div>
+          </div>
+          {!canEditCycle && (
+            <div className="alert alert--warning">Report generation is only available during Phase 3.</div>
+          )}
+          {generationError && (
+            <div className="alert alert--danger" role="alert" style={{ marginBottom: '1rem' }}>
+              {generationError}
+            </div>
+          )}
+          <button
+            className="btn btn--primary"
+            onClick={() => handleGenerateEvaluation(selectedEmployee)}
+            disabled={!canEditCycle || generatingEvaluation}
+          >
+            {generatingEvaluation ? 'Generating report...' : 'Generate AI-Assisted Report'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const readOnly = ['pending_hr', 'validated', 'closed'].includes(selectedEvaluation.status) || !canEditCycle;
+  const displayedManagerScore = formData.manager_score === '' ? selectedEvaluation.auto_score : Number(formData.manager_score);
+  const scoreDifference = Number((displayedManagerScore - Number(selectedEvaluation.auto_score || 0)).toFixed(1));
+  const requiresAdjustmentJustification = Math.abs(scoreDifference) >= 10;
 
   let completedObjs = 0;
   let partialObjs = 0;
@@ -429,13 +604,32 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
-        <button className="btn btn--secondary" onClick={() => setSelectedEmployee(null)}>[BACK] Back to Team List</button>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button className="btn btn--secondary" onClick={() => reportEmployeeId ? navigate('/final-evaluations') : setSelectedEmployee(null)}>Back to Team List</button>
+        </div>
         <button className="btn btn--outline" onClick={handleExportPDF}>Export Final Evaluation PDF</button>
       </div>
 
       {!canEditCycle && (
         <div className="alert alert--warning" style={{ marginBottom: '1.5rem', background: '#f8fafc', color: '#475569', padding: '1rem', borderRadius: '8px', borderLeft: '4px solid #64748b' }}>
           <strong>Note:</strong> This cycle is {activeCycle?.currentPhase || 'not in Phase 3'}. Evaluation data is view-only.
+        </div>
+      )}
+
+      {selectedEvaluation.status === 'pending_hr' && (
+        <div
+          className="alert alert--success"
+          role="status"
+          style={{ marginBottom: '1.5rem', padding: '1rem 1.25rem', borderRadius: '10px', background: '#ecfdf5', color: '#166534', border: '1px solid #86efac' }}
+        >
+          <strong>Submitted to HR successfully.</strong>
+          <div style={{ marginTop: '0.3rem' }}>This final-year report is locked while it awaits HR validation.</div>
+        </div>
+      )}
+      {selectedEvaluation.status === 'draft' && selectedEvaluation.hr_return_reason && (
+        <div className="alert alert--danger" role="alert" style={{ marginBottom: '1.5rem' }}>
+          <strong>HR returned this report for revision.</strong>
+          <div style={{ marginTop: '0.35rem', whiteSpace: 'pre-wrap' }}>{selectedEvaluation.hr_return_reason}</div>
         </div>
       )}
 
@@ -449,8 +643,12 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
             <h4 style={{ margin: '0 0 1rem 0' }}>Scoring System</h4>
             <div style={{ display: 'flex', gap: '2rem', background: '#f8fafc', padding: '1.5rem', borderRadius: '8px', flexWrap: 'wrap' }}>
               <div>
-                <div className="text-muted" style={{ fontSize: '0.85rem' }}>Auto Score</div>
+                <div className="text-muted" style={{ fontSize: '0.85rem' }}>Weighted Suggested Score</div>
                 <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>{selectedEvaluation.auto_score?.toFixed(1)}%</div>
+                <div className="text-muted" style={{ fontSize: '0.78rem' }}>
+                  {selectedEvaluation.objective_weight_total ?? 0}% objective weight
+                  {selectedEvaluation.objective_score_normalized ? ' (normalized)' : ''}
+                </div>
               </div>
               <div>
                 <div className="text-muted" style={{ fontSize: '0.85rem' }}>Final Score</div>
@@ -510,6 +708,47 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
                         "{obj.finalSelfAssessment}"
                       </p>
                     )}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(150px, 0.5fr) minmax(240px, 1.5fr) auto', gap: '0.75rem', alignItems: 'end', marginTop: '1rem' }}>
+                      <div>
+                        <label className="ent-label">Manager-confirmed achievement</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          className="ent-input"
+                          value={objectiveAssessments[obj._id]?.percent ?? 0}
+                          disabled={readOnly || savingObjectiveId === obj._id}
+                          onChange={(event) => setObjectiveAssessments((current) => ({
+                            ...current,
+                            [obj._id]: { ...current[obj._id], percent: event.target.value }
+                          }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="ent-label">Manager objective comment</label>
+                        <input
+                          type="text"
+                          className="ent-input"
+                          value={objectiveAssessments[obj._id]?.comment ?? ''}
+                          disabled={readOnly || savingObjectiveId === obj._id}
+                          placeholder="Explain the confirmed achievement using the available evidence."
+                          onChange={(event) => setObjectiveAssessments((current) => ({
+                            ...current,
+                            [obj._id]: { ...current[obj._id], comment: event.target.value }
+                          }))}
+                        />
+                      </div>
+                      {!readOnly && (
+                        <button
+                          type="button"
+                          className="btn btn--secondary"
+                          disabled={savingObjectiveId === obj._id}
+                          onClick={() => handleConfirmObjective(obj)}
+                        >
+                          {savingObjectiveId === obj._id ? 'Saving...' : 'Confirm'}
+                        </button>
+                      )}
+                    </div>
                     {objectiveAttachments.length > 0 && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
                         {objectiveAttachments.map((attachment, index) => (
@@ -557,24 +796,33 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
                   transition: 'all 0.2s',
                 }}
               >
-                {aiDraftLoading ? '⏳ Generating...' : '✨ Generate AI Draft'}
+                {aiDraftLoading ? 'Generating...' : 'Generate AI-Assisted Evaluation Draft'}
               </button>
             </div>
           )}
           <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: '220px' }}>
               <label className="ent-label">Manager Final Rating Score (%)</label>
-              <input type="number" className="ent-input" value={formData.manager_score} onChange={(e) => setFormData({ ...formData, manager_score: e.target.value })} disabled={readOnly} placeholder={selectedEvaluation.auto_score?.toFixed(1)} />
+              <input
+                type="number"
+                min="0"
+                max="100"
+                className="ent-input"
+                value={formData.manager_score}
+                onChange={(e) => {
+                  const nextScore = e.target.value;
+                  setFormData({ ...formData, manager_score: nextScore, rating_label: ratingForScore(nextScore) });
+                }}
+                disabled={readOnly}
+                placeholder={selectedEvaluation.auto_score?.toFixed(1)}
+              />
+              <div className="text-muted" style={{ fontSize: '0.82rem', marginTop: '0.4rem' }}>
+                Difference from suggested score: <strong>{scoreDifference > 0 ? '+' : ''}{scoreDifference} points</strong>
+              </div>
             </div>
             <div style={{ flex: 1, minWidth: '220px' }}>
-              <label className="ent-label">Final Rating</label>
-              <select className="ent-select" value={formData.rating_label} onChange={(e) => setFormData({ ...formData, rating_label: e.target.value })} disabled={readOnly}>
-                <option value="exceptional">Exceptional</option>
-                <option value="strong">Strong</option>
-                <option value="meets_expectations">Meets Expectations</option>
-                <option value="needs_improvement">Needs Improvement</option>
-                <option value="unsatisfactory">Unsatisfactory</option>
-              </select>
+              <label className="ent-label">Final Rating (automatic)</label>
+              <input className="ent-input" value={renderRatingLabel(ratingForScore(displayedManagerScore))} readOnly />
             </div>
             <div style={{ flex: 1, minWidth: '220px' }}>
               <label className="ent-label">Promotion / Warning Suggestion</label>
@@ -587,6 +835,31 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
               </select>
             </div>
           </div>
+
+          {requiresAdjustmentJustification && (
+            <div style={{ marginBottom: '1.5rem', padding: '1rem', borderRadius: '8px', background: '#fffbeb', border: '1px solid #fbbf24' }}>
+              <label className="ent-label">Score Adjustment Justification *</label>
+              <textarea
+                className="ent-input"
+                style={{ minHeight: '90px' }}
+                value={formData.manager_adjustment_justification}
+                onChange={(e) => setFormData({ ...formData, manager_adjustment_justification: e.target.value })}
+                disabled={readOnly}
+                placeholder={`Explain the ${Math.abs(scoreDifference)}-point difference using objective evidence, tasks, check-ins, quality, or documented blockers.`}
+              />
+            </div>
+          )}
+
+          {selectedEvaluation.evidence_summary && (
+            <div style={{ marginBottom: '1.5rem', padding: '1rem', borderRadius: '8px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+              <strong>Supporting evidence (not separately scored)</strong>
+              <div className="text-muted" style={{ marginTop: '0.45rem' }}>
+                Tasks: {selectedEvaluation.evidence_summary.tasks?.completed || 0}/{selectedEvaluation.evidence_summary.tasks?.total || 0} completed
+                {' | '}Check-ins: {selectedEvaluation.evidence_summary.checkins?.approved || 0}/{selectedEvaluation.evidence_summary.checkins?.total || 0} approved
+                {' | '}Average check-in progress: {selectedEvaluation.evidence_summary.checkins?.average_progress ?? 'N/A'}%
+              </div>
+            </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
             <div>
@@ -605,8 +878,14 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <label className="ent-label">Manager Final Comments</label>
+            <label className="ent-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              Final Comments
+              {selectedEvaluation.status === 'draft' && <span className="ds-badge ds-badge--ai">AI-Assisted Draft</span>}
+            </label>
             <textarea className="ent-input" style={{ minHeight: '120px' }} value={formData.manager_comments} onChange={(e) => setFormData({ ...formData, manager_comments: e.target.value })} disabled={readOnly} />
+            <div className="text-muted" style={{ fontSize: '0.82rem', marginTop: '0.4rem' }}>
+              AI provides an editable draft only. The manager remains responsible for the submitted report.
+            </div>
           </div>
 
           <div style={{ padding: '1.5rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
@@ -631,10 +910,24 @@ function FinalEvaluationManager({ cycleId, activeCycle }) {
       </div>
 
       {!readOnly && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem' }}>
-          <button type="button" className="btn btn--outline" onClick={() => handleSave(false)}>Save Draft</button>
-          <button type="button" className="btn btn--primary" onClick={() => handleSave(true)}>Submit for HR Validation</button>
-        </div>
+        <>
+          {validationErrors.length > 0 && (
+            <div className="alert alert--danger" role="alert" style={{ marginTop: '1.5rem' }}>
+              <strong>Report cannot be submitted yet:</strong>
+              <ul style={{ marginBottom: 0 }}>
+                {validationErrors.map((message, index) => <li key={`${message}-${index}`}>{message}</li>)}
+              </ul>
+            </div>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem' }}>
+            <button type="button" className="btn btn--outline" onClick={() => handleSave(false)} disabled={saving}>
+              {saving ? 'Saving…' : 'Save Draft'}
+            </button>
+            <button type="button" className="btn btn--primary" onClick={() => handleSave(true)} disabled={saving}>
+              {saving ? 'Submitting…' : 'Submit for HR Review'}
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

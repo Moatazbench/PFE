@@ -67,7 +67,14 @@ function AuditLogsPage() {
     <div className="audit-logs-page">
       <div className="ds-page-header">
         <div className="ds-page-header__left">
-          <h1 className="ds-page-header__title">System Audit Logs</h1>
+          <h1 className="ds-page-header__title">
+            <span className="ds-icon-circle ds-icon-circle--danger ds-icon-circle--sm">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '20px', height: '20px' }}>
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+            </span>
+            System Audit Logs
+          </h1>
           <p className="ds-page-header__subtitle">Security, workflow, and administrative activity across the platform.</p>
         </div>
       </div>

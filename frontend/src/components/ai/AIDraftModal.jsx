@@ -52,10 +52,22 @@ export default function AIDraftModal({ open, title, description, fields = [], dr
         ) : (
           <>
             {error ? (
-              <div style={{ marginBottom: '1rem', background: '#fee2e2', color: '#991b1b', padding: '1rem', borderRadius: '10px' }}>
-                <strong>Error:</strong> {error}
+              <div style={{ marginBottom: '1rem', background: 'var(--shell-warning)', color: '#fff', padding: '1rem', borderRadius: 'var(--shell-radius-md)', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                  <line x1="12" y1="9" x2="12" y2="13"></line>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <div>
+                  <strong style={{ display: 'block', marginBottom: '4px' }}>AI service is currently unavailable.</strong>
+                  <span style={{ fontSize: '0.9rem' }}>A rule-based draft was generated using your objectives, tasks, check-ins, and evaluation data. You can review and edit it below.</span>
+                </div>
               </div>
             ) : null}
+            
+            <div style={{ marginBottom: '1.25rem' }}>
+              <span className="ent-badge" style={{ backgroundColor: 'var(--shell-purple-subtle)', color: 'var(--shell-purple)', border: '1px solid rgba(139, 92, 246, 0.3)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600 }}>✨ AI-Assisted Draft</span>
+            </div>
 
             <div style={{ display: 'grid', gap: '1rem' }}>
               {fields.map(function (field) {

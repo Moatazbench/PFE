@@ -6,11 +6,14 @@ const auth = require('../middleware/auth');
 const role = require('../middleware/role');
 const rateLimiter = require('../middleware/rateLimiter');
 const { createNotification } = require('../utils/notificationHelper');
+const Objective = require('../models/Objective');
+const Task = require('../models/Task');
+const FinalEvaluation = require('../models/FinalEvaluation');
 
 function populateTeamQuery(query) {
   return query
-    .populate('leader', 'name email role')
-    .populate('members', 'name email role')
+    .populate('leader', 'name email role profileImage')
+    .populate('members', 'name email role profileImage')
     .populate('createdBy', 'name')
     .populate('parentTeam', 'name leader members');
 }
@@ -121,14 +124,17 @@ async function validateMainTeamPayload(payload) {
   };
 }
 
-async function validateSubTeamPayload(payload, parentTeam, creatorId) {
+async function validateSubTeamPayload(payload, parentTeam) {
   var name = payload.name;
-  var leader = String(creatorId);
-  var members = uniqueIds([creatorId].concat(payload.members || []));
+  var leader = payload.leader ? String(payload.leader) : '';
+  var members = uniqueIds(payload.members || []);
   var parentPoolIds = getParentPoolIds(parentTeam);
 
   if (!name || !name.trim()) {
-    return { status: 400, message: 'Team name is required.' };
+    return { status: 400, message: 'Sub-team name is required.' };
+  }
+  if (!leader) {
+    return { status: 400, message: 'A sub-team leader is required. Please select a leader from the parent team.' };
   }
   if (members.length === 0) {
     return { status: 400, message: 'At least one sub-team member is required.' };
@@ -143,15 +149,6 @@ async function validateSubTeamPayload(payload, parentTeam, creatorId) {
   var assignedUsers = await User.find({ _id: { $in: uniqueIds([leader].concat(members)) } }).select('_id');
   if (assignedUsers.length !== uniqueIds([leader].concat(members)).length) {
     return { status: 400, message: 'One or more selected users were not found.' };
-  }
-
-  var leaderTeamQuery = { leader: leader };
-  if (payload.excludeTeamId) {
-    leaderTeamQuery._id = { $ne: payload.excludeTeamId };
-  }
-  var existingLeaderTeam = await Team.findOne(leaderTeamQuery);
-  if (existingLeaderTeam) {
-    return { status: 400, message: 'This manager is already assigned to another team.' };
   }
 
   return {
@@ -243,6 +240,80 @@ router.get('/my-team', rateLimiter, auth, async function (req, res) {
 });
 
 // Get sub-teams by parent team
+router.get('/:id/summary', rateLimiter, auth, async function (req, res) {
+  try {
+    const team = await populateTeamQuery(Team.findById(req.params.id));
+    if (!team) return res.status(404).json({ success: false, message: 'Team not found.' });
+    if (!(await canManageTeam(req.user, team)) && !['ADMIN', 'HR'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to view this team summary.' });
+    }
+    const memberIds = uniqueIds([team.leader?._id, ...(team.members || []).map((member) => member._id || member)]);
+    const objectiveFilter = { owner: { $in: memberIds }, status: { $nin: ['draft', 'rejected', 'cancelled', 'archived'] } };
+    const evaluationFilter = { employee_id: { $in: memberIds }, status: { $in: ['validated', 'closed'] } };
+    if (req.query.cycleId) {
+      objectiveFilter.cycle = req.query.cycleId;
+      evaluationFilter.cycle_id = req.query.cycleId;
+    }
+    const [objectives, tasks, evaluations] = await Promise.all([
+      Objective.find(objectiveFilter).select('achievementPercent finalSelfPercent managerAdjustedPercent weight owner').lean(),
+      Task.find({ assignee: { $in: memberIds } }).select('status workflowStage').lean(),
+      FinalEvaluation.find(evaluationFilter).select('final_score').lean()
+    ]);
+    const objectiveProgress = objectives.length
+      ? objectives.reduce((sum, objective) => sum + Number(objective.managerAdjustedPercent ?? objective.finalSelfPercent ?? objective.achievementPercent ?? 0), 0) / objectives.length
+      : null;
+    const completedTasks = tasks.filter((task) => task.status === 'done' || task.workflowStage === 'completed').length;
+    const averageScore = evaluations.length
+      ? evaluations.reduce((sum, evaluation) => sum + Number(evaluation.final_score || 0), 0) / evaluations.length
+      : null;
+
+    // Weight Health Calculation
+    const weightPerMember = {};
+    memberIds.forEach(id => weightPerMember[id.toString()] = 0);
+    objectives.forEach(obj => {
+      const oid = obj.owner?.toString() || obj.owner;
+      if (oid && weightPerMember[oid] !== undefined) {
+        weightPerMember[oid] += (obj.weight || 0);
+      }
+    });
+
+    let overloaded = 0;
+    let nearLimit = 0;
+    let ok = 0;
+    let totalWeight = 0;
+
+    Object.values(weightPerMember).forEach(w => {
+      totalWeight += w;
+      if (w > 100) overloaded++;
+      else if (w >= 80) nearLimit++;
+      else ok++;
+    });
+
+    const weightHealth = {
+      overloaded,
+      nearLimit,
+      ok,
+      average: memberIds.length ? Math.round(totalWeight / memberIds.length) : 0
+    };
+
+    res.json({
+      success: true,
+      summary: {
+        teamId: team._id,
+        name: team.name,
+        leader: team.leader,
+        memberCount: memberIds.length,
+        objectiveProgress: objectiveProgress == null ? null : Number(objectiveProgress.toFixed(1)),
+        taskCompletion: tasks.length ? Number(((completedTasks / tasks.length) * 100).toFixed(1)) : null,
+        averagePerformanceScore: averageScore == null ? null : Number(averageScore.toFixed(1)),
+        weightHealth
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.get('/:id/subteams', rateLimiter, auth, async function (req, res) {
   try {
     var parentTeam = await Team.findById(req.params.id);
@@ -332,15 +403,7 @@ router.post('/:id/subteams', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER
       return res.status(403).json({ message: 'You can only create sub-teams inside your own team structure.' });
     }
 
-    var creatorId = String(req.user.id || req.user._id);
-    var currentParentPool = getParentPoolIds(parentTeam);
-    if (!currentParentPool.includes(creatorId)) {
-      parentTeam.members.push(creatorId);
-      await parentTeam.save();
-      parentTeam = await populateTeamQuery(Team.findById(req.params.id));
-    }
-
-    var validated = await validateSubTeamPayload(req.body, parentTeam, creatorId);
+    var validated = await validateSubTeamPayload(req.body, parentTeam);
     if (validated.status) {
       return res.status(validated.status).json({ message: validated.message });
     }
@@ -354,13 +417,6 @@ router.post('/:id/subteams', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER
       createdBy: req.user.id
     });
     await team.save();
-
-    // FIX 2: Auto-add sub-team leader to parent team members if not already present
-    var parentMemberIds = (parentTeam.members || []).map(function (m) { return String(m._id || m); });
-    var subTeamLeaderId = String(validated.leader);
-    if (!parentMemberIds.includes(subTeamLeaderId) && String(parentTeam.leader?._id || parentTeam.leader) !== subTeamLeaderId) {
-      await Team.findByIdAndUpdate(parentTeam._id, { $addToSet: { members: subTeamLeaderId } });
-    }
 
     var populated = await populateTeamQuery(Team.findById(team._id));
     await notifyTeamAssignments(req.user, validated.leader, validated.members, validated.name);
@@ -404,9 +460,10 @@ router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), async 
       validated = await validateSubTeamPayload({
         name: req.body.name !== undefined ? req.body.name : team.name,
         description: req.body.description !== undefined ? req.body.description : team.description,
+        leader: req.body.leader !== undefined ? req.body.leader : prevLeader,
         members: req.body.members !== undefined ? req.body.members : prevMembers,
         excludeTeamId: team._id
-      }, parentTeam, req.body.leader !== undefined ? req.body.leader : (team.leader ? String(team.leader._id || team.leader) : (req.user.id || req.user._id)));
+      }, parentTeam);
     } else {
       validated = await validateMainTeamPayload({
         name: req.body.name !== undefined ? req.body.name : team.name,

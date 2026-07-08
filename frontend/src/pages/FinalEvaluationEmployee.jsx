@@ -307,7 +307,7 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
                       ...prev,
                       [objective._id]: { ...prev[objective._id], comment: e.target.value }
                     }))}
-                    placeholder="Summarize what you delivered, the impact, and any end-of-cycle context."
+                    placeholder="Summarize achievements, delivered impact, difficulties or blockers, and any end-of-cycle context."
                   />
                 </div>
 
@@ -454,6 +454,9 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
     ...(evaluation.weaknesses || []).slice(0, 2).map((item) => ({ label: 'Focus Area', value: item })),
     ...(evaluation.improvement_suggestions || []).slice(0, 2).map((item) => ({ label: 'Next Cycle', value: item }))
   ];
+  const objectiveBreakdown = Array.isArray(evaluation.objective_breakdown)
+    ? evaluation.objective_breakdown
+    : [];
 
   const chartData = {
     labels: historyEvals.map((item) => item.cycleName),
@@ -505,7 +508,7 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
         <div className="card shadow-sm" style={{ padding: '1.25rem' }}>
           <div className="text-muted" style={{ fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 700 }}>Final KPI Score</div>
           <div style={{ fontSize: '1.9rem', fontWeight: 800, color: '#0284c7', marginTop: '0.35rem' }}>{evaluation.final_score}%</div>
-          <div style={{ fontSize: '0.9rem', marginTop: '0.35rem' }}>Global performance score for the full cycle.</div>
+          <div style={{ fontSize: '0.9rem', marginTop: '0.35rem' }}>Weighted objective score confirmed by your manager and validated by HR.</div>
         </div>
         <div className="card shadow-sm" style={{ padding: '1.25rem' }}>
           <div className="text-muted" style={{ fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 700 }}>Achievement Recap</div>
@@ -548,15 +551,33 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
             <span className="badge" style={{ background: '#fee2e2', color: '#991b1b' }}>Below Target: {missedObjectives.length}</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {objectives.map((objective) => (
-              <div key={objective._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--shell-bg-inset)', padding: '0.75rem', borderRadius: '6px' }}>
-                <span style={{ fontWeight: 500 }}>{objective.title}</span>
-                <span style={{ fontSize: '1rem' }} title={`Progress: ${objective.achievementPercent || 0}%`}>
-                  {getObjectiveIcon(objective.achievementPercent || 0)} {objective.achievementPercent || 0}%
-                </span>
+            {objectiveBreakdown.map((objective) => (
+              <div key={objective.objective_id || objective.title} style={{ background: 'var(--shell-bg-inset)', padding: '0.75rem', borderRadius: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+                  <span style={{ fontWeight: 600 }}>{objective.title}</span>
+                  <span style={{ fontSize: '1rem' }}>
+                    {getObjectiveIcon(objective.achievement_used || 0)} {objective.achievement_used || 0}%
+                  </span>
+                </div>
+                <div className="text-muted" style={{ fontSize: '0.82rem', marginTop: '0.3rem' }}>
+                  Weight {objective.weight}% · Employee input {objective.employee_achievement}% ·
+                  Manager confirmed {objective.manager_confirmed_achievement ?? objective.achievement_used}% ·
+                  Contribution {objective.weighted_points} points
+                </div>
+                {objectives.find((item) => String(item._id) === String(objective.objective_id))?.finalSelfAssessment && (
+                  <div style={{ marginTop: '0.45rem', fontSize: '0.86rem', fontStyle: 'italic' }}>
+                    Self-assessment: “{objectives.find((item) => String(item._id) === String(objective.objective_id)).finalSelfAssessment}”
+                  </div>
+                )}
               </div>
             ))}
-            {objectives.length === 0 && <p className="text-muted">No objectives found.</p>}
+            {objectiveBreakdown.length === 0 && objectives.map((objective) => (
+              <div key={objective._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--shell-bg-inset)', padding: '0.75rem', borderRadius: '6px' }}>
+                <span style={{ fontWeight: 500 }}>{objective.title}</span>
+                <span>{getObjectiveIcon(objective.achievementPercent || 0)} {objective.achievementPercent || 0}%</span>
+              </div>
+            ))}
+            {objectiveBreakdown.length === 0 && objectives.length === 0 && <p className="text-muted">No objectives found.</p>}
           </div>
         </div>
 
@@ -619,8 +640,13 @@ function FinalEvaluationEmployee({ cycleId, activeCycle }) {
       )}
 
       <div className="card shadow-sm" style={{ padding: '1.5rem', background: '#f8fafc' }}>
-        <h3 style={{ margin: '0 0 0.5rem 0' }}>Final Manager Comments</h3>
+        <h3 style={{ margin: '0 0 0.5rem 0' }}>
+          {evaluation.ai_assisted ? 'AI-Assisted Report Reviewed by Manager' : 'Final Manager Report'}
+        </h3>
         <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{evaluation.manager_comments || 'No final manager comments provided.'}</p>
+        <div className="text-muted" style={{ marginTop: '0.65rem', fontSize: '0.82rem' }}>
+          AI may have assisted with the initial draft. The manager reviewed and submitted this final text.
+        </div>
         {(evaluation.evaluator_id?.name || evaluation.evaluator_role) && (
           <div style={{ marginTop: '0.85rem', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
             Submitted by {evaluation.evaluator_id?.name || 'Unknown'}{evaluation.evaluator_role ? ` (${renderRoleLabel(evaluation.evaluator_role)})` : ''}{evaluation.evaluated_at ? ` on ${new Date(evaluation.evaluated_at).toLocaleDateString()}` : ''}.

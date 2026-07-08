@@ -330,7 +330,7 @@ function Notifications() {
                     <BellIcon />
                 </span>
                 {unreadCount > 0 ? (
-                    <span className="badge badge--error notification-trigger__badge">
+                    <span key={unreadCount} className="badge badge--error notification-trigger__badge">
                         {unreadCount}
                     </span>
                 ) : null}

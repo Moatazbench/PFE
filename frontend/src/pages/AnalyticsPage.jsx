@@ -13,6 +13,7 @@ import {
   LineElement,
 } from 'chart.js';
 import { Doughnut, Bar } from 'react-chartjs-2';
+import EmptyState from '../components/common/EmptyState';
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, ChartTooltip, Legend, PointElement, LineElement);
 
@@ -207,7 +208,15 @@ function AnalyticsPage() {
     <div className="ds-main__inner">
       <div className="ds-page-header">
         <div className="ds-page-header__left">
-          <h1 className="ds-page-header__title">Analytics</h1>
+          <h1 className="ds-page-header__title">
+            <span className="ds-icon-circle ds-icon-circle--primary ds-icon-circle--sm">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '20px', height: '20px' }}>
+                <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
+                <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+              </svg>
+            </span>
+            Analytics
+          </h1>
           <p className="ds-page-header__subtitle">Performance, task, and feedback insight across the current workspace.</p>
         </div>
       </div>
@@ -345,8 +354,8 @@ function AnalyticsPage() {
               </div>
             </ChartCard>
           ) : (
-            <div style={{ background: 'var(--shell-bg-inset, #f8fafc)', borderRadius: 16, padding: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--shell-text-secondary, #64748b)', fontSize: '0.9rem', border: '1px dashed var(--shell-border, #e2e8f0)' }}>
-              No feedback type breakdown yet
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: 'var(--shell-bg-inset, #f8fafc)', borderRadius: 16, border: '1px dashed var(--shell-border, #e2e8f0)' }}>
+              <EmptyState title="No feedback type breakdown" />
             </div>
           )}
         </div>
@@ -382,7 +391,7 @@ function AnalyticsPage() {
                     );
                   })}
                 </div>
-              ) : <p style={{ color: 'var(--shell-text-secondary, #64748b)', fontSize: '0.9rem', margin: 0 }}>No data</p>}
+              ) : <EmptyState title="No data available" />}
             </ChartCard>
           </div>
         </div>

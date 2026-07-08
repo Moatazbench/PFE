@@ -4,6 +4,8 @@ const Objective = require('../models/Objective');
 const Feedback = require('../models/Feedback');
 const Meeting = require('../models/Meeting');
 const Evaluation = require('../models/Evaluation');
+const Task = require('../models/Task');
+const CheckIn = require('../models/CheckIn');
 
 const MAX_TEXT_LENGTH = 400;
 const MAX_ITEMS = 10;
@@ -30,6 +32,10 @@ function buildObjectiveSummary(objective) {
     successIndicator: trimText(objective.successIndicator, 240),
     status: objective.status || '',
     achievementPercent: objective.achievementPercent != null ? objective.achievementPercent : null,
+    weight: objective.weight != null ? objective.weight : null,
+    category: objective.category || 'individual',
+    finalSelfPercent: objective.finalSelfPercent != null ? objective.finalSelfPercent : null,
+    managerAdjustedPercent: objective.managerAdjustedPercent != null ? objective.managerAdjustedPercent : null,
     selfAssessment: trimText(objective.selfAssessment || objective.finalSelfAssessment || ''),
     finalSelfAssessment: trimText(objective.finalSelfAssessment || ''),
     managerComments: trimText(objective.managerComments || ''),
@@ -141,14 +147,20 @@ async function buildReviewContext({ employeeId, cycleId, objectiveId = null }) {
     .limit(MAX_ITEMS)
     .lean();
   const evaluationPromise = Evaluation.findOne({ employeeId, cycleId }).populate('evaluatorId', 'name role').lean();
+  const taskPromise = Task.find({ assignee: employeeId }).select('title status progress linkedGoal dueDate').lean();
+  const checkinPromise = CheckIn.find({ employee_id: employeeId, cycle_id: cycleId })
+    .select('objective_id status progress_percent notes manager_feedback submitted_at')
+    .lean();
 
-  const [employee, cycle, objectives, feedbacks, meetings, evaluation] = await Promise.all([
+  const [employee, cycle, objectives, feedbacks, meetings, evaluation, tasks, checkins] = await Promise.all([
     employeePromise,
     cyclePromise,
     objectivesPromise,
     feedbackPromise,
     meetingPromise,
     evaluationPromise,
+    taskPromise,
+    checkinPromise,
   ]);
 
   if (!employee) {
@@ -186,6 +198,23 @@ async function buildReviewContext({ employeeId, cycleId, objectiveId = null }) {
     feedbacks: (feedbacks || []).map(buildFeedbackSummary),
     meetings: (meetings || []).map(buildMeetingSummary),
     evaluation: buildEvaluationSummary(evaluation),
+    tasks: (tasks || [])
+      .filter((task) => !task.linkedGoal || (objectives || []).some((objective) => String(objective._id) === String(task.linkedGoal)))
+      .slice(0, MAX_ITEMS)
+      .map((task) => ({
+        title: trimText(task.title, 120),
+        status: task.status || '',
+        progress: task.progress != null ? task.progress : null,
+        dueDate: task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : null,
+      })),
+    checkins: (checkins || []).slice(0, MAX_ITEMS).map((checkin) => ({
+      objectiveId: checkin.objective_id?.toString() || null,
+      status: checkin.status || '',
+      progressPercent: checkin.progress_percent != null ? checkin.progress_percent : null,
+      notes: trimText(checkin.notes, 220),
+      managerFeedback: trimText(checkin.manager_feedback, 220),
+      submittedAt: checkin.submitted_at ? new Date(checkin.submitted_at).toISOString().slice(0, 10) : null,
+    })),
     meta: {
       cycleId: cycleId.toString(),
       employeeId: employeeId.toString(),

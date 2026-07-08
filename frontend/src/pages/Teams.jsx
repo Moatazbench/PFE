@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { formatRoleLabel } from '../utils/roles';
 
 function Teams() {
   const { user } = useAuth();
@@ -169,9 +170,8 @@ function Teams() {
 
   function getMemberOptions() {
     if (formData.parentTeamId) {
-      var autoLeaderId = String(editingTeam?.leader?._id || user?.id || user?._id || '');
       return buildParentPool(getParentTeam()).filter(function (person) {
-        return String(person._id) !== autoLeaderId;
+        return String(person._id) !== String(formData.leader || '');
       });
     }
     return users.filter(function (person) {
@@ -205,7 +205,7 @@ function Teams() {
       setError('Team name is required.');
       return;
     }
-    if (!formData.parentTeamId && !formData.leader) {
+    if (!formData.leader) {
       setError(formData.parentTeamId ? 'A sub-team leader is required.' : 'A team leader is required.');
       return;
     }
@@ -227,6 +227,7 @@ function Teams() {
         await api.post('/teams/' + formData.parentTeamId + '/subteams', {
           name: formData.name,
           description: formData.description,
+          leader: formData.leader,
           members: formData.members
         });
         setSuccess('Sub-team created successfully!');
@@ -462,37 +463,32 @@ function Teams() {
                 />
               </div>
 
-              {!formData.parentTeamId && (
-                <div className="form-group">
-                  <label>Team Leader: <span style={{ color: 'red' }}>*</span></label>
-                  <select
-                    value={formData.leader}
-                    onChange={function (e) { setFormData({ ...formData, leader: e.target.value }); }}
-                    required
-                  >
-                    <option value="">-- Select Leader --</option>
-                    {getLeaderOptions().map(function (person) {
-                      const isLeaderOfOtherTeam = isAlreadyLeader(person._id);
-                      return (
-                        <option key={person._id} value={person._id} disabled={isLeaderOfOtherTeam}>
-                          {person.name} ({person.email}){person.role ? ' - ' + person.role : ''} {isLeaderOfOtherTeam ? '(Already leads another team)' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              )}
-
-              {formData.parentTeamId && (
-                <div className="form-group">
-                  <label>Sub-Team Leader:</label>
-                  <input
-                    type="text"
-                    value={((editingTeam?.leader?.name || user?.name || 'Current Team Leader')) + ' (auto-assigned)'}
-                    disabled
-                  />
-                </div>
-              )}
+              <div className="form-group">
+                <label>{formData.parentTeamId ? 'Sub-Team Leader' : 'Team Leader'}: <span style={{ color: 'red' }}>*</span></label>
+                <select
+                  value={formData.leader}
+                  onChange={function (e) {
+                    var nextLeader = e.target.value;
+                    setFormData({
+                      ...formData,
+                      leader: nextLeader,
+                      members: formData.members.filter(function (memberId) { return String(memberId) !== String(nextLeader); })
+                    });
+                  }}
+                  required
+                >
+                  <option value="">-- Select Team Leader --</option>
+                  {getLeaderOptions().map(function (person) {
+                    const isLeaderOfOtherTeam = !formData.parentTeamId && isAlreadyLeader(person._id);
+                    return (
+                      <option key={person._id} value={person._id} disabled={isLeaderOfOtherTeam}>
+                        {person.name} ({person.email}){person.role ? ' - ' + formatRoleLabel(person.role) : ''} {isLeaderOfOtherTeam ? '(Already leads another team)' : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+                {formData.parentTeamId ? <p className="form-hint">Leaders must be selected from the parent team.</p> : null}
+              </div>
 
               <div className="form-group">
                 <label>{formData.parentTeamId ? 'Sub-Team Members:' : 'Team Members:'} <span style={{ color: 'red' }}>*</span></label>
@@ -522,11 +518,6 @@ function Teams() {
                   Selected: {formData.members.length} member(s)
                   {formData.parentTeamId ? ' from the parent team only' : ''}
                 </p>
-                {formData.parentTeamId && (
-                  <p className="form-hint">
-                    You will automatically be added as the sub-team leader and a member.
-                  </p>
-                )}
               </div>
 
               <div className="modal-actions">

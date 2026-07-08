@@ -1,6 +1,19 @@
 const Task = require('../models/Task');
 const User = require('../models/User');
+const Team = require('../models/Team');
 const { createAuditLog } = require('../utils/auditHelper');
+
+async function getManagedTeamIds(userId) {
+  const roots = await Team.find({ leader: userId }).select('_id');
+  const managed = new Set(roots.map((team) => String(team._id)));
+  let queue = roots.map((team) => team._id);
+  while (queue.length) {
+    const children = await Team.find({ parentTeam: { $in: queue } }).select('_id');
+    queue = children.map((team) => team._id);
+    children.forEach((team) => managed.add(String(team._id)));
+  }
+  return Array.from(managed);
+}
 
 function clampProgress(value) {
   const numeric = Number(value);
@@ -236,7 +249,7 @@ exports.createTask = async (req, res) => {
 exports.getMyTasks = async (req, res) => {
   try {
     const { status, priority, search, page = 1, limit = 50 } = req.query;
-    const filter = addTaskSearch({ assignedBy: req.user._id }, search);
+    const filter = addTaskSearch({ assignee: req.user._id }, search);
 
     if (status) filter.status = status;
     if (priority) filter.priority = priority;
@@ -278,7 +291,16 @@ exports.getAssignedByMe = async (req, res) => {
 exports.getTeamTasks = async (req, res) => {
   try {
     const { teamId } = req.params;
-    const tasks = (await Task.find({ team: teamId, assignedBy: req.user._id })
+    const team = await Team.findById(teamId).select('leader members');
+    if (!team) return res.status(404).json({ success: false, message: 'Team not found.' });
+    const actorId = String(req.user.id || req.user._id);
+    const managedTeamIds = req.user.role === 'TEAM_LEADER' ? await getManagedTeamIds(actorId) : [];
+    const canView = ['ADMIN', 'HR'].includes(req.user.role)
+      || managedTeamIds.includes(String(team._id))
+      || String(team.leader) === actorId
+      || (team.members || []).some((member) => String(member) === actorId);
+    if (!canView) return res.status(403).json({ success: false, message: 'Not authorized to view this team.' });
+    const tasks = (await Task.find({ team: teamId })
       .populate('assignee', 'name email role')
       .populate('assignedBy', 'name email role')
       .populate('linkedGoal', 'title')
@@ -303,8 +325,23 @@ exports.getTasksByTeams = async (req, res) => {
       return res.json({ success: true, tasks: [] });
     }
 
+    const actorId = String(req.user.id || req.user._id);
+    let allowedTeamIds = teamIds;
+    if (!['ADMIN', 'HR'].includes(req.user.role)) {
+      const managedTeamIds = req.user.role === 'TEAM_LEADER' ? await getManagedTeamIds(actorId) : [];
+      const visibleTeams = await Team.find({
+        _id: { $in: teamIds },
+        $or: [{ leader: actorId }, { members: actorId }]
+      }).select('_id');
+      allowedTeamIds = Array.from(new Set([
+        ...visibleTeams.map((team) => String(team._id)),
+        ...teamIds.filter((teamId) => managedTeamIds.includes(String(teamId)))
+      ]));
+    }
+    if (!allowedTeamIds.length) return res.json({ success: true, tasks: [] });
+
     const limit = Number.parseInt(req.query.limit, 10);
-    let query = Task.find({ team: { $in: teamIds }, assignedBy: req.user._id })
+    let query = Task.find({ team: { $in: allowedTeamIds } })
       .populate('assignee', 'name email role')
       .populate('assignedBy', 'name email role')
       .populate('linkedGoal', 'title')
@@ -326,7 +363,7 @@ exports.getTasksByTeams = async (req, res) => {
 exports.getAllTasks = async (req, res) => {
   try {
     const { status, priority, search, page = 1, limit = 50 } = req.query;
-    const filter = { assignedBy: req.user._id };
+    const filter = {};
     if (status) filter.status = status;
     if (priority) filter.priority = priority;
     addTaskSearch(filter, search);

@@ -8,8 +8,9 @@ const { sendNotificationEmail } = require('../utils/mailer');
 // Get all notifications for current user
 router.get('/', auth, async function(req, res) {
   try {
-    const notifications = await Notification.find({ recipient: req.user.id })
-      .select('sender type title message link isRead createdAt')
+    const visibilityFilter = req.user.role === 'ADMIN' ? {} : { recipient: req.user.id };
+    const notifications = await Notification.find(visibilityFilter)
+      .select('recipient sender type title message link isRead createdAt')
       .populate('sender', 'name profileImage') // Populate sender info
       .sort({ createdAt: -1 })
       .limit(50)
@@ -24,10 +25,9 @@ router.get('/', auth, async function(req, res) {
 // Get unread count
 router.get('/unread-count', auth, async function(req, res) {
   try {
-    const count = await Notification.countDocuments({
-      recipient: req.user.id,
-      isRead: false
-    });
+    const count = await Notification.countDocuments(req.user.role === 'ADMIN'
+      ? { isRead: false }
+      : { recipient: req.user.id, isRead: false });
     res.json({ count: count });
   } catch (err) {
     console.error('Get unread count error:', err);
@@ -40,9 +40,14 @@ router.post('/', auth, async function(req, res) {
   try {
     // NOTE: 'sendEmailFlag' is a boolean from caller - renamed to avoid shadowing the imported sendNotificationEmail
     const { recipientId, type, title, message, link, sendEmail: sendEmailFlag } = req.body;
+    const targetRecipientId = recipientId || req.user.id;
+
+    if (String(targetRecipientId) !== String(req.user.id) && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'You cannot create notifications for unrelated users.' });
+    }
 
     const notification = await Notification.create({
-      recipient: recipientId || req.user.id,
+      recipient: targetRecipientId,
       sender: req.user.id,
       type: type || 'GOAL_UPDATE',
       title: title,
@@ -53,7 +58,7 @@ router.post('/', auth, async function(req, res) {
 
     // Send email if caller requested it
     if (sendEmailFlag) {
-      const user = await User.findById(recipientId || req.user.id);
+      const user = await User.findById(targetRecipientId);
       if (user && user.email) {
         try {
           // Use the already-imported sendNotificationEmail (no re-require needed)
@@ -75,8 +80,11 @@ router.post('/', auth, async function(req, res) {
 // Mark notification as read
 router.post('/:id/read', auth, async function(req, res) {
   try {
+    const ownershipFilter = req.user.role === 'ADMIN'
+      ? { _id: req.params.id }
+      : { _id: req.params.id, recipient: req.user.id };
     const notification = await Notification.findOneAndUpdate(
-      { _id: req.params.id, recipient: req.user.id },
+      ownershipFilter,
       { isRead: true },
       { new: true }
     );
@@ -95,10 +103,10 @@ router.post('/:id/read', auth, async function(req, res) {
 // Mark all notifications as read
 router.post('/read-all', auth, async function(req, res) {
   try {
-    await Notification.updateMany(
-      { recipient: req.user.id, isRead: false },
-      { isRead: true }
-    );
+    const readFilter = req.user.role === 'ADMIN'
+      ? { isRead: false }
+      : { recipient: req.user.id, isRead: false };
+    await Notification.updateMany(readFilter, { isRead: true });
     res.json({ message: 'All notifications marked as read' });
   } catch (err) {
     console.error('Mark all read error:', err);
@@ -109,7 +117,10 @@ router.post('/read-all', auth, async function(req, res) {
 // Delete notification
 router.delete('/:id', auth, async function(req, res) {
   try {
-    await Notification.findOneAndDelete({ _id: req.params.id, recipient: req.user.id });
+    const deleteFilter = req.user.role === 'ADMIN'
+      ? { _id: req.params.id }
+      : { _id: req.params.id, recipient: req.user.id };
+    await Notification.findOneAndDelete(deleteFilter);
     res.json({ message: 'Notification deleted' });
   } catch (err) {
     console.error('Delete notification error:', err);

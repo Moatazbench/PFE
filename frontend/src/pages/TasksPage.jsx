@@ -4,6 +4,7 @@ import { useAuth } from '../components/AuthContext';
 import { ToastContainer, useToast } from '../components/common/Toast';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
+import EmptyState from '../components/common/EmptyState';
 import usePersistentTimer from '../hooks/usePersistentTimer';
 import {
   buildDailyProductivity,
@@ -602,12 +603,20 @@ function TasksPage() {
 
   return (
     <div className="page-container wm-page">
-      <div className="page-header wm-page__header">
-        <div className="page-header__left">
-          <h1 className="page-title">Tasks Workspace</h1>
-          <p className="page-subtitle">Track delivery, focus time, and execution flow in one place.</p>
+      <div className="ds-page-header">
+        <div className="ds-page-header__left">
+          <h1 className="ds-page-header__title">
+            <span className="ds-icon-circle ds-icon-circle--primary ds-icon-circle--sm">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '20px', height: '20px' }}>
+                <polyline points="9 11 12 14 22 4"></polyline>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+              </svg>
+            </span>
+            Tasks Workspace
+          </h1>
+          <p className="ds-page-header__subtitle">Track delivery, focus time, and execution flow in one place.</p>
         </div>
-        <div className="wm-page__actions">
+        <div className="ds-page-header__actions wm-page__actions">
           <div className="wm-segmented">
             <button type="button" className={viewMode === 'list' ? 'is-active' : ''} onClick={function () { setViewMode('list'); }}>List</button>
             <button type="button" className={viewMode === 'kanban' ? 'is-active' : ''} onClick={function () { setViewMode('kanban'); }}>Kanban</button>
@@ -760,12 +769,11 @@ function TasksPage() {
           {loading ? (
             <LoadingSkeleton rows={5} height={88} />
           ) : visibleTasks.length === 0 ? (
-            <div className="empty-state wm-empty-state">
-              <div className="empty-state__icon">Tasks</div>
-              <h3>No tasks in this view</h3>
-              <p>Create a task to start tracking execution and focus time.</p>
-              <button className="btn btn--primary" onClick={function () { dispatchWorkflow({ type: 'OPEN_CREATE_FORM' }); }}>Create Task</button>
-            </div>
+            <EmptyState
+              title="No tasks in this view"
+              description="Create a task to start tracking execution and focus time."
+              action={<button className="btn btn--primary" onClick={function () { dispatchWorkflow({ type: 'OPEN_CREATE_FORM' }); }}>Create Task</button>}
+            />
           ) : viewMode === 'kanban' ? (
             <Suspense fallback={<LoadingSkeleton rows={3} height={108} />}>
               <KanbanBoard
@@ -909,7 +917,7 @@ function TasksPage() {
               </div>
 
               {selectedTaskEntries.length === 0 ? (
-                <div className="wm-empty-inline">No tracked sessions yet for this task.</div>
+                <EmptyState title="No sessions" description="No tracked sessions yet for this task." />
               ) : (
                 <div className="wm-timesheet-list">
                   {selectedTaskEntries.map(function (entry) {
@@ -964,7 +972,7 @@ function TasksPage() {
               </div>
             </div>
             {timesheetEntries.length === 0 ? (
-              <div className="wm-empty-inline">No tracked sessions yet.</div>
+              <EmptyState title="No timesheet history" description="No tracked sessions yet." />
             ) : (
               <div className="wm-timesheet-list">
                 {timesheetEntries.map(function (entry) {

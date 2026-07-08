@@ -1,5 +1,69 @@
 const Feedback = require('../models/Feedback');
 const User = require('../models/User');
+const Team = require('../models/Team');
+const FinalEvaluation = require('../models/FinalEvaluation');
+
+async function getRelatedFeedbackUserIds(actor) {
+  const actorId = String(actor.id || actor._id);
+  if (actor.role === 'ADMIN') return null;
+
+  const ids = new Set([actorId]);
+  if (actor.role === 'HR') {
+    const evaluations = await FinalEvaluation.find({
+      $or: [
+        { status: 'pending_hr' },
+        { hr_validated_by: actorId }
+      ]
+    }).select('employee_id evaluator_id').lean();
+    evaluations.forEach((evaluation) => {
+      if (evaluation.employee_id) ids.add(String(evaluation.employee_id));
+      if (evaluation.evaluator_id) ids.add(String(evaluation.evaluator_id));
+    });
+    return Array.from(ids);
+  }
+
+  let teams = await Team.find({
+    $or: [{ leader: actorId }, { members: actorId }]
+  }).select('_id leader members').lean();
+  const visited = new Set();
+  while (teams.length > 0) {
+    const parentIds = [];
+    teams.forEach((team) => {
+      const teamId = String(team._id);
+      if (visited.has(teamId)) return;
+      visited.add(teamId);
+      parentIds.push(team._id);
+      if (team.leader) ids.add(String(team.leader));
+      (team.members || []).forEach((memberId) => ids.add(String(memberId)));
+    });
+    teams = actor.role === 'TEAM_LEADER' && parentIds.length > 0
+      ? await Team.find({ parentTeam: { $in: parentIds } }).select('_id leader members').lean()
+      : [];
+  }
+
+  if (actor.role === 'TEAM_LEADER') {
+    const directReports = await User.find({ manager: actorId, isDeleted: false }).select('_id').lean();
+    directReports.forEach((employee) => ids.add(String(employee._id)));
+  }
+  return Array.from(ids);
+}
+
+async function canAccessFeedbackUser(actor, targetUserId) {
+  const allowedIds = await getRelatedFeedbackUserIds(actor);
+  return allowedIds === null || allowedIds.includes(String(targetUserId));
+}
+
+exports.getAvailableRecipients = async (req, res) => {
+  try {
+    const allowedIds = await getRelatedFeedbackUserIds(req.user);
+    const filter = { isDeleted: false, isActive: true };
+    if (allowedIds !== null) filter._id = { $in: allowedIds };
+    const users = await User.find(filter).select('_id name role profileImage').sort({ name: 1 }).lean();
+    res.json({ success: true, users });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 
 // Create feedback
 exports.createFeedback = async (req, res) => {
@@ -13,6 +77,9 @@ exports.createFeedback = async (req, res) => {
     const recipient = await User.findById(recipientId);
     if (!recipient) {
       return res.status(404).json({ success: false, message: 'Recipient not found' });
+    }
+    if (!await canAccessFeedbackUser(req.user, recipientId)) {
+      return res.status(403).json({ success: false, message: 'You can only send feedback to people related to your permitted work scope.' });
     }
 
     if (recipientId === req.user._id.toString()) {
@@ -117,6 +184,9 @@ exports.getAll = async (req, res) => {
 exports.getForUser = async (req, res) => {
   try {
     const { userId } = req.params;
+    if (!await canAccessFeedbackUser(req.user, userId)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to view feedback for this user' });
+    }
     const feedbacks = await Feedback.find({ recipient: userId, status: 'active' })
       .populate('sender', 'name email role')
       .sort({ createdAt: -1 });
@@ -143,7 +213,7 @@ exports.deleteFeedback = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Feedback not found' });
     }
 
-    if (feedback.sender.toString() !== req.user._id.toString() && !['ADMIN', 'HR'].includes(req.user.role)) {
+    if (feedback.sender.toString() !== req.user._id.toString() && req.user.role !== 'ADMIN') {
       return res.status(403).json({ success: false, message: 'Not authorized to delete this feedback' });
     }
 
@@ -158,6 +228,9 @@ exports.deleteFeedback = async (req, res) => {
 exports.getStats = async (req, res) => {
   try {
     const userId = req.params.userId || req.user._id;
+    if (req.params.userId && !await canAccessFeedbackUser(req.user, userId)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to view feedback statistics for this user' });
+    }
     const [received, sent, byType] = await Promise.all([
       Feedback.countDocuments({ recipient: userId, status: 'active' }),
       Feedback.countDocuments({ sender: userId }),

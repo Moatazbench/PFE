@@ -4,6 +4,7 @@ import { useAuth } from '../components/AuthContext';
 import { useToast } from '../components/common/Toast';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
+import EmptyState from '../components/common/EmptyState';
 import { formatRoleLabel } from '../utils/roles';
 import { useLocation } from 'react-router-dom';
 
@@ -69,14 +70,18 @@ function MeetingsPage() {
         try {
             var res = await api.getCached('/teams', undefined, { ttl: 30000, cacheKey: 'teams:meetings-list' });
             setTeams(Array.isArray(res.data) ? res.data : (res.data.teams || []));
-        } catch (err) { /* Collaborators may not have access */ }
+        } catch {
+            setTeams([]);
+        }
     }
 
     async function fetchCycles() {
         try {
             var res = await api.getCached('/cycles', undefined, { ttl: 60000, cacheKey: 'cycles:meetings-list' });
             setCycles(res.data || []);
-        } catch (err) { }
+        } catch {
+            setCycles([]);
+        }
     }
 
     useEffect(function () { fetchUsers(); fetchTeams(); fetchCycles(); }, []);
@@ -221,7 +226,7 @@ function MeetingsPage() {
             toast.success('Meeting deleted');
             fetchMeetings();
             if (showDetail && showDetail._id === id) setShowDetail(null);
-        } catch (err) {
+        } catch {
             toast.error('Failed to delete meeting');
         }
     }
@@ -231,7 +236,7 @@ function MeetingsPage() {
             await api.post('/meetings/' + id + '/duplicate');
             toast.success('Meeting duplicated!');
             fetchMeetings();
-        } catch (err) {
+        } catch {
             toast.error('Failed to duplicate');
         }
     }
@@ -245,7 +250,7 @@ function MeetingsPage() {
                 var res = await api.get('/meetings/' + id);
                 setShowDetail(res.data.meeting);
             }
-        } catch (err) {
+        } catch {
             toast.error('Failed to update status');
         }
     }
@@ -256,7 +261,7 @@ function MeetingsPage() {
             toast.success('Notes saved');
             var res = await api.get('/meetings/' + id);
             setShowDetail(res.data.meeting);
-        } catch (err) {
+        } catch {
             toast.error('Failed to save notes');
         }
     }
@@ -298,15 +303,15 @@ function MeetingsPage() {
             {loading ? (
                 <LoadingSkeleton rows={4} height={100} />
             ) : meetings.length === 0 ? (
-                <div className="empty-state">
-                    <div className="empty-state__icon">📅</div>
-                    <h3>No meetings found</h3>
-                    <p>Schedule your first meeting to get started</p>
-                    <button className="btn btn--primary" onClick={function () { openCreateModal(); }}>+ New Meeting</button>
-                </div>
+                <EmptyState
+                    title="No meetings found"
+                    description="Schedule your first meeting to get started"
+                    action={<button className="btn btn--primary" onClick={function () { openCreateModal(); }}>+ New Meeting</button>}
+                />
             ) : (
                 <div className="meetings-grid">
                     {meetings.map(function (meeting) {
+                        var canManage = user?.role === 'ADMIN' || String(meeting.organizer?._id || meeting.organizer) === String(user?.id || user?._id);
                         return (
                             <div key={meeting._id} className="meeting-card" onClick={function () { setShowDetail(meeting); }}>
                                 <div className="meeting-card__header">
@@ -328,13 +333,13 @@ function MeetingsPage() {
                                     </div>
                                 )}
                                 {meeting.recurring !== 'none' && <span className="meta-tag">🔄 {meeting.recurring}</span>}
-                                <div className="meeting-card__actions" onClick={function (e) { e.stopPropagation(); }}>
+                                {canManage && <div className="meeting-card__actions" onClick={function (e) { e.stopPropagation(); }}>
                                     {meeting.status === 'scheduled' && <button className="btn btn--secondary btn--sm" onClick={function () { handleStatusChange(meeting._id, 'in_progress'); }}>▶ Start</button>}
                                     {meeting.status === 'in_progress' && <button className="btn btn--primary btn--sm" onClick={function () { handleStatusChange(meeting._id, 'completed'); }}>✓ Complete</button>}
                                     <button className="btn btn--ghost btn--sm" onClick={function () { openEditModal(meeting); }}>✏️ Edit</button>
                                     <button className="btn btn--ghost btn--sm" onClick={function () { handleDuplicate(meeting._id); }}>📋 Duplicate</button>
                                     <button className="btn btn--ghost btn--sm" style={{ color: '#ef4444' }} onClick={function (e) { e.stopPropagation(); handleDelete(meeting._id); }}>🗑️</button>
-                                </div>
+                                </div>}
                             </div>
                         );
                     })}
@@ -478,10 +483,10 @@ function MeetingsPage() {
                 <MeetingDetailPanel
                     meeting={showDetail}
                     onClose={function () { setShowDetail(null); }}
-                    onRefresh={fetchMeetings}
                     onSaveNotes={handleSaveNotes}
                     onStatusChange={handleStatusChange}
                     onEdit={function (m) { setShowDetail(null); openEditModal(m); }}
+                    canManage={user?.role === 'ADMIN' || String(showDetail.organizer?._id || showDetail.organizer) === String(user?.id || user?._id)}
                     toast={toast}
                 />
             )}
@@ -489,7 +494,7 @@ function MeetingsPage() {
     );
 }
 
-function MeetingDetailPanel({ meeting, onClose, onRefresh, onSaveNotes, onStatusChange, onEdit, toast }) {
+function MeetingDetailPanel({ meeting, onClose, onSaveNotes, onStatusChange, onEdit, canManage, toast }) {
     var [activeTab, setActiveTab] = useState('details');
     var [notes, setNotes] = useState(meeting.notes || '');
     var [detail, setDetail] = useState(meeting);
@@ -523,7 +528,7 @@ function MeetingDetailPanel({ meeting, onClose, onRefresh, onSaveNotes, onStatus
             toast.success('Agenda item added');
             setNewAgendaItem('');
             fetchDetail();
-        } catch (err) { toast.error('Failed to add agenda item'); }
+        } catch { toast.error('Failed to add agenda item'); }
     }
 
     async function toggleAgendaItem(index) {
@@ -533,7 +538,7 @@ function MeetingDetailPanel({ meeting, onClose, onRefresh, onSaveNotes, onStatus
             });
             await api.put('/meetings/' + detail._id, { agenda: updatedAgenda });
             fetchDetail();
-        } catch (err) { toast.error('Failed to update agenda item'); }
+        } catch { toast.error('Failed to update agenda item'); }
     }
 
     async function addActionItem() {
@@ -544,7 +549,7 @@ function MeetingDetailPanel({ meeting, onClose, onRefresh, onSaveNotes, onStatus
             toast.success('Action item added');
             setNewActionItem('');
             fetchDetail();
-        } catch (err) { toast.error('Failed to add action item'); }
+        } catch { toast.error('Failed to add action item'); }
     }
 
     async function toggleActionItem(index) {
@@ -554,7 +559,7 @@ function MeetingDetailPanel({ meeting, onClose, onRefresh, onSaveNotes, onStatus
             });
             await api.put('/meetings/' + detail._id, { actionItems: updatedActions });
             fetchDetail();
-        } catch (err) { toast.error('Failed to update action item'); }
+        } catch { toast.error('Failed to update action item'); }
     }
 
     function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '—'; }
@@ -575,9 +580,9 @@ function MeetingDetailPanel({ meeting, onClose, onRefresh, onSaveNotes, onStatus
 
                 <div className="side-panel__actions">
                     <span className="status-chip" style={{ background: getStatusColor(detail.status) + '20', color: getStatusColor(detail.status) }}>{detail.status}</span>
-                    <button className="btn btn--secondary btn--sm" onClick={function () { onEdit(detail); }}>✏️ Edit</button>
-                    {detail.status === 'scheduled' && <button className="btn btn--secondary btn--sm" onClick={function () { onStatusChange(detail._id, 'in_progress'); }}>▶ Start Meeting</button>}
-                    {detail.status === 'in_progress' && <button className="btn btn--primary btn--sm" onClick={function () { onStatusChange(detail._id, 'completed'); }}>✓ Mark Complete</button>}
+                    {canManage && <button className="btn btn--secondary btn--sm" onClick={function () { onEdit(detail); }}>✏️ Edit</button>}
+                    {canManage && detail.status === 'scheduled' && <button className="btn btn--secondary btn--sm" onClick={function () { onStatusChange(detail._id, 'in_progress'); }}>▶ Start Meeting</button>}
+                    {canManage && detail.status === 'in_progress' && <button className="btn btn--primary btn--sm" onClick={function () { onStatusChange(detail._id, 'completed'); }}>✓ Mark Complete</button>}
                 </div>
 
                 <div className="tab-bar tab-bar--sm">
@@ -613,7 +618,7 @@ function MeetingDetailPanel({ meeting, onClose, onRefresh, onSaveNotes, onStatus
                                 ) : (
                                     (detail.agenda || []).map(function (item, i) {
                                         return (
-                                            <div key={i} className="checklist-item" onClick={function () { toggleAgendaItem(i); }}>
+                                            <div key={i} className="checklist-item" onClick={canManage ? function () { toggleAgendaItem(i); } : undefined}>
                                                 <span className="checklist-item__check">{item.completed ? '✅' : '⬜'}</span>
                                                 <span className={'checklist-item__text' + (item.completed ? ' checklist-item__text--done' : '')}>{item.title}</span>
                                                 <span className="checklist-item__meta">{item.duration} min</span>
@@ -622,10 +627,10 @@ function MeetingDetailPanel({ meeting, onClose, onRefresh, onSaveNotes, onStatus
                                     })
                                 )}
                             </div>
-                            <div className="add-item-row">
+                            {canManage && <div className="add-item-row">
                                 <input className="form-input" placeholder="Add agenda item..." value={newAgendaItem} onChange={function (e) { setNewAgendaItem(e.target.value); }} onKeyDown={function (e) { if (e.key === 'Enter') { e.preventDefault(); addAgendaItem(); } }} />
                                 <button className="btn btn--primary btn--sm" onClick={addAgendaItem}>Add</button>
-                            </div>
+                            </div>}
                         </div>
                     )}
 
@@ -635,13 +640,14 @@ function MeetingDetailPanel({ meeting, onClose, onRefresh, onSaveNotes, onStatus
                                 className="form-textarea"
                                 value={notes}
                                 onChange={function (e) { setNotes(e.target.value); }}
+                                readOnly={!canManage}
                                 rows={12}
                                 placeholder="Type meeting notes here..."
                                 style={{ width: '100%' }}
                             />
-                            <button className="btn btn--primary" style={{ marginTop: '8px' }} onClick={saveNotes} disabled={savingNotes}>
+                            {canManage && <button className="btn btn--primary" style={{ marginTop: '8px' }} onClick={saveNotes} disabled={savingNotes}>
                                 {savingNotes ? 'Saving...' : '💾 Save Notes'}
-                            </button>
+                            </button>}
                         </div>
                     )}
 
@@ -653,7 +659,7 @@ function MeetingDetailPanel({ meeting, onClose, onRefresh, onSaveNotes, onStatus
                                 ) : (
                                     (detail.actionItems || []).map(function (item, i) {
                                         return (
-                                            <div key={i} className="checklist-item" onClick={function () { toggleActionItem(i); }}>
+                                            <div key={i} className="checklist-item" onClick={canManage ? function () { toggleActionItem(i); } : undefined}>
                                                 <span className="checklist-item__check">{item.completed ? '✅' : '⬜'}</span>
                                                 <div style={{ flex: 1 }}>
                                                     <span className={'checklist-item__text' + (item.completed ? ' checklist-item__text--done' : '')}>{item.title}</span>
@@ -665,10 +671,10 @@ function MeetingDetailPanel({ meeting, onClose, onRefresh, onSaveNotes, onStatus
                                     })
                                 )}
                             </div>
-                            <div className="add-item-row">
+                            {canManage && <div className="add-item-row">
                                 <input className="form-input" placeholder="Add action item..." value={newActionItem} onChange={function (e) { setNewActionItem(e.target.value); }} onKeyDown={function (e) { if (e.key === 'Enter') { e.preventDefault(); addActionItem(); } }} />
                                 <button className="btn btn--primary btn--sm" onClick={addActionItem}>Add</button>
-                            </div>
+                            </div>}
                         </div>
                     )}
                 </div>

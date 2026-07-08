@@ -14,10 +14,10 @@ function FinalEvaluationPage() {
   const [cycles, setCycles] = useState([]);
   const [selectedCycleId, setSelectedCycleId] = useState('');
   const [activeCycle, setActiveCycle] = useState(null);
-  const [viewMode, setViewMode] = useState(['ADMIN', 'HR'].includes(user?.role) ? 'team' : 'self'); // 'self' or 'team'
+  const [viewMode, setViewMode] = useState(['ADMIN', 'TEAM_LEADER'].includes(user?.role) ? 'team' : 'self'); // 'self' or 'team'
   const [loading, setLoading] = useState(true);
 
-  const isManagerRole = ['TEAM_LEADER', 'ADMIN', 'HR'].includes(user?.role);
+  const isManagerRole = ['TEAM_LEADER', 'ADMIN'].includes(user?.role);
 
   function renderLoadingSubview(text) {
     return <div className="page-loading"><div className="spinner"></div><p>{text}</p></div>;
@@ -71,7 +71,7 @@ function FinalEvaluationPage() {
           <p className="text-muted" style={{ margin: '0.5rem 0 0 0' }}>Final performance measurement, auto-scoring, and reviews.</p>
           {['ADMIN', 'HR'].includes(user?.role) && (
             <Link to="/hr-validation" style={{ display: 'inline-block', marginTop: '0.85rem', fontWeight: 700 }}>
-              Open HR validation queue
+              Open HR review workspace
             </Link>
           )}
         </div>

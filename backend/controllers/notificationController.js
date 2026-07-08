@@ -6,7 +6,8 @@ const User = require('../models/User');
  */
 exports.getMyNotifications = async (req, res) => {
     try {
-        const notifs = await Notification.find({ recipient: req.user.id })
+        const visibilityFilter = req.user.role === 'ADMIN' ? {} : { recipient: req.user.id };
+        const notifs = await Notification.find(visibilityFilter)
             .populate('sender', 'name profileImage')
             .sort({ createdAt: -1 })
             .limit(50)

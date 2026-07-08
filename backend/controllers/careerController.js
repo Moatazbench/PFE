@@ -1,5 +1,21 @@
 const Competency = require('../models/Competency');
 const CareerPath = require('../models/CareerPath');// test devopssss
+const Team = require('../models/Team');
+const { createNotification } = require('../utils/notificationHelper');
+
+async function canManageCareerUser(actor, targetUserId) {
+  if (['ADMIN', 'HR'].includes(actor.role)) return true;
+  if (String(actor.id || actor._id) === String(targetUserId)) return true;
+  if (actor.role !== 'TEAM_LEADER') return false;
+  return Boolean(await Team.exists({ leader: actor.id || actor._id, members: targetUserId }));
+}
+
+async function canManageCareerPath(actor, targetUserId) {
+  if (['ADMIN', 'HR'].includes(actor.role)) return true;
+  if (String(actor.id || actor._id) === String(targetUserId)) return true;
+  if (actor.role !== 'TEAM_LEADER') return false;
+  return Boolean(await Team.exists({ leader: actor.id || actor._id, members: targetUserId }));
+}
 
 // === COMPETENCY CRUD ===
 
@@ -52,10 +68,13 @@ exports.createCareerPath = async (req, res) => {
   try {
     const { userId, currentRole, currentLevel, targetRole, targetLevel, targetDate, competencies, developmentPlan, mentorId, notes } = req.body;
     const targetUser = userId || req.user._id;
+    if (!await canManageCareerUser(req.user, targetUser)) {
+      return res.status(403).json({ success: false, message: 'You cannot create a career path for this user.' });
+    }
     const path = await CareerPath.create({
       user: targetUser, currentRole, currentLevel, targetRole, targetLevel,
       targetDate, competencies: competencies || [], developmentPlan: developmentPlan || [],
-      mentorId, notes, createdBy: req.user._id, status: 'active',
+      mentorId, notes, createdBy: req.user._id, status: 'active', finalEvaluation: req.body.finalEvaluation || null,
     });
     const populated = await CareerPath.findById(path._id)
       .populate('user', 'name email role')
@@ -81,7 +100,12 @@ exports.getMyCareerPath = async (req, res) => {
 
 exports.getCareerPathForUser = async (req, res) => {
   try {
-    const paths = await CareerPath.find({ user: req.params.userId })
+    const targetUserId = req.params.userId;
+    if (!await canManageCareerPath(req.user, targetUserId)) {
+      return res.status(403).json({ success: false, message: 'You cannot view this career path.' });
+    }
+
+    const paths = await CareerPath.find({ user: targetUserId })
       .populate('competencies.competency', 'name category level description')
       .populate('mentorId', 'name email')
       .populate('user', 'name email role')
@@ -110,11 +134,14 @@ exports.updateCareerPath = async (req, res) => {
     const path = await CareerPath.findById(req.params.id);
     if (!path) return res.status(404).json({ success: false, message: 'Career path not found' });
 
-    const isOwner = path.user.toString() === req.user._id.toString();
-    const isAdmin = ['ADMIN', 'HR'].includes(req.user.role);
-    if (!isOwner && !isAdmin) return res.status(403).json({ success: false, message: 'Not authorized' });
+    const isOwner = String(path.user) === String(req.user._id || req.user.id);
+    const canManage = await canManageCareerPath(req.user, path.user);
+    if (!isOwner && !canManage) return res.status(403).json({ success: false, message: 'Not authorized' });
 
-    Object.assign(path, req.body);
+    const allowedUpdates = ['currentRole', 'currentLevel', 'targetRole', 'targetLevel', 'targetDate', 'competencies', 'developmentPlan', 'mentorId', 'notes', 'status', 'finalEvaluation'];
+    allowedUpdates.forEach((field) => {
+      if (req.body[field] !== undefined) path[field] = req.body[field];
+    });
     await path.save();
 
     const populated = await CareerPath.findById(path._id)
@@ -131,11 +158,57 @@ exports.deleteCareerPath = async (req, res) => {
   try {
     const path = await CareerPath.findById(req.params.id);
     if (!path) return res.status(404).json({ success: false, message: 'Career path not found' });
-    const isOwner = path.user.toString() === req.user._id.toString();
-    const isAdmin = ['ADMIN', 'HR'].includes(req.user.role);
-    if (!isOwner && !isAdmin) return res.status(403).json({ success: false, message: 'Not authorized' });
+    const isOwner = String(path.user) === String(req.user._id || req.user.id);
+    const canManage = await canManageCareerPath(req.user, path.user);
+    if (!isOwner && !canManage) return res.status(403).json({ success: false, message: 'Not authorized' });
     await CareerPath.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'Career path deleted' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.createDevelopmentAction = async (req, res) => {
+  try {
+    const path = await CareerPath.findById(req.params.pathId);
+    if (!path) return res.status(404).json({ success: false, message: 'Career path not found' });
+
+    if (!await canManageCareerPath(req.user, path.user)) {
+      return res.status(403).json({ success: false, message: 'You cannot create a development action for this career path.' });
+    }
+
+    const { title, type, dueDate, notes, status } = req.body;
+    if (!title || !String(title).trim()) {
+      return res.status(400).json({ success: false, message: 'A title is required.' });
+    }
+
+    const action = {
+      title: String(title).trim(),
+      type: type || 'other',
+      status: ['planned', 'in_progress', 'completed', 'cancelled'].includes(status) ? status : 'planned',
+      dueDate: dueDate || null,
+      notes: notes || '',
+      createdFromEvaluation: req.body.finalEvaluation || null,
+    };
+
+    path.developmentPlan.push(action);
+    await path.save();
+    if (String(path.user) !== String(req.user.id || req.user._id)) {
+      await createNotification({
+        recipientId: path.user,
+        senderId: req.user.id || req.user._id,
+        type: 'GOAL_UPDATE',
+        title: 'Development action created',
+        message: `A new ${action.type} action was added to your development plan: ${action.title}.`,
+        link: '/career'
+      });
+    }
+
+    const populated = await CareerPath.findById(path._id)
+      .populate('user', 'name email role')
+      .populate('competencies.competency', 'name category')
+      .populate('mentorId', 'name email');
+    res.status(201).json({ success: true, careerPath: populated, action });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -149,6 +222,9 @@ exports.updateDevAction = async (req, res) => {
 
     const action = path.developmentPlan.id(req.params.actionId);
     if (!action) return res.status(404).json({ success: false, message: 'Action not found' });
+    if (!await canManageCareerUser(req.user, path.user)) {
+      return res.status(403).json({ success: false, message: 'You cannot update this development action.' });
+    }
 
     if (req.body.status) action.status = req.body.status;
     if (req.body.notes) action.notes = req.body.notes;
@@ -165,6 +241,34 @@ exports.updateDevAction = async (req, res) => {
 
 const CareerRecommendation = require('../models/CareerRecommendation');
 const FinalEvaluation = require('../models/FinalEvaluation');
+
+exports.getMyRecommendations = async (req, res) => {
+  try {
+    const recommendations = await CareerRecommendation.find({ employee_id: req.user.id || req.user._id })
+      .populate('cycle_id', 'name year')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, recommendations });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.getAllRecommendations = async (req, res) => {
+  try {
+    const filter = {};
+    if (req.user.role === 'TEAM_LEADER') {
+      const teams = await Team.find({ leader: req.user.id || req.user._id }).select('members');
+      filter.employee_id = { $in: teams.flatMap((team) => team.members || []) };
+    }
+    const recommendations = await CareerRecommendation.find(filter)
+      .populate('employee_id', 'name email role')
+      .populate('cycle_id', 'name year')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, recommendations });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 
 exports.generateRecommendation = async (req, res) => {
   try {

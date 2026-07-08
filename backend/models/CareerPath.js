@@ -3,10 +3,11 @@ const mongoose = require('mongoose');
 const DevelopmentActionSchema = new mongoose.Schema({
   title: { type: String, required: true },
   type: { type: String, enum: ['training', 'mentoring', 'project', 'certification', 'reading', 'other'], default: 'other' },
-  status: { type: String, enum: ['planned', 'in_progress', 'completed'], default: 'planned' },
+  status: { type: String, enum: ['planned', 'in_progress', 'completed', 'cancelled'], default: 'planned' },
   dueDate: { type: Date, default: null },
   completedAt: { type: Date, default: null },
   notes: { type: String, default: '' },
+  createdFromEvaluation: { type: mongoose.Schema.Types.ObjectId, ref: 'FinalEvaluation', default: null },
 });
 
 const CareerPathSchema = new mongoose.Schema({
@@ -23,6 +24,7 @@ const CareerPathSchema = new mongoose.Schema({
     gap: { type: Number, default: 0 },
   }],
   developmentPlan: [DevelopmentActionSchema],
+  finalEvaluation: { type: mongoose.Schema.Types.ObjectId, ref: 'FinalEvaluation', default: null },
   mentorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   status: {
     type: String,

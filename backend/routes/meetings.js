@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Meeting = require('../models/Meeting');
+const Team = require('../models/Team');
+const User = require('../models/User');
 const auth = require('../middleware/auth');
 const rateLimiter = require('../middleware/rateLimiter');
 const { createNotification } = require('../controllers/notificationController');
@@ -45,17 +47,55 @@ function normalizeMeetingCategory(value) {
     return ['one_on_one', 'team', 'all_hands', 'check_in', 'review', 'planning', 'other'].includes(value) ? value : 'team';
 }
 
+async function getManagedMeetingUserIds(user) {
+    const actorId = String(user.id || user._id);
+    const ids = new Set([actorId]);
+    if (user.role !== 'TEAM_LEADER') return Array.from(ids);
+
+    let queue = (await Team.find({ leader: actorId }).select('_id leader members').lean());
+    const visitedTeams = new Set();
+    while (queue.length > 0) {
+        const nextTeamIds = [];
+        queue.forEach(function (team) {
+            const teamId = String(team._id);
+            if (visitedTeams.has(teamId)) return;
+            visitedTeams.add(teamId);
+            if (team.leader) ids.add(String(team.leader));
+            (team.members || []).forEach(function (memberId) { ids.add(String(memberId)); });
+            nextTeamIds.push(team._id);
+        });
+        queue = nextTeamIds.length
+            ? await Team.find({ parentTeam: { $in: nextTeamIds } }).select('_id leader members').lean()
+            : [];
+    }
+
+    const directReports = await User.find({ manager: actorId, isDeleted: false }).select('_id').lean();
+    directReports.forEach(function (employee) { ids.add(String(employee._id)); });
+    return Array.from(ids);
+}
+
+async function buildMeetingVisibilityFilter(req, forceSelf) {
+    const actorId = req.user.id || req.user._id;
+    if (req.user.role === 'ADMIN' && !forceSelf) return {};
+    const userIds = forceSelf ? [String(actorId)] : await getManagedMeetingUserIds(req.user);
+    return {
+        $or: [
+            { organizer: { $in: userIds } },
+            { attendees: { $in: userIds } },
+            { participants: { $in: userIds } }
+        ]
+    };
+}
+
+function canManageMeeting(meeting, user) {
+    return user.role === 'ADMIN' || String(meeting.organizer) === String(user.id || user._id);
+}
+
 // Get all meetings for current user (as organizer or attendee)
 router.get('/', rateLimiter, auth, async function (req, res) {
     try {
         var { status, type, team, upcoming } = req.query;
-        var filter = {
-            $or: [
-                { organizer: req.user.id },
-                { attendees: req.user.id },
-                { participants: req.user.id }
-            ]
-        };
+        var filter = await buildMeetingVisibilityFilter(req, req.query.scope === 'self');
 
         if (status) {
             if (status.includes(',')) {
@@ -75,7 +115,7 @@ router.get('/', rateLimiter, auth, async function (req, res) {
         // Auto-complete past meetings that are still "scheduled"
         const now = new Date();
         const activeMeetings = await Meeting.find({
-            $or: [{ organizer: req.user.id }, { attendees: req.user.id }],
+            organizer: req.user.id,
             status: { $in: ['scheduled', 'in_progress'] }
         });
 
@@ -125,7 +165,8 @@ router.get('/', rateLimiter, auth, async function (req, res) {
 // Get single meeting
 router.get('/:id', rateLimiter, auth, async function (req, res) {
     try {
-        var meeting = await Meeting.findById(req.params.id)
+        var accessFilter = await buildMeetingVisibilityFilter(req, false);
+        var meeting = await Meeting.findOne({ _id: req.params.id, ...accessFilter })
             .populate('organizer', 'name email role')
             .populate('attendees', 'name email role')
             .populate('participants', 'name email role')
@@ -219,6 +260,9 @@ router.put('/:id', rateLimiter, auth, async function (req, res) {
         if (!meeting) {
             return res.status(404).json({ success: false, message: 'Meeting not found' });
         }
+        if (!canManageMeeting(meeting, req.user)) {
+            return res.status(403).json({ success: false, message: 'Only the organizer can update this meeting.' });
+        }
 
         var fields = ['title', 'description', 'date', 'startTime', 'endTime', 'type', 'meeting_type', 'cycle_id', 'final_evaluation_id', 'status', 'agenda', 'notes', 'relatedObjectives', 'team', 'recurring', 'location', 'actionItems'];
         fields.forEach(function (field) {
@@ -296,6 +340,9 @@ router.delete('/:id', rateLimiter, auth, async function (req, res) {
         if (!meeting) {
             return res.status(404).json({ success: false, message: 'Meeting not found' });
         }
+        if (!canManageMeeting(meeting, req.user)) {
+            return res.status(403).json({ success: false, message: 'Only the organizer can delete this meeting.' });
+        }
 
         await Meeting.findByIdAndDelete(req.params.id);
         res.json({ success: true, message: 'Meeting deleted' });
@@ -311,6 +358,9 @@ router.post('/:id/duplicate', rateLimiter, auth, async function (req, res) {
         var original = await Meeting.findById(req.params.id);
         if (!original) {
             return res.status(404).json({ success: false, message: 'Meeting not found' });
+        }
+        if (!canManageMeeting(original, req.user)) {
+            return res.status(403).json({ success: false, message: 'Only the organizer can duplicate this meeting.' });
         }
 
         var newMeeting = await Meeting.create({
@@ -353,6 +403,9 @@ router.post('/:id/actions', rateLimiter, auth, async function (req, res) {
         var meeting = await Meeting.findById(req.params.id);
         if (!meeting) {
             return res.status(404).json({ success: false, message: 'Meeting not found' });
+        }
+        if (!canManageMeeting(meeting, req.user)) {
+            return res.status(403).json({ success: false, message: 'Only the organizer can add meeting action items.' });
         }
 
         meeting.actionItems.push({

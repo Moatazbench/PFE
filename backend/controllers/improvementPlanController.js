@@ -2,6 +2,7 @@ const ImprovementPlan = require('../models/ImprovementPlan');
 const FinalEvaluation = require('../models/FinalEvaluation');
 const User = require('../models/User');
 const Team = require('../models/Team');
+const { createNotification } = require('../utils/notificationHelper');
 
 async function getManagedEmployeeIds(actor) {
   const actorId = actor.id || actor._id;
@@ -123,6 +124,15 @@ exports.createPlan = async (req, res) => {
     const populated = await ImprovementPlan.findById(plan._id)
       .populate('created_by', 'name')
       .populate('updated_by', 'name');
+
+    await createNotification({
+      recipientId: evaluation.employee_id,
+      senderId: req.user.id || req.user._id,
+      type: 'EVALUATION_COMPLETED',
+      title: 'Improvement plan created',
+      message: `HR created an improvement plan for follow-up: ${plan.objective_goal}.`,
+      link: '/final-evaluations'
+    });
 
     res.status(201).json({ success: true, plan: populated });
   } catch (err) {

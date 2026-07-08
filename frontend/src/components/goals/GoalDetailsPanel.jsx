@@ -275,6 +275,12 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
                 <div className="goal-panel__content" style={{ flex: 1, padding: '2rem 2.5rem', overflowY: 'auto' }}>
                     {activeTab === 'details' && (
                         <div className="goal-panel__details">
+                            {detail.managerComments && ['approved', 'validated', 'rejected', 'revision_requested'].includes(detail.status) ? (
+                                <div className={'goal-panel__decision-message goal-panel__decision-message--' + detail.status}>
+                                    <strong>Manager decision message</strong>
+                                    <p>{detail.managerComments}</p>
+                                </div>
+                            ) : null}
                             <div className="goal-panel__detail-row"><span>Owner:</span><span>{detail.owner?.name || 'Unknown'}</span></div>
                             <div className="goal-panel__detail-row"><span>Source:</span><span>{detail.source === 'manager_assigned' ? '📌 Manager Assigned' : '✎ Self Created'}</span></div>
                             {detail.assignedBy && <div className="goal-panel__detail-row"><span>Assigned By:</span><span>{detail.assignedBy?.name || detail.assignedBy}</span></div>}

@@ -13,7 +13,6 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, existingOb
         cycle: selectedCycle || '',
         category: 'individual',
         priority: 'medium',
-        visibility: 'team',
         targetUser: '',
         targetTeam: ''
     });
@@ -77,11 +76,14 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, existingOb
                 }
 
                 if (form.category === 'individual' && form.targetUser && form.targetUser !== user.id) {
-                    var res = await api.get('/objectives/user/' + form.targetUser + '/cycle/' + activeCycle);
-                    var userObjectives = Array.isArray(res.data.individualObjectives) ? res.data.individualObjectives : [];
+                    var userObjectivesResponse = await api.get('/objectives/user/' + form.targetUser + '/cycle/' + activeCycle);
+                    var userObjectives = [
+                        ...(Array.isArray(userObjectivesResponse.data.individualObjectives) ? userObjectivesResponse.data.individualObjectives : []),
+                        ...(Array.isArray(userObjectivesResponse.data.teamObjectives) ? userObjectivesResponse.data.teamObjectives : [])
+                    ];
                     var usedWeightForUser = sumObjectiveWeights(userObjectives);
-                    var remaining = Math.max(0, 100 - usedWeightForUser);
-                    setCapacityInfo({ usedWeight: usedWeightForUser, remainingWeight: remaining, message: `Assigned employee has ${remaining}% remaining capacity for individual objectives.` });
+                    var userRemainingWeight = Math.max(0, 100 - usedWeightForUser);
+                    setCapacityInfo({ usedWeight: usedWeightForUser, remainingWeight: userRemainingWeight, message: `Assigned employee has ${userRemainingWeight}% remaining combined objective capacity.` });
                     return;
                 }
 
@@ -99,8 +101,9 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, existingOb
     var currentCycleObjectives = (existingObjectives || []).filter(function(o) {
         var objCycleId = o.cycle?._id || o.cycle;
         var sameCycle = objCycleId === (form.cycle || selectedCycle);
-        if (!sameCycle || o.category !== form.category) return false;
+        if (!sameCycle) return false;
         if (form.category === 'team') {
+            if (o.category !== 'team') return false;
             var objectiveTeamId = o.team?._id || o.team || '';
             return form.targetTeam ? String(objectiveTeamId) === String(form.targetTeam) : false;
         }
@@ -195,7 +198,6 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, existingOb
                 priority: form.priority,
                 cycle: form.cycle,
                 category: form.category,
-                visibility: form.visibility,
                 targetUser: form.targetUser || null,
                 targetTeam: form.targetTeam || null
             };
@@ -423,13 +425,6 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, existingOb
                                 </select>
                             </div>
 
-                            <div className="goal-modal__field">
-                                <label>Visibility</label>
-                                <select value={form.visibility} onChange={function (e) { handleChange('visibility', e.target.value); }} disabled={isCreateLocked}>
-                                    <option value="team">Team Only</option>
-                                    <option value="private">Private</option>
-                                </select>
-                            </div>
                         </div>
                     </div>
 

@@ -13,15 +13,18 @@ function BonusPenaltyPage() {
   const [showForm, setShowForm] = useState(false);
   const [filterType, setFilterType] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [reviewNotes, setReviewNotes] = useState({});
   const [formData, setFormData] = useState({
     employee: '',
     type: 'bonus',
     value: '',
-    reason: ''
+    reason: '',
+    finalEvaluation: ''
   });
   const [saving, setSaving] = useState(false);
 
   const isHROrAdmin = ['HR', 'ADMIN'].includes(user?.role);
+  const canRecommend = user?.role === 'ADMIN' || user?.role === 'TEAM_LEADER';
 
   useEffect(() => {
     fetchData();
@@ -30,40 +33,58 @@ function BonusPenaltyPage() {
   async function fetchData() {
     setLoading(true);
     try {
-      const usersRes = await api.get('/users');
-      const usersList = Array.isArray(usersRes.data) ? usersRes.data : usersRes.data?.users || [];
-      setUsers(usersList);
-
-      // If HR/Admin, get records for all users
-      // Otherwise only get records for team members
-      if (isHROrAdmin && usersList.length > 0) {
-        const allRecords = [];
-        for (const u of usersList) {
-          try {
-            const res = await api.get(`/bonus-penalty/employee/${u._id}`);
-            if (res.data.records) allRecords.push(...res.data.records);
-          } catch { /* skip users without records */ }
+      if (isHROrAdmin) {
+        const recordsRes = await api.get('/bonus-penalty');
+        setRecords(recordsRes.data.records || []);
+        if (canRecommend) {
+          const usersRes = await api.get('/users');
+          setUsers(usersRes.data?.users || []);
+        } else {
+          setUsers([]);
         }
-        setRecords(allRecords);
+      } else {
+        const usersRes = await api.get('/team-members');
+        const usersList = Array.isArray(usersRes.data) ? usersRes.data : usersRes.data?.members || [];
+        setUsers(usersList);
+        const results = await Promise.allSettled(usersList.map((member) => api.get(`/bonus-penalty/employee/${member._id || member.id}`)));
+        setRecords(results.flatMap((result) => result.status === 'fulfilled' ? result.value.data.records || [] : []));
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }
   }
 
+  async function handleApproval(recordId, approvalStatus) {
+    const notes = String(reviewNotes[recordId] || '').trim();
+    if (approvalStatus === 'rejected' && !notes) {
+      toast.error('Explain what documentation the manager must correct.');
+      return;
+    }
+    try {
+      await api.put(`/bonus-penalty/${recordId}/approval`, { approvalStatus, reviewNotes: notes });
+      toast.success(approvalStatus === 'approved'
+        ? 'Documentation marked as reviewed.'
+        : 'Recommendation sent back for documentation correction.');
+      setReviewNotes((previous) => ({ ...previous, [recordId]: '' }));
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update approval.');
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!formData.employee || !formData.value || !formData.reason.trim()) {
-      toast.error('All fields are required.');
+    if (!formData.employee || !formData.value || Number(formData.value) <= 0 || !formData.reason.trim()) {
+      toast.error('Employee, reason, and a value greater than zero are required.');
       return;
     }
     setSaving(true);
     try {
       await api.post('/bonus-penalty', formData);
-      toast.success(`${formData.type === 'bonus' ? 'Bonus' : 'Penalty'} recorded successfully.`);
-      setFormData({ employee: '', type: 'bonus', value: '', reason: '' });
+      toast.success(`${formData.type === 'bonus' ? 'Bonus' : 'Penalty'} recommendation recorded successfully.`);
+      setFormData({ employee: '', type: 'bonus', value: '', reason: '', finalEvaluation: '' });
       setShowForm(false);
       fetchData();
     } catch (err) {
@@ -110,10 +131,10 @@ function BonusPenaltyPage() {
             💰 Bonus & Penalty Management
           </h1>
           <p className="text-muted" style={{ margin: '0.5rem 0 0 0' }}>
-            Assign bonuses or penalties to employees based on performance.
+            Managers recommend. HR reviews the supporting reason, linked evaluation, objective context, and documentation before recording a review outcome.
           </p>
         </div>
-        {isHROrAdmin && (
+        {canRecommend && (
           <button
             className="btn btn--primary"
             onClick={() => setShowForm(!showForm)}
@@ -145,7 +166,7 @@ function BonusPenaltyPage() {
       </div>
 
       {/* Create Form */}
-      {showForm && isHROrAdmin && (
+      {showForm && canRecommend && (
         <div className="card shadow-sm" style={{ padding: '1.5rem', marginBottom: '2rem', borderRadius: '12px', border: '2px solid var(--primary)', background: 'var(--shell-bg-inset, #f8fafc)' }}>
           <h3 style={{ margin: '0 0 1rem 0' }}>Create Bonus / Penalty</h3>
           <form onSubmit={handleSubmit}>
@@ -160,7 +181,7 @@ function BonusPenaltyPage() {
                 >
                   <option value="">Select an employee...</option>
                   {users.map(u => (
-                    <option key={u._id} value={u._id}>{u.name} ({u.email})</option>
+                    <option key={u._id || u.id} value={u._id || u.id}>{u.name}{u.email ? ` (${u.email})` : ''}</option>
                   ))}
                 </select>
               </div>
@@ -184,9 +205,19 @@ function BonusPenaltyPage() {
                   onChange={e => setFormData({ ...formData, value: e.target.value })}
                   placeholder="e.g. 500"
                   required
-                  min="0"
+                  min="0.01"
+                  step="0.01"
                 />
               </div>
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <label className="ent-label">Linked Final Evaluation</label>
+              <input
+                className="ent-input"
+                value={formData.finalEvaluation}
+                onChange={e => setFormData({ ...formData, finalEvaluation: e.target.value })}
+                placeholder="Validated final evaluation ID"
+              />
             </div>
             <div style={{ marginBottom: '1rem' }}>
               <label className="ent-label">Reason</label>
@@ -273,6 +304,34 @@ function BonusPenaltyPage() {
                 <div className="text-muted" style={{ fontSize: '0.8rem' }}>
                   Assigned by {record.assignedBy?.name || 'System'} · {new Date(record.createdAt).toLocaleDateString()}
                 </div>
+                <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginTop: '0.55rem' }}>
+                  <span className="badge">{record.approvalStatus || 'approved'}</span>
+                  {record.finalEvaluation && <span className="badge">Final score: {record.finalEvaluation.final_score}%</span>}
+                  {record.hrDecision && <span className="badge">HR: {(record.hrDecision.actionLabel || record.hrDecision.action || '').replace(/_/g, ' ')}</span>}
+                  {record.objective && <span className="badge">Objective: {record.objective.title}</span>}
+                </div>
+                {isHROrAdmin && record.approvalStatus === 'pending' && (
+                  <div style={{ marginTop: '0.8rem', padding: '0.85rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                    <label className="ent-label">HR documentation review note</label>
+                    <textarea
+                      className="ent-input"
+                      style={{ minHeight: '68px' }}
+                      value={reviewNotes[record._id] || ''}
+                      onChange={(event) => setReviewNotes((previous) => ({ ...previous, [record._id]: event.target.value }))}
+                      placeholder="Optional review note, or required correction reason when sending back."
+                    />
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.65rem', flexWrap: 'wrap' }}>
+                      <button className="btn btn--primary btn--sm" onClick={() => handleApproval(record._id, 'approved')}>Mark Documentation Reviewed</button>
+                      <button className="btn btn--outline btn--sm" onClick={() => handleApproval(record._id, 'rejected')}>Send Back for Documentation</button>
+                    </div>
+                  </div>
+                )}
+                {record.reviewNotes && (
+                  <div style={{ marginTop: '0.65rem', padding: '0.7rem', background: record.approvalStatus === 'rejected' ? '#fef2f2' : '#f0fdf4', borderRadius: '8px', fontSize: '0.88rem' }}>
+                    <strong>HR documentation note:</strong> {record.reviewNotes}
+                    {record.reviewedBy?.name && <span className="text-muted"> · {record.reviewedBy.name}</span>}
+                  </div>
+                )}
               </div>
               <div style={{
                 textAlign: 'center',

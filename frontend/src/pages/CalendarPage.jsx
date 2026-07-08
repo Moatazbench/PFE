@@ -203,8 +203,8 @@ function CalendarPage() {
     Promise.allSettled([
       api.get('/tasks/my'),
       api.get('/objectives/my'),
-      api.get('/meetings'),
-      api.get('/checkins'),
+      api.get('/meetings', { params: { scope: 'self' } }),
+      api.get('/checkins', { params: { scope: 'self' } }),
       api.get('/calendar/providers'),
       api.get('/calendar/events', {
         params: {

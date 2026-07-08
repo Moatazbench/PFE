@@ -5,10 +5,91 @@ const CheckIn = require('../models/CheckIn');
 const User = require('../models/User');
 const Cycle = require('../models/Cycle');
 const Team = require('../models/Team');
-const { calculateAutoScore, determineRatingLabel } = require('../services/scoreCalculationService');
+const BonusPenalty = require('../models/BonusPenalty');
+const CareerRecommendation = require('../models/CareerRecommendation');
+const {
+  calculateWeightedObjectiveScore,
+  getEvaluationEvidence,
+  determineRatingLabel
+} = require('../services/scoreCalculationService');
 const aiService = require('../services/aiService');
 const reviewContextService = require('../services/reviewContextService');
 const auditLogger = require('../utils/auditLogger');
+const { createNotification } = require('../utils/notificationHelper');
+const {
+  buildEvaluationReviewChecklist,
+  getBlockingEvaluationReviewIssues
+} = require('../utils/workflowRules');
+
+const SIGNIFICANT_SCORE_ADJUSTMENT = 10;
+const EXCLUDED_EVALUATION_OBJECTIVE_STATUSES = ['draft', 'rejected', 'cancelled', 'archived'];
+
+function roundScore(value) {
+  return Number(Number(value || 0).toFixed(2));
+}
+
+async function calculateEvaluationSnapshot(employeeId, cycleId) {
+  const scoring = await calculateWeightedObjectiveScore(employeeId, cycleId);
+  const objectiveIds = scoring.breakdown.map((item) => item.objective_id).filter(Boolean);
+  const evidence = await getEvaluationEvidence(employeeId, cycleId, objectiveIds);
+  return { scoring, evidence };
+}
+
+function applyEvaluationSnapshot(evaluation, snapshot) {
+  evaluation.auto_score = snapshot.scoring.score;
+  evaluation.objective_weight_total = snapshot.scoring.totalWeight;
+  evaluation.objective_score_normalized = snapshot.scoring.normalized;
+  evaluation.objective_breakdown = snapshot.scoring.breakdown;
+  evaluation.evidence_summary = snapshot.evidence;
+
+  const resolvedScore = evaluation.manager_score != null
+    ? Number(evaluation.manager_score)
+    : snapshot.scoring.score;
+  evaluation.final_score = roundScore(resolvedScore);
+  evaluation.score_difference = roundScore(evaluation.final_score - evaluation.auto_score);
+  evaluation.rating_label = determineRatingLabel(evaluation.final_score);
+}
+
+async function buildConsistencyWarnings(evaluation) {
+  const warnings = [];
+  const expectedRating = determineRatingLabel(evaluation.final_score);
+  const difference = Math.abs(Number(evaluation.final_score || 0) - Number(evaluation.auto_score || 0));
+  const [improvementPlanExists, bonusDocumentationExists, careerRecommendationExists] = await Promise.all([
+    ImprovementPlan.exists({ evaluation_id: evaluation._id }),
+    BonusPenalty.exists({
+      finalEvaluation: evaluation._id,
+      reason: { $type: 'string', $ne: '' }
+    }),
+    CareerRecommendation.exists({
+      employee_id: evaluation.employee_id,
+      cycle_id: evaluation.cycle_id
+    })
+  ]);
+
+  if (evaluation.objective_score_normalized) {
+    warnings.push(`Objective weights total ${evaluation.objective_weight_total}%, so the suggested score was normalized to 100%.`);
+  }
+  if (evaluation.rating_label !== expectedRating) {
+    warnings.push(`Rating should be ${humanizeRatingLabel(expectedRating)} for a score of ${roundScore(evaluation.final_score)}%.`);
+  }
+  if (difference >= SIGNIFICANT_SCORE_ADJUSTMENT && !String(evaluation.manager_adjustment_justification || '').trim()) {
+    warnings.push(`Manager score differs from the suggested score by ${roundScore(difference)} points without justification.`);
+  }
+  if (!String(evaluation.manager_comments || '').trim()) {
+    warnings.push('Manager final comments are missing.');
+  }
+  if (Number(evaluation.final_score || 0) < 50) {
+    if (!improvementPlanExists) warnings.push('Low performance has no improvement plan yet.');
+  }
+
+  const reviewWarnings = buildEvaluationReviewChecklist(evaluation, {
+    hasImprovementPlan: improvementPlanExists,
+    hasBonusDocumentation: Boolean(bonusDocumentationExists),
+    hasCareerRecommendation: Boolean(careerRecommendationExists),
+  });
+
+  return [...warnings, ...reviewWarnings.filter((item) => !warnings.includes(item))];
+}
 
 async function getManagedEmployeeIds(actor) {
   const actorId = actor.id || actor._id;
@@ -125,8 +206,16 @@ function buildManagerReviewFallback(context, autoScore, ratingLabel) {
   };
 }
 
-async function generateManagerDraft(employeeId, cycleId, autoScore, ratingLabel) {
+async function generateManagerDraft(employeeId, cycleId, autoScore, ratingLabel, snapshot) {
   const context = await reviewContextService.buildReviewContext({ employeeId, cycleId });
+  context.evaluationDecision = {
+    suggestedScore: autoScore,
+    ratingLabel,
+    objectiveWeightTotal: snapshot?.scoring?.totalWeight ?? null,
+    objectiveScoreNormalized: Boolean(snapshot?.scoring?.normalized),
+    objectiveBreakdown: snapshot?.scoring?.breakdown || [],
+    evidenceSummary: snapshot?.evidence || null,
+  };
   const fallbackReview = buildManagerReviewFallback(context, autoScore, ratingLabel);
 
   if (aiService.isConfigured()) {
@@ -176,7 +265,8 @@ exports.getEvaluation = async (req, res) => {
     const evaluation = await FinalEvaluation.findOne({ cycle_id, employee_id })
       .populate('employee_id', 'name email profileImage')
       .populate('evaluator_id', 'name role')
-      .populate('hr_validated_by', 'name');
+      .populate('hr_validated_by', 'name')
+      .populate('workflow_history.performed_by', 'name role');
 
     const improvementPlans = evaluation
       ? await ImprovementPlan.find({ evaluation_id: evaluation._id })
@@ -261,14 +351,15 @@ exports.generateEvaluation = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Evaluation already exists and is not in draft' });
     }
 
-    const auto_score = await calculateAutoScore(employee_id, cycle_id);
+    const snapshot = await calculateEvaluationSnapshot(employee_id, cycle_id);
+    const auto_score = snapshot.scoring.score;
     const rating_label = determineRatingLabel(auto_score);
-    const { review, usedFallback } = await generateManagerDraft(employee_id, cycle_id, auto_score, rating_label);
+    const { review, usedFallback } = await generateManagerDraft(employee_id, cycle_id, auto_score, rating_label, snapshot);
 
     if (evaluation) {
-      evaluation.auto_score = auto_score;
-      evaluation.final_score = auto_score;
-      evaluation.rating_label = rating_label;
+      evaluation.manager_score = null;
+      evaluation.manager_adjustment_justification = '';
+      applyEvaluationSnapshot(evaluation, snapshot);
       evaluation.evaluator_id = req.user.id || req.user._id;
       evaluation.evaluator_role = req.user.role;
       evaluation.evaluated_at = new Date();
@@ -280,6 +371,9 @@ exports.generateEvaluation = async (req, res) => {
         review?.recommended_rating_rationale,
         review?.warning
       );
+      evaluation.ai_assisted = !usedFallback;
+      evaluation.ai_draft_generated_at = new Date();
+      evaluation.consistency_warnings = await buildConsistencyWarnings(evaluation);
       await evaluation.save();
     } else {
       evaluation = new FinalEvaluation({
@@ -288,6 +382,10 @@ exports.generateEvaluation = async (req, res) => {
         auto_score,
         final_score: auto_score,
         rating_label,
+        objective_weight_total: snapshot.scoring.totalWeight,
+        objective_score_normalized: snapshot.scoring.normalized,
+        objective_breakdown: snapshot.scoring.breakdown,
+        evidence_summary: snapshot.evidence,
         evaluator_id: req.user.id || req.user._id,
         evaluator_role: req.user.role,
         evaluated_at: new Date(),
@@ -299,8 +397,11 @@ exports.generateEvaluation = async (req, res) => {
           review?.recommended_rating_rationale,
           review?.warning
         ),
+        ai_assisted: !usedFallback,
+        ai_draft_generated_at: new Date(),
         status: 'draft'
       });
+      evaluation.consistency_warnings = await buildConsistencyWarnings(evaluation);
       await evaluation.save();
     }
 
@@ -319,8 +420,8 @@ exports.generateEvaluation = async (req, res) => {
       aiGenerated: !usedFallback,
       usedFallback,
       message: usedFallback
-        ? 'Final evaluation draft generated using the built-in fallback summary.'
-        : 'AI final evaluation draft generated successfully.'
+        ? 'Evaluation draft generated using the built-in fallback summary.'
+        : 'AI-assisted evaluation draft generated successfully.'
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -330,7 +431,16 @@ exports.generateEvaluation = async (req, res) => {
 exports.updateEvaluation = async (req, res) => {
   try {
     const { id } = req.params;
-    const { manager_score, rating_label, recommendation, strengths, weaknesses, improvement_suggestions, manager_comments, status, hr_decision } = req.body;
+    const {
+      manager_score,
+      manager_adjustment_justification,
+      recommendation,
+      strengths,
+      weaknesses,
+      improvement_suggestions,
+      manager_comments,
+      status,
+    } = req.body;
 
     const mongoose = require('mongoose');
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -352,35 +462,100 @@ exports.updateEvaluation = async (req, res) => {
     }
 
     if (manager_score !== undefined) {
-      evaluation.manager_score = manager_score;
-      evaluation.final_score = manager_score;
+      const parsedManagerScore = Number(manager_score);
+      if (!Number.isFinite(parsedManagerScore) || parsedManagerScore < 0 || parsedManagerScore > 100) {
+        return res.status(400).json({ success: false, message: 'Manager score must be between 0 and 100.' });
+      }
+      evaluation.manager_score = roundScore(parsedManagerScore);
+      evaluation.final_score = evaluation.manager_score;
     }
-    if (rating_label) evaluation.rating_label = rating_label;
-    if (strengths) evaluation.strengths = strengths;
-    if (weaknesses) evaluation.weaknesses = weaknesses;
-    if (improvement_suggestions) evaluation.improvement_suggestions = improvement_suggestions;
+    if (manager_adjustment_justification !== undefined) {
+      evaluation.manager_adjustment_justification = String(manager_adjustment_justification || '').trim();
+    }
+    if (strengths !== undefined) evaluation.strengths = strengths;
+    if (weaknesses !== undefined) evaluation.weaknesses = weaknesses;
+    if (improvement_suggestions !== undefined) evaluation.improvement_suggestions = improvement_suggestions;
     if (manager_comments !== undefined) evaluation.manager_comments = manager_comments;
     if (recommendation) evaluation.recommendation = recommendation;
-    if (status) evaluation.status = status; // e.g. 'pending_hr'
+    if (status && !['draft', 'pending_hr'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid manager evaluation status.' });
+    }
+
+    const resolvedScore = evaluation.manager_score != null ? evaluation.manager_score : evaluation.auto_score;
+    evaluation.final_score = roundScore(resolvedScore);
+    evaluation.score_difference = roundScore(evaluation.final_score - evaluation.auto_score);
+    evaluation.rating_label = determineRatingLabel(evaluation.final_score);
+
+    const significantAdjustment = Math.abs(evaluation.score_difference) >= SIGNIFICANT_SCORE_ADJUSTMENT;
+    if (significantAdjustment && !String(evaluation.manager_adjustment_justification || '').trim()) {
+      return res.status(400).json({
+        success: false,
+        message: `A justification is required when the manager score differs by ${SIGNIFICANT_SCORE_ADJUSTMENT} points or more.`,
+        errors: [{ field: 'manager_adjustment_justification', message: 'Explain the significant score adjustment.' }]
+      });
+    }
+    if (status === 'pending_hr' && !String(evaluation.manager_comments || '').trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Manager final comments are required before submitting to HR.',
+        errors: [{ field: 'manager_comments', message: 'Add final manager comments.' }]
+      });
+    }
+    if (status === 'pending_hr') {
+      const objectives = await Objective.find({
+        owner: evaluation.employee_id,
+        cycle: evaluation.cycle_id,
+        status: { $nin: EXCLUDED_EVALUATION_OBJECTIVE_STATUSES }
+      }).select('title finalSelfSubmittedAt managerAdjustedPercent');
+      const missingSelfAssessments = objectives.filter((objective) => !objective.finalSelfSubmittedAt).length;
+      const unconfirmedObjectives = objectives.filter((objective) => objective.managerAdjustedPercent == null).length;
+
+      if (missingSelfAssessments > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `${missingSelfAssessments} active objective(s) still require employee self-assessment before HR submission.`,
+          errors: objectives
+            .filter((objective) => !objective.finalSelfSubmittedAt)
+            .map((objective) => ({ field: 'objectives', objectiveId: objective._id, message: `${objective.title}: employee self-assessment is missing.` }))
+        });
+      }
+      if (unconfirmedObjectives > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `${unconfirmedObjectives} active objective achievement(s) still require manager confirmation before HR submission.`,
+          errors: objectives
+            .filter((objective) => objective.managerAdjustedPercent == null)
+            .map((objective) => ({ field: 'objectives', objectiveId: objective._id, message: `${objective.title}: manager achievement confirmation is missing.` }))
+        });
+      }
+    }
+    if (status) {
+      evaluation.status = status;
+      if (status === 'pending_hr') {
+        evaluation.hr_return_reason = '';
+        evaluation.workflow_history.push({
+          action: 'submitted',
+          performed_by: req.user.id || req.user._id,
+          performed_at: new Date()
+        });
+      }
+    }
+    if (evaluation.ai_assisted) {
+      evaluation.ai_reviewed_by_manager = true;
+    }
     evaluation.evaluator_id = req.user.id || req.user._id;
     evaluation.evaluator_role = req.user.role;
     evaluation.evaluated_at = new Date();
     
-    if (hr_decision) {
-      evaluation.hr_decision = {
-        action: hr_decision.action,
-        notes: hr_decision.notes,
-        decided_by: req.user.id || req.user._id,
-        decided_at: new Date()
-      };
-    }
-
+    evaluation.consistency_warnings = await buildConsistencyWarnings(evaluation);
     await evaluation.save();
 
     await auditLogger.log(req.user.id || req.user._id, 'evaluation.updated', 'FinalEvaluation', evaluation._id, {
       status: evaluation.status,
       manager_score,
-      hr_decision_action: hr_decision ? hr_decision.action : null
+      score_difference: evaluation.score_difference,
+      adjustmentJustified: Boolean(evaluation.manager_adjustment_justification),
+      aiReviewedByManager: evaluation.ai_reviewed_by_manager
     });
 
     const populated = await FinalEvaluation.findById(evaluation._id)
@@ -394,29 +569,130 @@ exports.updateEvaluation = async (req, res) => {
   }
 };
 
+exports.recalculateEvaluation = async (req, res) => {
+  try {
+    const evaluation = await FinalEvaluation.findById(req.params.id);
+    if (!evaluation) return res.status(404).json({ success: false, message: 'Evaluation not found' });
+
+    const phaseCheck = await enforcePhase3Evaluation(evaluation.cycle_id);
+    if (phaseCheck.error) return res.status(phaseCheck.status).json({ success: false, message: phaseCheck.message });
+    if (!await canManageEmployeeEvaluation(req.user, evaluation.employee_id)) {
+      return res.status(403).json({ success: false, message: 'You can only evaluate your own team members.' });
+    }
+    if (evaluation.status !== 'draft') {
+      return res.status(400).json({ success: false, message: 'Only draft evaluations can be recalculated.' });
+    }
+
+    const snapshot = await calculateEvaluationSnapshot(evaluation.employee_id, evaluation.cycle_id);
+    applyEvaluationSnapshot(evaluation, snapshot);
+    evaluation.consistency_warnings = await buildConsistencyWarnings(evaluation);
+    await evaluation.save();
+
+    await auditLogger.log(req.user.id || req.user._id, 'evaluation.recalculated', 'FinalEvaluation', evaluation._id, {
+      auto_score: evaluation.auto_score,
+      final_score: evaluation.final_score,
+      objective_weight_total: evaluation.objective_weight_total
+    });
+
+    const populated = await FinalEvaluation.findById(evaluation._id)
+      .populate('employee_id', 'name email profileImage')
+      .populate('evaluator_id', 'name role');
+    res.json({ success: true, evaluation: populated });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 exports.validateEvaluation = async (req, res) => {
   try {
     const { id } = req.params;
-    const { action, performance_status } = req.body; // 'validate' or 'send_back'
+    const { action, performance_status, return_reason, hr_review_notes } = req.body;
+    if (!['validate', 'send_back'].includes(action)) {
+      return res.status(400).json({ success: false, message: 'Action must be validate or send_back.' });
+    }
 
     const evaluation = await FinalEvaluation.findById(id);
     if (!evaluation) return res.status(404).json({ success: false, message: 'Evaluation not found' });
     const phaseCheck = await enforcePhase3Evaluation(evaluation.cycle_id);
     if (phaseCheck.error) return res.status(phaseCheck.status).json({ success: false, message: phaseCheck.message });
 
+    let didCompleteReview = false;
     if (action === 'validate') {
-      evaluation.status = evaluation.status === 'closed' ? 'closed' : 'validated';
-      evaluation.hr_validated_by = req.user.id;
-      evaluation.hr_validated_at = new Date();
+      if (evaluation.status === 'pending_hr') {
+        const blockingIssues = getBlockingEvaluationReviewIssues(evaluation);
+        if (blockingIssues.length > 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'This evaluation is incomplete and must be corrected by the manager before HR can mark it as reviewed.',
+            errors: blockingIssues
+          });
+        }
+      } else if (!['validated', 'closed'].includes(evaluation.status)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Only manager-submitted or previously reviewed evaluations can be updated by HR.'
+        });
+      }
+
+      const isFirstReview = evaluation.status === 'pending_hr';
+      evaluation.consistency_warnings = await buildConsistencyWarnings(evaluation);
+      if (isFirstReview) {
+        didCompleteReview = true;
+        evaluation.status = 'validated';
+        evaluation.hr_validated_by = req.user.id;
+        evaluation.hr_validated_at = new Date();
+        evaluation.workflow_history.push({
+          action: 'validated',
+          reason: String(hr_review_notes || '').trim(),
+          performed_by: req.user.id,
+          performed_at: new Date()
+        });
+      }
       if (performance_status !== undefined) {
         evaluation.performance_status = performance_status || null;
       }
+      if (hr_review_notes !== undefined) {
+        evaluation.hr_review_notes = String(hr_review_notes || '').trim();
+      }
+      evaluation.hr_return_reason = '';
     } else if (action === 'send_back') {
+      if (evaluation.status !== 'pending_hr') {
+        return res.status(400).json({ success: false, message: 'Only an evaluation pending HR validation can be sent back.' });
+      }
+      if (!String(return_reason || '').trim()) {
+        return res.status(400).json({ success: false, message: 'A return reason is required before sending the evaluation back.' });
+      }
       evaluation.status = 'draft';
-      // Notification logic would go here
+      evaluation.hr_return_reason = String(return_reason).trim();
+      evaluation.workflow_history.push({
+        action: 'sent_back',
+        reason: evaluation.hr_return_reason,
+        performed_by: req.user.id,
+        performed_at: new Date()
+      });
     }
 
     await evaluation.save();
+    if (action === 'send_back' && evaluation.evaluator_id) {
+      await createNotification({
+        recipientId: evaluation.evaluator_id,
+        senderId: req.user.id,
+        type: 'EVALUATION_REJECTED',
+        title: 'Final evaluation returned by HR',
+        message: `HR returned the final evaluation for revision: ${evaluation.hr_return_reason}`,
+        link: '/final-evaluations'
+      });
+    }
+    if (didCompleteReview && evaluation.employee_id) {
+      await createNotification({
+        recipientId: evaluation.employee_id,
+        senderId: req.user.id,
+        type: 'EVALUATION_COMPLETED',
+        title: 'Final evaluation report ready',
+        message: 'HR completed the process review. Your final evaluation report is ready to view.',
+        link: '/final-evaluations'
+      });
+    }
 
     await auditLogger.log(req.user.id, `evaluation.${action}`, 'FinalEvaluation', evaluation._id, {
       action,
@@ -428,7 +704,8 @@ exports.validateEvaluation = async (req, res) => {
       .populate('employee_id', 'name email profileImage')
       .populate('cycle_id', 'name year')
       .populate('evaluator_id', 'name role')
-      .populate('hr_validated_by', 'name');
+      .populate('hr_validated_by', 'name')
+      .populate('workflow_history.performed_by', 'name role');
 
     res.json({ success: true, evaluation: populated });
   } catch (err) {
@@ -479,9 +756,14 @@ exports.exportEvaluation = async (req, res) => {
     // Scores & Rating
     doc.fontSize(16).text('Evaluation Summary');
     doc.fontSize(12).moveDown(0.5);
-    doc.text(`Auto-Calculated Score: ${evaluation.auto_score || 'N/A'}`);
-    doc.text(`Final Score: ${evaluation.final_score || 'N/A'}`);
+    doc.text(`Weighted Suggested Score: ${evaluation.auto_score ?? 'N/A'}`);
+    doc.text(`Manager Score: ${evaluation.manager_score ?? 'Not adjusted'}`);
+    doc.text(`Final Score: ${evaluation.final_score ?? 'N/A'}`);
     doc.text(`Rating Label: ${evaluation.rating_label || 'N/A'}`);
+    doc.text(`Score Difference: ${evaluation.score_difference || 0} point(s)`);
+    if (evaluation.manager_adjustment_justification) {
+      doc.text(`Manager Adjustment Justification: ${evaluation.manager_adjustment_justification}`);
+    }
     doc.text(`Manager Recommendation: ${evaluation.recommendation || 'None'}`);
     if (evaluation.performance_status) {
       doc.text(`HR Performance Status: ${humanizePerformanceStatus(evaluation.performance_status)}`);
@@ -541,9 +823,19 @@ exports.exportEvaluation = async (req, res) => {
     }
 
     // Objectives Summary
-    doc.fontSize(16).text('Objectives Summary');
+    doc.fontSize(16).text('Weighted Objectives Summary');
     doc.moveDown(0.5);
-    if (objectives.length === 0) {
+    if (evaluation.objective_breakdown?.length > 0) {
+      evaluation.objective_breakdown.forEach((objective, idx) => {
+        doc.fontSize(14).text(`${idx + 1}. ${objective.title}`);
+        doc.fontSize(12).text(`Category: ${objective.category || 'individual'}`);
+        doc.text(`Weight: ${objective.weight || 0}%`);
+        doc.text(`Employee Achievement: ${objective.employee_achievement || 0}%`);
+        doc.text(`Manager Confirmed: ${objective.manager_confirmed_achievement ?? objective.achievement_used ?? 0}%`);
+        doc.text(`Weighted Contribution: ${objective.weighted_points || 0} points`);
+        doc.moveDown(1);
+      });
+    } else if (objectives.length === 0) {
       doc.fontSize(12).text('No objectives found for this cycle.');
     } else {
       objectives.forEach((obj, idx) => {
@@ -574,10 +866,21 @@ exports.exportEvaluation = async (req, res) => {
 
 exports.getPendingEvaluations = async (req, res) => {
   try {
+    const evaluationDocuments = await FinalEvaluation.find({ status: 'pending_hr' });
+    await Promise.all(evaluationDocuments.map(async (evaluation) => {
+      const warnings = await buildConsistencyWarnings(evaluation);
+      const warningsChanged = JSON.stringify(evaluation.consistency_warnings || []) !== JSON.stringify(warnings);
+      if (warningsChanged) {
+        evaluation.consistency_warnings = warnings;
+        await evaluation.save();
+      }
+    }));
+
     const evaluations = await FinalEvaluation.find({ status: 'pending_hr' })
       .populate('employee_id', 'name email profileImage')
       .populate('cycle_id', 'name')
-      .populate('evaluator_id', 'name role');
+      .populate('evaluator_id', 'name role')
+      .populate('workflow_history.performed_by', 'name role');
     res.json({ success: true, evaluations });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -591,6 +894,7 @@ exports.getReviewedEvaluations = async (req, res) => {
       .populate('cycle_id', 'name year')
       .populate('evaluator_id', 'name role')
       .populate('hr_validated_by', 'name')
+      .populate('workflow_history.performed_by', 'name role')
       .sort({ hr_validated_at: -1, updatedAt: -1 });
 
     res.json({ success: true, evaluations });

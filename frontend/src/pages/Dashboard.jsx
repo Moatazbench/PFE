@@ -9,7 +9,7 @@ import MeetingCard from '../components/dashboard/MeetingCard';
 import TaskCard from '../components/dashboard/TaskCard';
 import FeedbackCard from '../components/dashboard/FeedbackCard';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
-import { buildProductivitySummary, formatDuration } from '../utils/workManagement';
+import EmptyState from '../components/common/EmptyState';
 import {
   buildRecentTimeline,
   collectKpis,
@@ -92,18 +92,26 @@ function MetricCard({ eyebrow, value, label, hint, points, accent }) {
 
 function EmptyPanel({ title, text, actionLabel, actionHref }) {
   return (
-    <div className="dash-inline-empty">
-      <strong>{title}</strong>
-      <p>{text}</p>
-      {actionLabel && actionHref ? <Link to={actionHref}>{actionLabel}</Link> : null}
-    </div>
+    <EmptyState
+      title={title}
+      description={text}
+      action={actionLabel && actionHref ? (
+        <Link to={actionHref} className="btn btn--primary" style={{ display: 'inline-block' }}>
+          {actionLabel}
+        </Link>
+      ) : null}
+    />
   );
 }
 
 function Dashboard() {
   var auth = useAuth();
   var user = auth.user;
-  var [activeTab, setActiveTab] = useState('me');
+  var [activeTab, setActiveTab] = useState(function () {
+    if (user?.role === 'ADMIN' || user?.role === 'HR') return 'org';
+    if (user?.role === 'TEAM_LEADER') return 'team';
+    return 'me';
+  });
   var [dashboardData, setDashboardData] = useState(INITIAL_DATA);
   var [loading, setLoading] = useState(true);
   var [pageError, setPageError] = useState('');
@@ -113,6 +121,7 @@ function Dashboard() {
 
   var userId = getUserId(user);
   var isAdminOrHr = user?.role === 'ADMIN' || user?.role === 'HR';
+  var insights = dashboardData.stats?.insights || {};
 
   useEffect(function () {
     if (!userId) return;
@@ -280,10 +289,6 @@ function Dashboard() {
     return getCheckInSummary(dashboardData.checkIns);
   }, [dashboardData.checkIns]);
 
-  var productivitySummary = useMemo(function () {
-    return buildProductivitySummary(dashboardData.tasks);
-  }, [dashboardData.tasks]);
-
   var kpis = useMemo(function () {
     return collectKpis(dashboardData.objectives);
   }, [dashboardData.objectives]);
@@ -317,10 +322,9 @@ function Dashboard() {
       return Number(kpi.progress || 0);
     });
   }, [kpis]);
-
   var timelineItems = useMemo(function () {
     return buildRecentTimeline(
-      []
+      (dashboardData.stats?.insights?.recentActivity || [])
         .concat(dashboardData.objectives.map(function (objective) {
           return {
             id: 'objective-' + objective._id,
@@ -367,7 +371,7 @@ function Dashboard() {
           };
         }))
     );
-  }, [dashboardData.checkIns, dashboardData.feedbacks, dashboardData.meetings, dashboardData.objectives, dashboardData.tasks]);
+  }, [dashboardData.checkIns, dashboardData.feedbacks, dashboardData.meetings, dashboardData.objectives, dashboardData.stats, dashboardData.tasks]);
 
   var needsAttentionObjectives = useMemo(function () {
     var threshold = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
@@ -382,10 +386,24 @@ function Dashboard() {
   if (loading) {
     return (
       <div className="ds-main__inner">
-        <div className="dash-loading-state">
-          <LoadingSkeleton rows={2} height={112} />
-          <LoadingSkeleton rows={2} height={132} />
-          <LoadingSkeleton rows={3} height={118} />
+        <DashboardHeader
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          activeCycle={null}
+          summary={{ total: 0 }}
+          onRefresh={function () {}}
+          loading={true}
+        />
+        <div className="dash-loading-state" style={{ marginTop: 28 }}>
+          <LoadingSkeleton rows={1} height={118} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, marginTop: 28 }}>
+            <LoadingSkeleton rows={2} height={150} />
+            <LoadingSkeleton rows={2} height={150} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, marginTop: 28 }}>
+            <LoadingSkeleton rows={3} height={200} />
+            <LoadingSkeleton rows={3} height={200} />
+          </div>
         </div>
       </div>
     );
@@ -419,45 +437,80 @@ function Dashboard() {
       <div className="dash-metrics-grid">
         <MetricCard
           eyebrow={getScopeLabel(activeTab)}
-          value={objectiveSummary.total}
-          label="Objectives in scope"
-          hint={objectiveSummary.active + ' active and ' + objectiveSummary.review + ' in review'}
+          value={insights.activeObjectives ?? objectiveSummary.total}
+          label="Active objectives"
+          hint={(insights.averageObjectiveProgress ?? objectiveSummary.averageProgress) + '% average progress'}
           points={weeklySparkline}
           accent="#6366f1"
         />
         <MetricCard
           eyebrow="Execution"
-          value={taskSummary.total}
-          label="Tracked tasks"
-          hint={taskSummary.done + ' completed, ' + taskSummary.overdue + ' overdue'}
+          value={insights.completedTasks ?? taskSummary.done}
+          label="Completed tasks"
+          hint={(insights.pendingTasks ?? (taskSummary.todo + taskSummary.inProgress)) + ' pending, ' + (insights.overdueTasks ?? taskSummary.overdue) + ' overdue'}
           points={taskSparkline}
           accent="#0ea5e9"
         />
         <MetricCard
           eyebrow="Check-ins"
-          value={checkInSummary.total}
-          label="Submitted updates"
-          hint={checkInSummary.pending + ' pending review'}
+          value={(insights.checkInCompletionRate ?? 0) + '%'}
+          label="Check-in completion"
+          hint={checkInSummary.total + ' updates visible in this view'}
           points={checkInSparkline}
           accent="#14b8a6"
         />
         <MetricCard
-          eyebrow="Productivity"
-          value={formatDuration(productivitySummary.weekSeconds)}
-          label="Tracked this week"
-          hint={formatDuration(productivitySummary.todaySeconds) + ' logged today'}
+          eyebrow="Performance"
+          value={insights.averagePerformanceScore == null ? '—' : insights.averagePerformanceScore + '%'}
+          label="Average final score"
+          hint={(insights.atRiskEmployees || 0) + ' employees currently at risk'}
           points={taskSparkline}
           accent="#ec4899"
         />
         <MetricCard
-          eyebrow="KPI coverage"
-          value={kpis.length}
-          label="Active KPI records"
-          hint={objectiveSummary.averageProgress + '% average goal progress'}
+          eyebrow={isAdminOrHr ? 'HR queue' : 'Evaluation'}
+          value={isAdminOrHr ? (insights.pendingHrValidation || 0) : (insights.finalEvaluationsGenerated || 0)}
+          label={isAdminOrHr ? 'Pending HR review' : 'Final evaluations'}
+          hint={isAdminOrHr
+            ? (insights.pendingCompensation || 0) + ' compensation recommendations pending'
+            : (insights.pendingManagerReviews || 0) + ' manager reviews pending'}
           points={kpiSparkline}
           accent="#f59e0b"
         />
       </div>
+
+      {user?.role === 'HR' && (
+        <MotionDiv
+          className="dash-card"
+          style={{ marginBottom: '1.25rem', padding: '1.25rem', borderTop: '4px solid #6366f1' }}
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.26, ease: 'easeOut' }}
+        >
+          <div className="dash-card__header">
+            <div>
+              <h3>HR Process Review &amp; Development Follow-up</h3>
+              <p className="dash-card__subtitle">Governance workload and employee follow-up requiring attention</p>
+            </div>
+            <Link to="/hr-validation" className="dash-card__link">Open HR review</Link>
+          </div>
+          <div className="dash-overview-card__grid">
+            <div><span>Pending review</span><strong>{insights.pendingHrValidation || 0}</strong></div>
+            <div><span>Consistency warnings</span><strong>{insights.evaluationsWithWarnings || 0}</strong></div>
+            <div><span>Correction returns</span><strong>{insights.hrSendBacks || 0}</strong></div>
+            <div><span>Low performance without plan</span><strong>{insights.lowPerformanceWithoutPlans || 0}</strong></div>
+            <div><span>Active improvement plans</span><strong>{insights.activeImprovementPlans || 0}</strong></div>
+            <div><span>Development actions pending</span><strong>{insights.pendingCareerActions || 0}</strong></div>
+            <div><span>Compensation documents pending</span><strong>{insights.pendingCompensation || 0}</strong></div>
+            <div><span>At-risk employees</span><strong>{insights.atRiskEmployees || 0}</strong></div>
+          </div>
+          {(insights.pendingHrValidation || 0) === 0 && (
+            <p className="text-muted" style={{ margin: '1rem 0 0' }}>
+              No evaluations pending HR review. Manager-submitted evaluations will appear here.
+            </p>
+          )}
+        </MotionDiv>
+      )}
 
       <div className="dash-overview-grid">
         <MotionDiv
@@ -518,8 +571,8 @@ function Dashboard() {
             <EmptyPanel
               title="No active cycle"
               text="The dashboard will pin the current cycle here once one is active."
-              actionLabel="Manage cycles"
-              actionHref="/cycles"
+              actionLabel={user?.role === 'ADMIN' ? 'Manage cycles' : ''}
+              actionHref={user?.role === 'ADMIN' ? '/cycles' : ''}
             />
           )}
         </MotionDiv>
@@ -557,7 +610,48 @@ function Dashboard() {
             </div>
           )}
         </MotionDiv>
+
+        <MotionDiv
+          className="dash-card dash-overview-card"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.28, ease: 'easeOut' }}
+        >
+          <div className="dash-overview-card__header">
+            <div>
+              <h3>Evaluation pipeline</h3>
+              <p>Current end-year actions in this scope</p>
+            </div>
+          </div>
+          <div className="dash-overview-card__grid">
+            <div><span>Generated</span><strong>{insights.finalEvaluationsGenerated || 0}</strong></div>
+            <div><span>Pending HR review</span><strong>{insights.pendingHrValidation || 0}</strong></div>
+            <div><span>Reviewed</span><strong>{insights.recentlyValidated || 0}</strong></div>
+            <div><span>Sent back</span><strong>{insights.hrSendBacks || 0}</strong></div>
+          </div>
+          <Link to={isAdminOrHr ? '/hr-validation' : '/final-evaluations'} className="dash-card__link">
+            Open evaluation workflow
+          </Link>
+        </MotionDiv>
       </div>
+
+      {(insights.subteams || []).length > 0 && (
+        <div className="dash-card" style={{ marginBottom: '1.25rem', padding: '1.25rem' }}>
+          <div className="dash-card__header">
+            <div><h3>Subteam comparison</h3><p className="dash-card__subtitle">Progress, task delivery, and validated performance</p></div>
+            <Link to="/my-team" className="dash-card__link">View team</Link>
+          </div>
+          <div className="dash-overview-card__grid">
+            {insights.subteams.map(function (subteam) {
+              return <div key={subteam.id}>
+                <span>{subteam.name} · {subteam.members} members</span>
+                <strong>{subteam.averageScore == null ? '—' : subteam.averageScore + '%'}</strong>
+                <small>{subteam.objectiveProgress ?? '—'}% objectives · {subteam.taskCompletion ?? '—'}% tasks</small>
+              </div>;
+            })}
+          </div>
+        </div>
+      )}
 
       {showDeferredAnalytics ? (
         <Suspense fallback={<div className="dash-card"><LoadingSkeleton rows={3} height={120} /></div>}>
@@ -568,6 +662,7 @@ function Dashboard() {
             teams={activeTab === 'team' ? dashboardData.scopeTeams : dashboardData.teams}
             user={user}
             checkIns={dashboardData.checkIns}
+            insights={insights}
             loading={loading}
           />
         </Suspense>

@@ -35,6 +35,104 @@
   gap: 24px;
 }
 
+.subteam-summary-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--apple-border);
+  border-radius: 14px;
+  background: var(--apple-bg-secondary);
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.subteam-summary-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(99, 102, 241, 0.45);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+}
+
+.subteam-summary-card--selected {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.12);
+}
+
+.subteam-summary-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.subteam-summary-card__title {
+  min-width: 0;
+  color: var(--apple-text-primary);
+  font-size: 17px;
+  font-weight: 750;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.subteam-summary-card__button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.subteam-summary-card__leader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 0 14px;
+  border-bottom: 1px solid var(--apple-border);
+}
+
+.subteam-summary-card__leader > div:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.subteam-summary-card__leader span,
+.subteam-summary-card__metrics span {
+  color: var(--apple-text-secondary);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.subteam-summary-card__leader strong {
+  overflow: hidden;
+  color: var(--apple-text-primary);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subteam-summary-card__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding-top: 14px;
+}
+
+.subteam-summary-card__metrics > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--apple-bg);
+}
+
+.subteam-summary-card__metrics strong {
+  color: var(--apple-text-primary);
+  font-size: 16px;
+  line-height: 1.2;
+}
+
 /* Card Styling */
 .user-card {
   background: var(--apple-bg-secondary);
@@ -278,5 +376,14 @@
 @media (max-width: 768px) {
   .team-grid {
     grid-template-columns: 1fr;
+  }
+
+  .subteam-summary-card__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .subteam-summary-card__button {
+    width: 100%;
   }
 }

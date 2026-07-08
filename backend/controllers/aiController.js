@@ -5,9 +5,17 @@ const aiService = require('../services/aiService'); // Demo update - v2222222222
 const reviewContextService = require('../services/reviewContextService');
 const Objective = require('../models/Objective');
 const User = require('../models/User');
+const Task = require('../models/Task');
+const CheckIn = require('../models/CheckIn');
+const Feedback = require('../models/Feedback');
+const FinalEvaluation = require('../models/FinalEvaluation');
+const Team = require('../models/Team');
+const Cycle = require('../models/Cycle');
+const { calculateWeightedScoreFromObjectives } = require('../services/scoreCalculationService');
 const { createAuditLog } = require('../utils/auditHelper');
 
-const REVIEW_ROLES = ['ADMIN', 'HR', 'TEAM_LEADER'];
+const REVIEW_ROLES = ['ADMIN', 'TEAM_LEADER'];
+const PREDICTION_EXCLUDED_OBJECTIVE_STATUSES = ['draft', 'rejected', 'cancelled', 'archived'];
 
 function getRequesterId(req) {
     return String(req.user?.id || req.user?._id || '');
@@ -395,7 +403,7 @@ async function runReviewFlow(req, res, mode) {
             if (ownerId !== String(employeeId)) {
                 return res.status(400).json({ message: 'Objective does not belong to the requested employee' });
             }
-            if (!['ADMIN', 'HR'].includes(req.user.role)) {
+            if (req.user.role !== 'ADMIN') {
                 const managerId = String(objective.owner?.manager || '');
                 if (managerId !== requesterId) {
                     return res.status(403).json({ message: 'Forbidden: not authorized to review this employee' });
@@ -403,7 +411,7 @@ async function runReviewFlow(req, res, mode) {
             }
         }
 
-        if (mode === 'final_self_assessment' && String(employeeId) !== requesterId && !['ADMIN', 'HR'].includes(req.user.role)) {
+        if (mode === 'final_self_assessment' && String(employeeId) !== requesterId && req.user.role !== 'ADMIN') {
             const targetEmployee = await User.findById(employeeId).select('manager').lean();
             if (!targetEmployee) {
                 return res.status(404).json({ message: 'Employee not found' });
@@ -429,7 +437,7 @@ async function runReviewFlow(req, res, mode) {
                 break;
             case 'final_self_assessment':
                 if (requesterId !== String(employeeId) && !REVIEW_ROLES.includes(req.user.role)) {
-                    return res.status(403).json({ message: 'Forbidden: only the employee or HR/Admin can request final self assessment' });
+                    return res.status(403).json({ message: 'Forbidden: only the employee or their manager can request a final self-assessment draft' });
                 }
                 result = await aiService.generateFinalSelfReview(context);
                 break;
@@ -1160,7 +1168,7 @@ function buildDevelopmentPlanSummary(evaluation, goals, lowCompetencies, score) 
 // ============ AI EVALUATION DRAFT GENERATOR ============
 exports.generateEvaluationDraft = async (req, res) => {
     try {
-        const { employee_name, objectives = [], existing_score } = req.body;
+        const { employee_name, objectives = [], existing_score, rating_label: requestedRatingLabel } = req.body;
 
         if (!employee_name) {
             return res.status(400).json({ success: false, message: 'employee_name is required' });
@@ -1184,13 +1192,30 @@ exports.generateEvaluationDraft = async (req, res) => {
                 ? Math.round(objectives.reduce(function (sum, o) { return sum + (o.achievementPercent || 0); }, 0) / objectives.length)
                 : 0;
 
-            const score = existing_score || avgAchievement || 70;
+            const totalWeight = objectives.reduce(function (sum, objective) {
+                return sum + Math.max(0, Number(objective.weight) || 0);
+            }, 0);
+            const weightedPoints = objectives.reduce(function (sum, objective) {
+                const weight = Math.max(0, Number(objective.weight) || 0);
+                const achievement = Math.max(0, Math.min(100, Number(objective.achievementPercent) || 0));
+                return sum + ((weight * achievement) / 100);
+            }, 0);
+            const weightedAchievement = totalWeight > 0
+                ? Math.round((weightedPoints / totalWeight) * 100)
+                : avgAchievement;
+            const score = existing_score !== undefined && existing_score !== null
+                ? Math.max(0, Math.min(100, Number(existing_score) || 0))
+                : weightedAchievement;
 
             let rating_label = 'meets_expectations';
-            if (score >= 90) rating_label = 'exceeds_expectations';
-            else if (score >= 75) rating_label = 'meets_expectations';
-            else if (score >= 60) rating_label = 'partially_meets_expectations';
-            else rating_label = 'does_not_meet_expectations';
+            if (score >= 90) rating_label = 'exceptional';
+            else if (score >= 75) rating_label = 'strong';
+            else if (score >= 50) rating_label = 'meets_expectations';
+            else if (score >= 30) rating_label = 'needs_improvement';
+            else rating_label = 'unsatisfactory';
+            if (requestedRatingLabel && requestedRatingLabel !== rating_label) {
+                console.warn('Ignored inconsistent requested AI draft rating:', requestedRatingLabel, 'expected:', rating_label);
+            }
 
             const highObjectives = objectives.filter(function (o) { return (o.achievementPercent || 0) >= 80; });
             const lowObjectives = objectives.filter(function (o) { return (o.achievementPercent || 0) < 50; });
@@ -1198,7 +1223,7 @@ exports.generateEvaluationDraft = async (req, res) => {
             const strengthPool = [
                 'Demonstrated consistent commitment to objectives throughout the cycle',
                 'Showed strong initiative in tracking progress and updating KPIs',
-                'Average achievement of ' + avgAchievement + '% across all objectives',
+                'Weighted objective achievement of ' + weightedAchievement + '% across all objectives',
                 highObjectives.length > 0 ? 'Excelled in: ' + highObjectives.map(function (o) { return '"' + o.title + '"'; }).join(', ') : 'Maintained professional standards across all tasks',
                 'Proactive communication with the team',
                 'Delivered results on time with good quality'
@@ -1222,7 +1247,7 @@ exports.generateEvaluationDraft = async (req, res) => {
                 strengths: pickMultiple(strengthPool, 3),
                 weaknesses: pickMultiple(weaknessPool, 2),
                 improvement_suggestions: pickMultiple(improvementPool, 2),
-                manager_comments: employee_name + ' has demonstrated ' + (score >= 75 ? 'solid' : 'developing') + ' performance this cycle with an average achievement of ' + avgAchievement + '%. ' + completedCount + ' of ' + objectives.length + ' objectives were fully completed. ' + (score >= 80 ? 'Overall this was a commendable cycle.' : 'Continued improvement is expected next cycle.'),
+                manager_comments: employee_name + ' has demonstrated ' + (score >= 75 ? 'solid' : 'developing') + ' performance this cycle with a weighted objective achievement of ' + weightedAchievement + '%. ' + completedCount + ' of ' + objectives.length + ' objectives were fully completed. This is an AI-assisted draft and must be reviewed by the manager before submission. ' + (score >= 80 ? 'Overall this was a commendable cycle.' : 'Continued improvement is expected next cycle.'),
                 rating_label: rating_label,
                 manager_score: score,
                 source: 'template'
@@ -1235,35 +1260,359 @@ exports.generateEvaluationDraft = async (req, res) => {
     }
 };
 
-// ============ AI PERFORMANCE PREDICTOR (PYTHON ML) ============
-exports.predictEmployeePerformance = async (req, res) => {
-    try {
-        const metrics = req.body.metrics;
-        
-        if (!metrics) {
-            return res.status(400).json({ success: false, message: 'metrics object is required' });
-        }
+// ============ AI PERFORMANCE PREDICTOR ============
+function clampPredictionPercent(value) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? Math.max(0, Math.min(100, numeric)) : null;
+}
 
-        // Call the Python AI service
-        const response = await fetch('http://localhost:5000/predict', {
+async function getPredictionEmployeeIds(actor) {
+    const actorId = actor.id || actor._id;
+    if (actor.role === 'COLLABORATOR') return [String(actorId)];
+    if (['ADMIN', 'HR'].includes(actor.role)) {
+        const users = await User.find({ isDeleted: false, isActive: true, role: { $ne: 'ADMIN' } }).select('_id');
+        return users.map((user) => String(user._id));
+    }
+    if (actor.role === 'TEAM_LEADER') {
+        const ids = new Set([String(actorId)]);
+        const teams = await Team.find({ leader: actorId }).select('members');
+        teams.forEach((team) => (team.members || []).forEach((member) => ids.add(String(member))));
+        const directReports = await User.find({ manager: actorId, isDeleted: false, isActive: true }).select('_id');
+        directReports.forEach((user) => ids.add(String(user._id)));
+        return Array.from(ids);
+    }
+    return [];
+}
+
+async function canViewPrediction(actor, employeeId) {
+    const allowedIds = await getPredictionEmployeeIds(actor);
+    return allowedIds.includes(String(employeeId));
+}
+
+function weightedAvailableAverage(parts) {
+    const available = parts.filter((part) => part.value != null);
+    const weight = available.reduce((sum, part) => sum + part.weight, 0);
+    if (!weight) return null;
+    return available.reduce((sum, part) => sum + part.value * part.weight, 0) / weight;
+}
+
+function buildPredictionResult(metrics) {
+    const currentScore = metrics.current_score;
+    const predicted = weightedAvailableAverage([
+        { value: metrics.weighted_objective_score, weight: 45 },
+        { value: metrics.task_completion_percent, weight: 20 },
+        { value: metrics.avg_checkin_progress, weight: 15 },
+        { value: metrics.previous_final_score, weight: 20 }
+    ]);
+    const predictedScore = clampPredictionPercent(predicted == null ? currentScore : predicted);
+    const evidenceSources = [
+        metrics.objective_count > 0,
+        metrics.task_count > 0,
+        metrics.checkin_count > 0,
+        metrics.previous_final_score != null
+    ].filter(Boolean).length;
+    const confidence = Math.min(92, 30 + evidenceSources * 14 + Math.min(metrics.objective_count + metrics.checkin_count, 12) * 2);
+    const risk = predictedScore == null || evidenceSources < 2
+        ? 'insufficient_data'
+        : predictedScore < 45
+            ? 'high'
+            : predictedScore < 65
+                ? 'medium'
+                : 'low';
+    const delta = predictedScore != null && currentScore != null ? predictedScore - currentScore : 0;
+
+    return {
+        predicted_score: predictedScore == null ? null : Number(predictedScore.toFixed(1)),
+        current_score: currentScore,
+        trend: Math.abs(delta) < 2 ? 'stable' : delta > 0 ? 'improving' : 'declining',
+        risk_level: risk,
+        confidence_level: evidenceSources < 2 ? 'low' : confidence >= 75 ? 'high' : 'medium',
+        confidence_percent: evidenceSources < 2 ? Math.min(confidence, 49) : confidence,
+        reliable: evidenceSources >= 2,
+        source: 'project_metrics_fallback',
+        explanation: evidenceSources < 2
+            ? 'Not enough project data is available for a reliable prediction yet.'
+            : 'This prediction uses weighted objective achievement, task completion, check-in progress, and previous final evaluation data. Missing sources are excluded rather than replaced with fake values.'
+    };
+}
+
+function buildLongRangeForecasts(metrics, prediction) {
+    const clamp = (value) => Number(Math.max(0, Math.min(100, Number(value || 0))).toFixed(1));
+    const current = metrics.current_score ?? prediction.current_score ?? prediction.predicted_score ?? 0;
+    const availableProductivity = [
+        { value: metrics.weighted_objective_score, weight: 50 },
+        { value: metrics.task_completion_percent, weight: 25 },
+        { value: metrics.checkin_consistency_percent, weight: 15 },
+        { value: metrics.team_contribution_percent, weight: 10 }
+    ].filter((item) => item.value != null);
+    const totalProductivityWeight = availableProductivity.reduce((sum, item) => sum + item.weight, 0);
+    const productivity = totalProductivityWeight
+        ? availableProductivity.reduce((sum, item) => sum + item.value * item.weight, 0) / totalProductivityWeight
+        : current;
+    const modelDelta = Number(prediction.predicted_score ?? current) - current;
+    const historyDelta = metrics.previous_final_score == null ? null : current - metrics.previous_final_score;
+    const rawAdjustment = historyDelta == null
+        ? (modelDelta * 0.45) + ((productivity - current) * 0.2)
+        : (historyDelta * 0.3) + (modelDelta * 0.25) + ((productivity - current) * 0.2);
+    const annualAdjustment = Math.max(historyDelta == null ? -5 : -8, Math.min(historyDelta == null ? 5 : 8, rawAdjustment));
+    const performance = [
+        { label: 'Current', years: 0, value: clamp(current) },
+        { label: '1 Year', years: 1, value: clamp(current + annualAdjustment) },
+        { label: '2 Years', years: 2, value: clamp(current + annualAdjustment * 1.5) },
+        { label: '5 Years', years: 5, value: clamp(current + annualAdjustment * 2.5) }
+    ];
+    const productivityAdjustment = annualAdjustment * 0.6;
+    const productivityForecast = [
+        { label: 'Current Cycle', years: 0, value: clamp(productivity) },
+        { label: '1 Year', years: 1, value: clamp(productivity + productivityAdjustment) },
+        { label: '2 Years', years: 2, value: clamp(productivity + productivityAdjustment * 1.5) },
+        { label: '5 Years', years: 5, value: clamp(productivity + productivityAdjustment * 2.5) }
+    ];
+    const objectiveRisk = metrics.weighted_objective_score == null ? null : 100 - metrics.weighted_objective_score;
+    const taskRisk = metrics.task_completion_percent == null ? null : 100 - metrics.task_completion_percent;
+    const checkinRisk = metrics.checkin_consistency_percent == null ? null : 100 - metrics.checkin_consistency_percent;
+    const riskParts = [
+        { value: objectiveRisk, weight: 45 },
+        { value: taskRisk, weight: 30 },
+        { value: checkinRisk, weight: 25 }
+    ].filter((item) => item.value != null);
+    const totalRiskWeight = riskParts.reduce((sum, item) => sum + item.weight, 0);
+    const baseRisk = totalRiskWeight
+        ? riskParts.reduce((sum, item) => sum + item.value * item.weight, 0) / totalRiskWeight
+        : 50;
+    const trendRiskAdjustment = annualAdjustment < 0 ? Math.abs(annualAdjustment) * 1.5 : -annualAdjustment;
+    const flightRisk = [
+        { label: 'Current', years: 0, value: clamp(baseRisk) },
+        { label: '1 Year', years: 1, value: clamp(baseRisk + trendRiskAdjustment) },
+        { label: '2 Years', years: 2, value: clamp(baseRisk + trendRiskAdjustment * 1.5) },
+        { label: '5 Years', years: 5, value: clamp(baseRisk + trendRiskAdjustment * 2.5) }
+    ];
+    const fiveYearDelta = performance[3].value - performance[0].value;
+    const direction = fiveYearDelta >= 8 ? 'inclining' : fiveYearDelta <= -8 ? 'declining' : 'stable';
+    const riskCategory = (value) => value >= 75 ? 'critical' : value >= 55 ? 'high' : value >= 30 ? 'medium' : 'low';
+
+    return {
+        performance,
+        productivity: productivityForecast,
+        flightRisk: flightRisk.map((item) => ({ ...item, category: riskCategory(item.value) })),
+        direction,
+        five_year_delta: Number(fiveYearDelta.toFixed(1)),
+        annual_adjustment: Number(annualAdjustment.toFixed(1)),
+        historical_data_available: historyDelta != null,
+        methodology: historyDelta == null
+            ? 'Rule-assisted forecast generated from available current-cycle metrics and the AI score. More historical data is needed for higher confidence.'
+            : 'Rule-assisted forecast generated from evaluation history, current-cycle productivity metrics, and the AI score.'
+    };
+}
+
+async function enhancePredictionWithAIService(metrics, fallback) {
+    if (!fallback.reliable) {
+        return {
+            ...fallback,
+            fallback_reason: 'Not enough real metrics are available to call the trained AI service.'
+        };
+    }
+    const requiredMetrics = {
+        kpi_score: metrics.weighted_objective_score ?? metrics.kpi_score ?? 0,
+        goal_completion_percent: metrics.objective_completion_percent ?? metrics.goal_completion_percent ?? 0,
+        checkin_count: metrics.checkin_count,
+        avg_checkin_progress: metrics.avg_checkin_progress ?? 0,
+        feedback_count: metrics.feedback_count,
+        positive_feedback_ratio: metrics.positive_feedback_ratio ?? 0,
+        task_completion_percent: metrics.task_completion_percent ?? 0,
+        tasks_on_time_percent: metrics.tasks_on_time_percent ?? 0
+    };
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500);
+    try {
+        const response = await fetch(process.env.PERFORMANCE_AI_URL || 'http://localhost:5000/predict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(metrics)
+            body: JSON.stringify(requiredMetrics),
+            signal: controller.signal
         });
-
-        if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(`AI Service returned ${response.status}: ${errText}`);
-        }
-
-        const prediction = await response.json();
-        return res.json({ success: true, prediction });
+        if (!response.ok) throw new Error(`AI service returned ${response.status}`);
+        const aiResult = await response.json();
+        return {
+            ...fallback,
+            predicted_score: clampPredictionPercent(aiResult.overall_score),
+            confidence_level: Number(aiResult.rating_confidence || 0) >= 0.75 ? 'high' : 'medium',
+            confidence_percent: Math.round(Number(aiResult.rating_confidence || 0) * 100),
+            source: 'python_ml_service',
+            model_rating: aiResult.rating,
+            promotion_ready: Boolean(aiResult.promotion_ready),
+            promotion_probability: Number(aiResult.promotion_probability || 0),
+            strengths: aiResult.strengths || [],
+            weaknesses: aiResult.weaknesses || [],
+            explanation: `${fallback.explanation} The trained project AI service supplied the final score and rating.`
+        };
     } catch (err) {
-        console.error('Python AI Prediction Error:', err);
-        return res.status(500).json({ 
-            success: false, 
-            message: 'Prediction service unavailable. Is the Python AI service running?',
-            error: err.message 
-        });
+        return {
+            ...fallback,
+            fallback_reason: err.name === 'AbortError' ? 'AI service timed out.' : 'AI service unavailable.',
+            explanation: `${fallback.explanation} The trained AI service is unavailable, so the project-metrics fallback is shown.`
+        };
+    } finally {
+        clearTimeout(timeout);
     }
+}
+
+async function buildEmployeePredictionData(employeeId, cycleId) {
+    const [employee, cycle] = await Promise.all([
+        User.findById(employeeId).select('_id name email role profileImage team isActive').populate('team', 'name parentTeam').lean(),
+        Cycle.findById(cycleId).select('_id name year phase1Start phase3End').lean()
+    ]);
+    if (!employee) return null;
+    if (!cycle) throw Object.assign(new Error('Cycle not found.'), { status: 404 });
+
+    const objectives = await Objective.find({
+        owner: employeeId,
+        cycle: cycleId,
+        status: { $nin: PREDICTION_EXCLUDED_OBJECTIVE_STATUSES }
+    }).select('title category weight status achievementPercent finalSelfPercent managerAdjustedPercent progressUpdates createdAt updatedAt').lean();
+    const objectiveIds = objectives.map((objective) => objective._id);
+    const [tasks, checkins, feedbacks, evaluations] = await Promise.all([
+        Task.find({ assignee: employeeId, $or: [{ linkedGoal: { $in: objectiveIds } }, { objective_id: { $in: objectiveIds } }] })
+            .select('status workflowStage progress dueDate completedAt createdAt').sort({ createdAt: 1 }).lean(),
+        CheckIn.find({ employee_id: employeeId, cycle_id: cycleId })
+            .select('status progress_percent submitted_at createdAt').sort({ submitted_at: 1, createdAt: 1 }).lean(),
+        Feedback.find({ recipient: employeeId, cycle_id: cycleId, status: 'active' })
+            .select('type rating createdAt').lean(),
+        FinalEvaluation.find({ employee_id: employeeId }).select('cycle_id final_score manager_score auto_score status createdAt')
+            .populate('cycle_id', 'name year').sort({ createdAt: 1 }).lean()
+    ]);
+
+    const scoring = calculateWeightedScoreFromObjectives(objectives);
+    const completedTasks = tasks.filter((task) => task.status === 'done' || task.workflowStage === 'completed').length;
+    const taskCompletion = tasks.length ? (completedTasks / tasks.length) * 100 : null;
+    const datedCompletedTasks = tasks.filter((task) => task.status === 'done' && task.dueDate && task.completedAt);
+    const onTimeTasks = datedCompletedTasks.filter((task) => new Date(task.completedAt) <= new Date(task.dueDate)).length;
+    const positiveFeedback = feedbacks.filter((feedback) => feedback.type === 'praise' || Number(feedback.rating || 0) >= 4).length;
+    const averageCheckin = checkins.length
+        ? checkins.reduce((sum, item) => sum + (clampPredictionPercent(item.progress_percent) || 0), 0) / checkins.length
+        : null;
+    const approvedCheckins = checkins.filter((checkin) => checkin.status === 'approved').length;
+    const checkinApprovalRate = checkins.length ? (approvedCheckins / checkins.length) * 100 : null;
+    const checkinConsistency = checkins.length
+        ? (Number(averageCheckin || 0) * 0.6) + (Number(checkinApprovalRate || 0) * 0.4)
+        : null;
+    const previousEvaluations = evaluations.filter((evaluation) =>
+        String(evaluation.cycle_id?._id || evaluation.cycle_id) !== String(cycleId) &&
+        ['validated', 'closed'].includes(evaluation.status)
+    );
+    const previous = previousEvaluations.length ? previousEvaluations[previousEvaluations.length - 1] : null;
+    const currentEvaluation = evaluations.find((evaluation) => String(evaluation.cycle_id?._id || evaluation.cycle_id) === String(cycleId));
+    const currentScore = currentEvaluation?.final_score ?? (objectives.length ? scoring.score : null);
+    const metrics = {
+        current_score: clampPredictionPercent(currentScore),
+        weighted_objective_score: objectives.length ? scoring.score : null,
+        objective_completion_percent: objectives.length
+            ? Number((objectives.reduce((sum, item) => sum + (clampPredictionPercent(item.managerAdjustedPercent ?? item.finalSelfPercent ?? item.achievementPercent) || 0), 0) / objectives.length).toFixed(1))
+            : null,
+        objective_count: objectives.length,
+        task_completion_percent: taskCompletion == null ? null : Number(taskCompletion.toFixed(1)),
+        tasks_on_time_percent: datedCompletedTasks.length ? Number(((onTimeTasks / datedCompletedTasks.length) * 100).toFixed(1)) : null,
+        task_count: tasks.length,
+        checkin_count: checkins.length,
+        avg_checkin_progress: averageCheckin == null ? null : Number(averageCheckin.toFixed(1)),
+        checkin_consistency_percent: checkinConsistency == null ? null : Number(checkinConsistency.toFixed(1)),
+        feedback_count: feedbacks.length,
+        positive_feedback_ratio: feedbacks.length ? Number((positiveFeedback / feedbacks.length).toFixed(2)) : null,
+        previous_final_score: previous ? clampPredictionPercent(previous.final_score ?? previous.manager_score ?? previous.auto_score) : null
+    };
+    const teamObjectives = scoring.breakdown.filter((objective) => objective.category === 'team');
+    metrics.team_contribution_percent = teamObjectives.length
+        ? Number((teamObjectives.reduce((sum, objective) => sum + objective.achievement_used, 0) / teamObjectives.length).toFixed(1))
+        : null;
+    metrics.evaluation_history_score = metrics.previous_final_score;
+    const prediction = buildPredictionResult(metrics);
+    const objectiveTrend = objectives.map((objective, index) => ({
+        label: objective.title || `Objective ${index + 1}`,
+        value: clampPredictionPercent(objective.managerAdjustedPercent ?? objective.finalSelfPercent ?? objective.achievementPercent) || 0
+    }));
+    const taskTrend = tasks.map((task, index) => ({
+        label: `Task ${index + 1}`,
+        value: clampPredictionPercent(task.status === 'done' ? 100 : task.progress) || 0
+    }));
+    const checkinTrend = checkins.map((checkin, index) => ({
+        label: `Check-in ${index + 1}`,
+        value: clampPredictionPercent(checkin.progress_percent) || 0
+    }));
+    const evaluationTrend = previousEvaluations.concat(currentEvaluation ? [currentEvaluation] : []).filter(Boolean).map((evaluation) => ({
+        label: evaluation.cycle_id?.name || String(evaluation.cycle_id?.year || 'Cycle'),
+        value: clampPredictionPercent(evaluation.final_score ?? evaluation.manager_score ?? evaluation.auto_score) || 0
+    }));
+    if (prediction.predicted_score != null) evaluationTrend.push({ label: 'Prediction', value: prediction.predicted_score });
+
+    return {
+        employee,
+        cycle: { _id: cycle._id, name: cycle.name, year: cycle.year },
+        metrics,
+        prediction,
+        contributions: [
+            { key: 'weighted_objectives', label: 'Weighted Objectives', value: metrics.weighted_objective_score },
+            { key: 'task_completion', label: 'Task Completion', value: metrics.task_completion_percent },
+            { key: 'checkin_consistency', label: 'Check-in Consistency', value: metrics.checkin_consistency_percent },
+            { key: 'team_contribution', label: 'Team Contribution', value: metrics.team_contribution_percent },
+            { key: 'evaluation_history', label: 'Evaluation History', value: metrics.evaluation_history_score }
+        ],
+        objectiveBreakdown: scoring.breakdown.map((objective) => ({
+            id: objective.objective_id,
+            title: objective.title,
+            category: objective.category,
+            weight: objective.weight,
+            progress: objective.achievement_used,
+            contribution: objective.weighted_points
+        })),
+        trends: { objectives: objectiveTrend, tasks: taskTrend, checkins: checkinTrend, performance: evaluationTrend }
+    };
+}
+
+exports.getPerformancePredictionUsers = async (req, res) => {
+    try {
+        const { cycleId } = req.query;
+        if (!cycleId) return res.status(400).json({ success: false, message: 'cycleId is required.' });
+        const employeeIds = await getPredictionEmployeeIds(req.user);
+        const results = await Promise.all(employeeIds.map((employeeId) => buildEmployeePredictionData(employeeId, cycleId)));
+        const users = results.filter(Boolean).map((result) => ({
+            employee: result.employee,
+            current_score: result.metrics.current_score,
+            objective_completion_percent: result.metrics.objective_completion_percent,
+            prediction_status: result.prediction.reliable ? 'ready' : 'not_enough_data',
+            risk_level: result.prediction.risk_level
+        }));
+        return res.json({ success: true, users });
+    } catch (err) {
+        return res.status(err.status || 500).json({ success: false, message: err.message || 'Failed to load prediction users.' });
+    }
+};
+
+exports.getEmployeePerformancePrediction = async (req, res) => {
+    try {
+        const { cycleId } = req.query;
+        if (!cycleId) return res.status(400).json({ success: false, message: 'cycleId is required.' });
+        if (!await canViewPrediction(req.user, req.params.employeeId)) {
+            return res.status(403).json({ success: false, message: 'You are not authorized to view this employee prediction.' });
+        }
+        const result = await buildEmployeePredictionData(req.params.employeeId, cycleId);
+        if (!result) return res.status(404).json({ success: false, message: 'Employee not found.' });
+        result.prediction = await enhancePredictionWithAIService(result.metrics, result.prediction);
+        result.forecasts = buildLongRangeForecasts(result.metrics, result.prediction);
+        const predictionPoint = result.trends.performance[result.trends.performance.length - 1];
+        if (predictionPoint?.label === 'Prediction' && result.prediction.predicted_score != null) {
+            predictionPoint.value = result.prediction.predicted_score;
+        }
+        return res.json({ success: true, ...result });
+    } catch (err) {
+        return res.status(err.status || 500).json({ success: false, message: err.message || 'Failed to generate prediction.' });
+    }
+};
+
+// Legacy manual metrics endpoint retained for compatibility.
+exports.predictEmployeePerformance = async (req, res) => {
+    const metrics = req.body.metrics;
+    if (!metrics) return res.status(400).json({ success: false, message: 'metrics object is required' });
+    const fallback = buildPredictionResult(metrics);
+    const prediction = await enhancePredictionWithAIService(metrics, fallback);
+    return res.json({ success: true, prediction });
 };

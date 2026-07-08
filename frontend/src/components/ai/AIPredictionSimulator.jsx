@@ -1,154 +1,110 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { aiAPI } from '../../api/ai';
+import UserAvatar from '../UserAvatar';
 import './AIPredictionSimulator.css';
 
-const AIPredictionSimulator = () => {
-    const [metrics, setMetrics] = useState({
-        kpi_score: 80,
-        goal_completion_percent: 75,
-        checkin_count: 10,
-        avg_checkin_progress: 70,
-        feedback_count: 20,
-        positive_feedback_ratio: 0.8,
-        task_completion_percent: 85,
-        tasks_on_time_percent: 80,
-    });
+function formatRole(role) {
+    return String(role || '').replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
 
-    const [loading, setLoading] = useState(false);
-    const [result, setResult] = useState(null);
-    const [error, setError] = useState(null);
+const AIPredictionSimulator = ({ cycleId }) => {
+    const navigate = useNavigate();
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setMetrics(prev => ({
-            ...prev,
-            [name]: parseFloat(value)
-        }));
-    };
+    useEffect(() => {
+        let cancelled = false;
+        if (!cycleId) return undefined;
+        aiAPI.getPerformanceUsers(cycleId)
+            .then((response) => {
+                if (!cancelled) setUsers(response.users || []);
+            })
+            .catch((err) => {
+                if (!cancelled) setError(err.message || 'Failed to load employees.');
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
+        return () => { cancelled = true; };
+    }, [cycleId]);
 
-    const handlePredict = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await aiAPI.predictPerformance(metrics);
-            setResult(response.prediction);
-        } catch (err) {
-            setError(err.message || 'Prediction failed');
-        } finally {
-            setLoading(false);
-        }
-    };
+    if (loading) {
+        return <div className="predictor-state"><div className="spinner"></div><p>Loading authorized employee metrics…</p></div>;
+    }
 
-    const formatRating = (rating) => {
-        if (!rating) return '';
-        return rating.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    };
+    if (error) {
+        return (
+            <div className="ent-empty-state" style={{ margin: '24px auto', maxWidth: '600px', backgroundColor: 'var(--shell-bg-card)', border: '1px solid var(--shell-warning)' }}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--shell-warning)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 16 }}>
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                  <line x1="12" y1="9" x2="12" y2="13"></line>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <h3 style={{ color: 'var(--shell-text)', fontSize: '1.25rem', fontWeight: 600, marginBottom: '8px' }}>Predictor Unavailable</h3>
+                <p style={{ color: 'var(--shell-text-secondary)', marginBottom: '12px' }}>{error}</p>
+                <p style={{ color: 'var(--shell-text-tertiary)', fontSize: '0.9rem', maxWidth: '400px' }}>
+                    Not enough data for a reliable AI prediction yet. Prediction will improve after more objectives, tasks, and evaluations are available.
+                </p>
+            </div>
+        );
+    }
 
     return (
-        <div className="ai-simulator-container glass-card fade-in">
-            <div className="ai-simulator-header">
-                <span className="text-primary mr-2" style={{fontSize: '24px'}}>✨</span>
-                <h2>AI Performance Predictor</h2>
-            </div>
-            
-            <p className="text-muted mb-4">
-                Adjust the metrics below to simulate an employee's performance profile and instantly see the AI's prediction.
-            </p>
-
-            <div className="ai-simulator-grid">
-                <div className="metrics-panel">
-                    <h3>Adjust Metrics</h3>
-                    <div className="sliders-container">
-                        <div className="slider-group">
-                            <label>🎯 KPI Score: {metrics.kpi_score}</label>
-                            <input type="range" name="kpi_score" min="0" max="100" value={metrics.kpi_score} onChange={handleChange} />
-                        </div>
-                        <div className="slider-group">
-                            <label>✅ Goal Completion: {metrics.goal_completion_percent}%</label>
-                            <input type="range" name="goal_completion_percent" min="0" max="100" value={metrics.goal_completion_percent} onChange={handleChange} />
-                        </div>
-                        <div className="slider-group">
-                            <label>📈 Check-in Count: {metrics.checkin_count}</label>
-                            <input type="range" name="checkin_count" min="0" max="20" value={metrics.checkin_count} onChange={handleChange} />
-                        </div>
-                        <div className="slider-group">
-                            <label>📈 Avg Check-in Progress: {metrics.avg_checkin_progress}%</label>
-                            <input type="range" name="avg_checkin_progress" min="0" max="100" value={metrics.avg_checkin_progress} onChange={handleChange} />
-                        </div>
-                        <div className="slider-group">
-                            <label>💬 Feedback Count: {metrics.feedback_count}</label>
-                            <input type="range" name="feedback_count" min="0" max="50" value={metrics.feedback_count} onChange={handleChange} />
-                        </div>
-                        <div className="slider-group">
-                            <label>💬 Positive Feedback Ratio: {(metrics.positive_feedback_ratio * 100).toFixed(0)}%</label>
-                            <input type="range" name="positive_feedback_ratio" min="0" max="1" step="0.05" value={metrics.positive_feedback_ratio} onChange={handleChange} />
-                        </div>
-                        <div className="slider-group">
-                            <label>✅ Task Completion: {metrics.task_completion_percent}%</label>
-                            <input type="range" name="task_completion_percent" min="0" max="100" value={metrics.task_completion_percent} onChange={handleChange} />
-                        </div>
-                        <div className="slider-group">
-                            <label>⏱️ Tasks On Time: {metrics.tasks_on_time_percent}%</label>
-                            <input type="range" name="tasks_on_time_percent" min="0" max="100" value={metrics.tasks_on_time_percent} onChange={handleChange} />
-                        </div>
-                    </div>
-                    <button 
-                        className="btn-primary w-full mt-4" 
-                        onClick={handlePredict} 
-                        disabled={loading}
-                    >
-                        {loading ? 'Analyzing...' : 'Run AI Prediction'}
-                    </button>
-                    {error && <div className="text-danger mt-2">{error}</div>}
+        <section className="predictor-shell">
+            <div className="predictor-heading">
+                <div>
+                    <span className="predictor-eyebrow" style={{ color: 'var(--shell-purple)', fontWeight: 600, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>✨ AI Performance Predictor</span>
+                    <h2>Choose an employee</h2>
+                    <p>Predictions use project metrics already recorded for the selected cycle.</p>
                 </div>
+                <span className="predictor-count">{users.length} visible</span>
+            </div>
 
-                <div className="results-panel">
-                    <h3>Prediction Results</h3>
-                    {result ? (
-                        <div className="results-content fade-in">
-                            <div className="result-highlight">
-                                <div className="highlight-box">
-                                    <h4>Predicted Rating</h4>
-                                    <div className="rating-badge">{formatRating(result.rating)}</div>
-                                </div>
-                                <div className="highlight-box">
-                                    <h4>Promotion Ready</h4>
-                                    <div className={`promo-badge ${result.promotion_ready ? 'success' : 'warning'}`}>
-                                        {result.promotion_ready ? 'Yes' : 'Not Yet'}
+            {users.length === 0 ? (
+                <div className="ent-empty-state">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <h3>No employees found</h3>
+                    <p>No employees with accessible prediction data are available in this cycle.</p>
+                </div>
+            ) : (
+                <div className="predictor-grid">
+                    {users.map((item, index) => {
+                        const employee = item.employee;
+                        return (
+                            <article className="predictor-card" key={employee._id} style={{ '--delay': `${Math.min(index * 45, 360)}ms` }}>
+                                <div className="predictor-person">
+                                    <UserAvatar user={employee} size={54} />
+                                    <div>
+                                        <h3>{employee.name}</h3>
+                                        <p>{formatRole(employee.role)}</p>
                                     </div>
-                                    <small>{(result.promotion_probability * 100).toFixed(1)}% probability</small>
+                                    <span className={`predictor-status predictor-status--${item.prediction_status}`}>
+                                        {item.prediction_status === 'ready' ? 'Ready' : 'More data needed'}
+                                    </span>
                                 </div>
-                            </div>
-                            
-                            <div className="review-summary mt-4">
-                                <h4>AI Summary</h4>
-                                <p>{result.review_summary}</p>
-                            </div>
-
-                            <div className="strengths-weaknesses">
-                                <div className="sw-box">
-                                    <h4>Strengths</h4>
-                                    <ul>
-                                        {result.strengths?.map((s, i) => <li key={i}>{s}</li>)}
-                                    </ul>
+                                <div className="predictor-meta">
+                                    <span><small>Team</small>{employee.team?.name || 'Not assigned'}</span>
+                                    <span><small>Current score</small>{item.current_score == null ? '—' : `${item.current_score}%`}</span>
+                                    <span><small>Objectives</small>{item.objective_completion_percent == null ? '—' : `${item.objective_completion_percent}%`}</span>
                                 </div>
-                                <div className="sw-box">
-                                    <h4>Areas to Improve</h4>
-                                    <ul>
-                                        {result.weaknesses?.map((w, i) => <li key={i}>{w}</li>)}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="empty-state">
-                            <span className="text-muted mb-2" style={{fontSize: '48px'}}>✨</span>
-                            <p className="text-muted">Adjust the metrics and click predict to see the AI's analysis.</p>
-                        </div>
-                    )}
+                                <button
+                                    className="btn btn--primary predictor-action"
+                                    onClick={() => navigate(`/performance/predictor/${employee._id}?cycleId=${encodeURIComponent(cycleId)}`)}
+                                >
+                                    Predict Performance
+                                </button>
+                            </article>
+                        );
+                    })}
                 </div>
-            </div>
-        </div>
+            )}
+        </section>
     );
 };
 

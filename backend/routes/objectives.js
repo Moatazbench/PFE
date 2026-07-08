@@ -20,8 +20,10 @@ router.get('/pending-validation', rateLimiter, auth, role('TEAM_LEADER'), object
 router.get('/stale', rateLimiter, auth, role('TEAM_LEADER', 'ADMIN'), objectiveController.getStaleObjectives);
 router.get('/pending-change-requests', rateLimiter, auth, role('TEAM_LEADER', 'ADMIN'), objectiveController.getPendingChangeRequests);
 router.get('/completed-awaiting-evaluation', rateLimiter, auth, role('TEAM_LEADER', 'ADMIN'), objectiveController.getCompletedAwaitingEvaluation);
-router.get('/team-goals', rateLimiter, auth, role('ADMIN', 'TEAM_LEADER', 'HR'), objectiveController.getTeamGoalsForManager);
 router.get('/team-weight-capacity', rateLimiter, auth, role('ADMIN', 'TEAM_LEADER', 'HR'), objectiveController.getTeamWeightCapacity);
+router.all('/team-goals', rateLimiter, auth, function (_req, res) {
+    return res.status(404).json({ success: false, message: 'Goal Check-Up has been removed.' });
+});
 router.get('/:id', rateLimiter, auth, objectiveController.getObjectiveById);
 
 // Creation and modification
@@ -71,8 +73,5 @@ router.get('/:id/children', rateLimiter, auth, objectiveController.getSubObjecti
 
 // Duplicate
 router.post('/:id/duplicate', rateLimiter, auth, objectiveController.duplicateObjective);
-
-// Manager Goal Check-up Panel
-router.put('/:id/note', rateLimiter, auth, role('ADMIN', 'TEAM_LEADER', 'HR'), objectiveController.addManagerNote);
 
 module.exports = router;

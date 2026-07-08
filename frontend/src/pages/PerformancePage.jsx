@@ -34,7 +34,7 @@ function PerformancePage() {
       if (availableCycles.length > 0) {
         setSelectedCycleId(availableCycles[0]._id);
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to load cycles.');
       setLoading(false);
     }
@@ -50,7 +50,7 @@ function PerformancePage() {
         const teamRes = await api.get(`/performance/team-summary/${user.id}/${selectedCycleId}`);
         setTeamStats(teamRes.data.employees || []);
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to load performance summary.');
     } finally {
       setLoading(false);
@@ -96,7 +96,7 @@ function PerformancePage() {
                   </button>
               )}
               <button onClick={() => setViewMode('ai')} style={{ background: 'none', border: 'none', fontSize: '1.1rem', fontWeight: viewMode === 'ai' ? 'bold' : 'normal', color: viewMode === 'ai' ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', paddingBottom: '0.5rem', borderBottom: viewMode === 'ai' ? '3px solid var(--primary)' : '3px solid transparent' }}>
-                AI Simulator
+                AI Predictor
               </button>
             </div>
 
@@ -180,7 +180,7 @@ function PerformancePage() {
 
           {viewMode === 'ai' && (
             <div>
-              <AIPredictionSimulator />
+              <AIPredictionSimulator cycleId={selectedCycleId} />
             </div>
           )}
         </>

@@ -305,7 +305,16 @@ function GoalsPage() {
         <div className="ds-main__inner">
             <div className="ds-page-header">
                 <div className="ds-page-header__left">
-                    <h1 className="ds-page-header__title">Objectives</h1>
+                    <h1 className="ds-page-header__title">
+                        <span className="ds-icon-circle ds-icon-circle--primary ds-icon-circle--sm">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '20px', height: '20px' }}>
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <circle cx="12" cy="12" r="6"></circle>
+                                <circle cx="12" cy="12" r="2"></circle>
+                            </svg>
+                        </span>
+                        Objectives
+                    </h1>
                     <p className="ds-page-header__subtitle">{filteredObjectives.length} objectives · {phaseLabel}</p>
                 </div>
                 <div className="ds-page-header__actions">

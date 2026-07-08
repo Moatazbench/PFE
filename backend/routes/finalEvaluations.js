@@ -20,10 +20,11 @@ router.get('/hr/reviewed', role('ADMIN', 'HR'), finalEvaluationController.getRev
 router.get('/user/:employee_id/history', finalEvaluationController.getUserHistory);
 
 // Auto-generate
-router.post('/generate/:cycle_id/:employee_id', role('ADMIN', 'HR', 'TEAM_LEADER'), finalEvaluationController.generateEvaluation);
+router.post('/generate/:cycle_id/:employee_id', role('ADMIN', 'TEAM_LEADER'), finalEvaluationController.generateEvaluation);
 
 // Update (manager override)
-router.put('/:id', role('ADMIN', 'HR', 'TEAM_LEADER'), finalEvaluationController.updateEvaluation);
+router.put('/:id', role('ADMIN', 'TEAM_LEADER'), finalEvaluationController.updateEvaluation);
+router.post('/:id/recalculate', role('ADMIN', 'TEAM_LEADER'), finalEvaluationController.recalculateEvaluation);
 
 // HR validate
 router.put('/:id/hr-validate', role('ADMIN', 'HR'), finalEvaluationController.validateEvaluation);

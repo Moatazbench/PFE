@@ -102,23 +102,23 @@ function EvaluationScoringPage() {
   async function handleApprove() {
     try {
       await api.post(`/evaluations/${evaluation._id}/approve`, { comments: '' });
-      toast.success('Evaluation approved.');
+      toast.success('Evaluation marked as reviewed.');
       fetchEvaluation();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to approve evaluation.');
+      toast.error(err.response?.data?.message || 'Failed to mark evaluation as reviewed.');
     }
   }
 
   async function handleReject() {
-    const comments = window.prompt('Reason for rejection:');
+    const comments = window.prompt('Required correction reason:');
     if (!comments) return;
 
     try {
       await api.post(`/evaluations/${evaluation._id}/reject`, { comments });
-      toast.success('Evaluation rejected.');
+      toast.success('Evaluation sent back for correction.');
       fetchEvaluation();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to reject evaluation.');
+      toast.error(err.response?.data?.message || 'Failed to send evaluation back.');
     }
   }
 
@@ -210,8 +210,8 @@ function EvaluationScoringPage() {
           )}
           {evaluation.status === 'submitted' && ['ADMIN', 'HR'].includes(user?.role) && (
             <div className="eval-header-actions">
-              <button className="btn eval-btn-approve" onClick={handleApprove}>Approve</button>
-              <button className="btn eval-btn-reject" onClick={handleReject}>Reject</button>
+              <button className="btn eval-btn-approve" onClick={handleApprove}>Mark as Reviewed</button>
+              <button className="btn eval-btn-reject" onClick={handleReject}>Send Back for Correction</button>
             </div>
           )}
           {isEmployee && ['submitted', 'approved', 'completed'].includes(evaluation.status) && !evaluation.employeeAcknowledgment?.acknowledged && (

@@ -145,7 +145,7 @@ function TopHeader({ onMobileToggle }) {
                     </svg>
                 </button>
                 <div style={{ minWidth: 0, overflow: 'hidden' }}>
-                    {section ? <span className="ent-header__breadcrumb">{section} /</span> : null}
+                    {/* Removed section eyebrow per user request */}
                     <h1 className="ent-header__page-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h1>
                     {phaseLabel ? (
                         <div className="ent-header__phase" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

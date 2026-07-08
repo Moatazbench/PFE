@@ -9,7 +9,8 @@ function roundScore(value) {
 }
 
 function calculateObjectiveScore(objective) {
-  const achievement = Number.isFinite(Number(objective.achievementPercent)) ? Number(objective.achievementPercent) : 0;
+  const resolvedAchievement = objective.managerAdjustedPercent ?? objective.finalSelfPercent ?? objective.achievementPercent;
+  const achievement = Number.isFinite(Number(resolvedAchievement)) ? Number(resolvedAchievement) : 0;
   return roundScore((Number(objective.weight || 0) * achievement) / 100);
 }
 
@@ -79,7 +80,7 @@ function buildSummaryFromObjectives(employeeId, cycleId, objectives) {
       _id: objective._id,
       title: objective.title,
       weight: objective.weight,
-      achievementPercent: objective.achievementPercent || 0,
+      achievementPercent: objective.managerAdjustedPercent ?? objective.finalSelfPercent ?? objective.achievementPercent ?? 0,
       weightedScore: score,
       category: objective.category,
       status: objective.status,
@@ -88,15 +89,11 @@ function buildSummaryFromObjectives(employeeId, cycleId, objectives) {
     };
   });
 
-  // Use the 70/30 composite score formula matching the validation panel:
-  // Final Score = (Individual Score × 70%) + (Team Score × 30%)
-  const individualScoreRaw = Math.min(individualWeightedScore, 100);
-  const teamScoreRaw = Math.min(teamWeightedScore, 100);
-  const hasTeamObjectives = teamWeight > 0;
-  // If employee has only individual objectives, use 100% individual score
-  const performanceScore = hasTeamObjectives
-    ? roundScore((individualScoreRaw * 0.70) + (teamScoreRaw * 0.30))
-    : roundScore(individualScoreRaw);
+  const combinedWeight = individualWeight + teamWeight;
+  const combinedWeightedPoints = individualWeightedScore + teamWeightedScore;
+  const performanceScore = combinedWeight > 0
+    ? roundScore(combinedWeight === 100 ? combinedWeightedPoints : (combinedWeightedPoints / combinedWeight) * 100)
+    : 0;
   const averageRating = ratingCount > 0 ? roundScore(ratingSum / ratingCount) : 0;
 
   return {
@@ -108,7 +105,7 @@ function buildSummaryFromObjectives(employeeId, cycleId, objectives) {
     averageRating,
     performanceLabel: getPerformanceLabel(performanceScore),
     totalObjectives: objectives.length,
-    totalWeight: roundScore(individualWeight),
+    totalWeight: roundScore(combinedWeight),
     individualWeight: roundScore(individualWeight),
     teamWeight: roundScore(teamWeight),
   };

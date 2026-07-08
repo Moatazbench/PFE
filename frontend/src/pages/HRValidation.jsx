@@ -28,6 +28,23 @@ function createEmptyPlanForm() {
   };
 }
 
+function buildReviewChecklist(evaluation) {
+  const differenceIsDocumented = Math.abs(Number(evaluation.score_difference || 0)) < 10
+    || Boolean(String(evaluation.manager_adjustment_justification || '').trim());
+
+  return [
+    { label: 'Correct employee and cycle linked', pass: Boolean(evaluation.employee_id?._id && evaluation.cycle_id?._id) },
+    { label: 'Final score recorded', pass: evaluation.final_score != null },
+    { label: 'Rating recorded and score-aligned', pass: Boolean(evaluation.rating_label) && !(evaluation.consistency_warnings || []).some((warning) => warning.includes('Rating does not match')) },
+    { label: 'Manager comments completed', pass: Boolean(String(evaluation.manager_comments || '').trim()) },
+    { label: 'Strengths completed', pass: Array.isArray(evaluation.strengths) && evaluation.strengths.length > 0 },
+    { label: 'Areas for improvement completed', pass: Array.isArray(evaluation.weaknesses) && evaluation.weaknesses.length > 0 },
+    { label: 'Objective contribution breakdown visible', pass: Array.isArray(evaluation.objective_breakdown) && evaluation.objective_breakdown.length > 0 },
+    { label: 'Significant score difference documented', pass: differenceIsDocumented },
+    { label: 'AI draft reviewed by manager when used', pass: !evaluation.ai_assisted || evaluation.ai_reviewed_by_manager },
+  ];
+}
+
 function HRValidation() {
   const toast = useToast();
   const [pendingEvaluations, setPendingEvaluations] = useState([]);
@@ -36,6 +53,9 @@ function HRValidation() {
   const [plansByEvaluation, setPlansByEvaluation] = useState({});
   const [planEditors, setPlanEditors] = useState({});
   const [savingMap, setSavingMap] = useState({});
+  const [reviewNotes, setReviewNotes] = useState({});
+  const [sendBackTarget, setSendBackTarget] = useState(null);
+  const [returnReason, setReturnReason] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -62,6 +82,13 @@ function HRValidation() {
         });
         return next;
       });
+      setReviewNotes(() => {
+        const next = {};
+        [...pending, ...reviewed].forEach((evaluation) => {
+          next[evaluation._id] = evaluation.hr_review_notes || '';
+        });
+        return next;
+      });
 
       const reviewedPlans = await Promise.allSettled(
         reviewed.map(async (evaluation) => {
@@ -77,7 +104,7 @@ function HRValidation() {
         }
       });
       setPlansByEvaluation(nextPlans);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load HR validation data');
     } finally {
       setLoading(false);
@@ -88,7 +115,7 @@ function HRValidation() {
     try {
       const res = await api.get(`/improvement-plans/evaluation/${evaluationId}`);
       setPlansByEvaluation((prev) => ({ ...prev, [evaluationId]: res.data.plans || [] }));
-    } catch (err) {
+    } catch {
       toast.error('Failed to refresh improvement plans');
     }
   }
@@ -98,8 +125,12 @@ function HRValidation() {
   }
 
   async function handleAction(evaluation, action) {
-    const promptText = action === 'validate' ? 'validate' : 'send back';
-    if (!window.confirm(`Are you sure you want to ${promptText} this evaluation?`)) {
+    if (action === 'send_back') {
+      setSendBackTarget(evaluation);
+      setReturnReason('');
+      return;
+    }
+    if (!window.confirm('Mark this evaluation as reviewed? This confirms process completeness, not a replacement of the manager judgment.')) {
       return;
     }
 
@@ -109,12 +140,37 @@ function HRValidation() {
     try {
       await api.put(`/final-evaluations/${evaluation._id}/hr-validate`, {
         action,
-        performance_status: action === 'validate' ? statusSelections[evaluation._id] || null : undefined
+        performance_status: statusSelections[evaluation._id] || null,
+        hr_review_notes: reviewNotes[evaluation._id] || ''
       });
-      toast.success(action === 'validate' ? 'Evaluation validated successfully.' : 'Evaluation sent back to manager.');
+      toast.success(action === 'validate' ? 'Evaluation marked as reviewed.' : 'Evaluation sent back to manager for correction.');
       await fetchData();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to process evaluation');
+    } finally {
+      setSaving(key, false);
+    }
+  }
+
+  async function submitSendBack() {
+    if (!sendBackTarget || !returnReason.trim()) {
+      toast.error('A correction reason is required.');
+      return;
+    }
+    const key = `send_back-${sendBackTarget._id}`;
+    setSaving(key, true);
+    try {
+      await api.put(`/final-evaluations/${sendBackTarget._id}/hr-validate`, {
+        action: 'send_back',
+        return_reason: returnReason.trim(),
+        hr_review_notes: reviewNotes[sendBackTarget._id] || ''
+      });
+      toast.success('Evaluation sent back to the manager for correction.');
+      setSendBackTarget(null);
+      setReturnReason('');
+      await fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send the evaluation back');
     } finally {
       setSaving(key, false);
     }
@@ -126,7 +182,8 @@ function HRValidation() {
     try {
       await api.put(`/final-evaluations/${evaluation._id}/hr-validate`, {
         action: 'validate',
-        performance_status: statusSelections[evaluation._id] || null
+        performance_status: statusSelections[evaluation._id] || null,
+        hr_review_notes: reviewNotes[evaluation._id] || ''
       });
       toast.success('Performance status updated.');
       await fetchData();
@@ -225,9 +282,9 @@ function HRValidation() {
   return (
     <div className="page" style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       <div>
-        <h1 style={{ margin: 0, fontSize: '2.2rem', color: 'var(--text-dark)' }}>HR Validation</h1>
+        <h1 style={{ margin: 0, fontSize: '2.2rem', color: 'var(--text-dark)' }}>HR Review Workspace</h1>
         <p className="text-muted" style={{ margin: '0.5rem 0 0 0' }}>
-          Validate manager submissions, assign performance status, and manage improvement plans when follow-up is required.
+          Review completeness, governance, follow-up actions, and documentation after the manager submits the final evaluation.
         </p>
       </div>
 
@@ -237,11 +294,11 @@ function HRValidation() {
           <div style={{ fontSize: '1.9rem', fontWeight: 800, color: '#d97706' }}>{pendingEvaluations.length}</div>
         </div>
         <div className="card shadow-sm" style={{ padding: '1.1rem' }}>
-          <div className="text-muted" style={{ fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 700 }}>Validated Reports</div>
+          <div className="text-muted" style={{ fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 700 }}>Recently Reviewed</div>
           <div style={{ fontSize: '1.9rem', fontWeight: 800, color: '#16a34a' }}>{reviewedSummary.total}</div>
         </div>
         <div className="card shadow-sm" style={{ padding: '1.1rem' }}>
-          <div className="text-muted" style={{ fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 700 }}>With HR Status</div>
+          <div className="text-muted" style={{ fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 700 }}>With Follow-up Status</div>
           <div style={{ fontSize: '1.9rem', fontWeight: 800, color: 'var(--primary)' }}>{reviewedSummary.withStatus}</div>
         </div>
         <div className="card shadow-sm" style={{ padding: '1.1rem' }}>
@@ -255,7 +312,7 @@ function HRValidation() {
           <div>
             <h2 style={{ margin: 0, fontSize: '1.35rem' }}>Pending Final Evaluations</h2>
             <p className="text-muted" style={{ margin: '0.4rem 0 0 0' }}>
-              Existing validate and send-back actions remain unchanged. Performance status can now be assigned during validation.
+              Review manager-submitted reports for completeness, consistency, documentation, and people-development follow-up.
             </p>
           </div>
         </div>
@@ -264,11 +321,14 @@ function HRValidation() {
           <div className="ent-empty" style={{ padding: '3rem 2rem' }}>
             <span style={{ fontSize: '2.4rem' }}>OK</span>
             <h3 style={{ margin: '1rem 0 0.5rem 0' }}>All caught up</h3>
-            <p className="text-muted">No final evaluations are currently pending HR validation.</p>
+            <p className="text-muted">No evaluations pending HR review. Manager-submitted evaluations will appear here.</p>
           </div>
         ) : (
           <div style={{ display: 'grid', gap: '1.25rem' }}>
-            {pendingEvaluations.map((evaluation) => (
+            {pendingEvaluations.map((evaluation) => {
+              const checklist = buildReviewChecklist(evaluation);
+              const blockingItems = checklist.filter((item) => !item.pass);
+              return (
               <div key={evaluation._id} className="card shadow-sm" style={{ borderLeft: '4px solid #eab308', padding: '1.35rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                   <div style={{ flex: 1, minWidth: '260px' }}>
@@ -277,18 +337,24 @@ function HRValidation() {
                       Cycle: <strong>{evaluation.cycle_id?.name}</strong> | Email: {evaluation.employee_id?.email || 'N/A'}
                     </div>
                     <div className="text-muted" style={{ fontSize: '0.92rem', marginBottom: '1rem' }}>
-                      Submitted by: <strong>{evaluation.evaluator_id?.name || 'Unknown'}</strong>
+                      Manager submission: <strong>{evaluation.evaluator_id?.name || 'Unknown'}</strong>
                       {evaluation.evaluator_role ? ` (${humanizeWorkflowLabel(evaluation.evaluator_role)})` : ''}
                     </div>
 
                     <div style={{ display: 'flex', gap: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', flexWrap: 'wrap' }}>
                       <div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Auto Score</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Weighted Suggested Score</div>
                         <div style={{ fontWeight: 700 }}>{evaluation.auto_score?.toFixed(1)}%</div>
                       </div>
                       <div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Manager Score</div>
                         <div style={{ fontWeight: 700 }}>{evaluation.manager_score ?? '-'}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Difference</div>
+                        <div style={{ fontWeight: 700, color: Math.abs(evaluation.score_difference || 0) >= 10 ? '#b45309' : 'inherit' }}>
+                          {(evaluation.score_difference || 0) > 0 ? '+' : ''}{evaluation.score_difference || 0} points
+                        </div>
                       </div>
                       <div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Final Rating</div>
@@ -300,16 +366,68 @@ function HRValidation() {
                       </div>
                     </div>
 
+                    {evaluation.manager_adjustment_justification && (
+                      <div style={{ marginBottom: '1rem' }}>
+                        <h4 style={{ margin: '0 0 0.5rem 0' }}>Manager Score Adjustment Justification</h4>
+                        <p style={{ margin: 0, whiteSpace: 'pre-wrap', background: '#fffbeb', border: '1px solid #fde68a', padding: '0.75rem', borderRadius: '6px' }}>
+                          {evaluation.manager_adjustment_justification}
+                        </p>
+                      </div>
+                    )}
+
+                    {evaluation.consistency_warnings?.length > 0 && (
+                      <div role="alert" style={{ marginBottom: '1rem', background: '#fff7ed', border: '1px solid #fdba74', borderRadius: '8px', padding: '0.9rem', color: '#9a3412' }}>
+                        <strong>Review checks</strong>
+                        <ul style={{ margin: '0.45rem 0 0', paddingLeft: '1.2rem' }}>
+                          {evaluation.consistency_warnings.map((warning, index) => <li key={index}>{warning}</li>)}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div style={{ marginBottom: '1rem', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '1rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.7rem', flexWrap: 'wrap' }}>
+                        <strong>HR Process Review Checklist</strong>
+                        <span className="badge" style={{ background: blockingItems.length ? '#fef3c7' : '#dcfce7', color: blockingItems.length ? '#92400e' : '#166534' }}>
+                          {checklist.length - blockingItems.length}/{checklist.length} complete
+                        </span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.55rem' }}>
+                        {checklist.map((item) => (
+                          <div key={item.label} style={{ color: item.pass ? '#166534' : '#b45309', fontSize: '0.9rem', fontWeight: 600 }}>
+                            <span aria-hidden="true">{item.pass ? '✓' : '!'}</span> {item.label}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                     <div style={{ marginBottom: '1rem' }}>
-                      <h4 style={{ margin: '0 0 0.5rem 0' }}>Manager Comments</h4>
+                      <h4 style={{ margin: '0 0 0.6rem 0' }}>Objective Contribution Breakdown</h4>
+                      {(evaluation.objective_breakdown || []).length === 0 ? (
+                        <p className="text-muted">No objective contribution breakdown was submitted.</p>
+                      ) : (
+                        <div style={{ display: 'grid', gap: '0.45rem' }}>
+                          {evaluation.objective_breakdown.map((objective) => (
+                            <div key={objective.objective_id || objective.title} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', padding: '0.65rem 0.75rem', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                              <span>{objective.title} <small className="text-muted">({objective.weight}% weight)</small></span>
+                              <strong>{objective.weighted_points ?? 0} pts</strong>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ marginBottom: '1rem' }}>
+                      <h4 style={{ margin: '0 0 0.5rem 0' }}>
+                        {evaluation.ai_assisted ? 'AI-Assisted Draft / Manager Final Report' : 'Manager Final Report'}
+                      </h4>
                       <p style={{ margin: 0, whiteSpace: 'pre-wrap', background: 'var(--shell-bg-inset)', padding: '0.75rem', borderRadius: '6px' }}>
                         {evaluation.manager_comments || 'No manager comments provided.'}
                       </p>
                     </div>
 
                     <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
-                      <div style={{ fontWeight: 700, marginBottom: '0.6rem' }}>HR Decision</div>
-                      <label className="ent-label">Performance Status</label>
+                      <div style={{ fontWeight: 700, marginBottom: '0.6rem' }}>HR Process Review</div>
+                      <label className="ent-label">Follow-up Status</label>
                       <select
                         className="ent-select"
                         value={statusSelections[evaluation._id] || ''}
@@ -323,6 +441,14 @@ function HRValidation() {
                       <div className="text-muted" style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
                         Improvement plans become available after validation when the saved status is Needs Improvement or Critical Attention.
                       </div>
+                      <label className="ent-label" style={{ marginTop: '0.8rem' }}>HR Review Notes</label>
+                      <textarea
+                        className="ent-input"
+                        style={{ minHeight: '82px' }}
+                        value={reviewNotes[evaluation._id] || ''}
+                        onChange={(event) => setReviewNotes((previous) => ({ ...previous, [evaluation._id]: event.target.value }))}
+                        placeholder="Document process checks, follow-up needs, or records reviewed. Do not rewrite the manager assessment."
+                      />
                     </div>
                   </div>
 
@@ -331,21 +457,26 @@ function HRValidation() {
                       className="btn btn--primary"
                       style={{ background: '#22c55e', borderColor: '#22c55e' }}
                       onClick={() => handleAction(evaluation, 'validate')}
-                      disabled={savingMap[`validate-${evaluation._id}`]}
+                      disabled={savingMap[`validate-${evaluation._id}`] || blockingItems.length > 0}
+                      title={blockingItems.length > 0 ? 'Manager corrections are required before this evaluation can be marked as reviewed.' : ''}
                     >
-                      {savingMap[`validate-${evaluation._id}`] ? 'Saving...' : 'Validate'}
+                      {savingMap[`validate-${evaluation._id}`] ? 'Saving...' : 'Mark as Reviewed'}
                     </button>
                     <button
                       className="btn btn--outline"
                       onClick={() => handleAction(evaluation, 'send_back')}
                       disabled={savingMap[`send_back-${evaluation._id}`]}
                     >
-                      {savingMap[`send_back-${evaluation._id}`] ? 'Sending...' : 'Send Back'}
+                      {savingMap[`send_back-${evaluation._id}`] ? 'Sending...' : 'Send Back for Correction'}
                     </button>
+                    <div className="text-muted" style={{ fontSize: '0.8rem', lineHeight: 1.45 }}>
+                      Marking as reviewed confirms that the process is complete, documented, and consistent. It does not replace the manager’s performance judgment.
+                    </div>
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -353,7 +484,7 @@ function HRValidation() {
       <div className="card shadow-sm" style={{ padding: '1.5rem' }}>
         <h2 style={{ margin: '0 0 0.4rem 0', fontSize: '1.35rem' }}>Reviewed Evaluations</h2>
         <p className="text-muted" style={{ margin: '0 0 1rem 0' }}>
-          Manage HR performance status, monitor employee acknowledgment, and maintain improvement plans for validated reports.
+          Maintain employee records, follow-up classifications, acknowledgment, and improvement plans after process review.
         </p>
 
         {reviewedEvaluations.length === 0 ? (
@@ -379,7 +510,7 @@ function HRValidation() {
                       </h3>
                       <div className="text-muted" style={{ fontSize: '0.92rem' }}>
                         Cycle: <strong>{evaluation.cycle_id?.name}</strong>
-                        {evaluation.hr_validated_at ? ` | Validated on ${new Date(evaluation.hr_validated_at).toLocaleDateString()}` : ''}
+                        {evaluation.hr_validated_at ? ` | Reviewed on ${new Date(evaluation.hr_validated_at).toLocaleDateString()}` : ''}
                         {evaluation.hr_validated_by?.name ? ` by ${evaluation.hr_validated_by.name}` : ''}
                       </div>
                     </div>
@@ -395,8 +526,8 @@ function HRValidation() {
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
                     <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
-                      <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>HR Decision Status</div>
-                      <label className="ent-label">Performance Status</label>
+                      <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Development Follow-up</div>
+                      <label className="ent-label">Follow-up Status</label>
                       <select
                         className="ent-select"
                         value={statusSelections[evaluation._id] || ''}
@@ -407,6 +538,14 @@ function HRValidation() {
                           <option key={option.value} value={option.value}>{option.label}</option>
                         ))}
                       </select>
+                      <label className="ent-label" style={{ marginTop: '0.75rem' }}>HR Review Notes</label>
+                      <textarea
+                        className="ent-input"
+                        style={{ minHeight: '72px' }}
+                        value={reviewNotes[evaluation._id] || ''}
+                        onChange={(event) => setReviewNotes((previous) => ({ ...previous, [evaluation._id]: event.target.value }))}
+                        placeholder="Record governance and follow-up notes."
+                      />
                       <button
                         type="button"
                         className="btn btn--outline"
@@ -414,7 +553,7 @@ function HRValidation() {
                         onClick={() => handleSavePerformanceStatus(evaluation)}
                         disabled={savingMap[`status-${evaluation._id}`]}
                       >
-                        {savingMap[`status-${evaluation._id}`] ? 'Saving...' : 'Save Status'}
+                        {savingMap[`status-${evaluation._id}`] ? 'Saving...' : 'Save Follow-up'}
                       </button>
                     </div>
 
@@ -433,6 +572,21 @@ function HRValidation() {
                       </div>
                     </div>
                   </div>
+
+                  {(evaluation.workflow_history || []).length > 0 && (
+                    <div style={{ marginBottom: '1rem', borderLeft: '2px solid #cbd5e1', paddingLeft: '1rem' }}>
+                      <div style={{ fontWeight: 700, marginBottom: '0.6rem' }}>Process Review Timeline</div>
+                      <div style={{ display: 'grid', gap: '0.65rem' }}>
+                        {evaluation.workflow_history.map((entry, index) => (
+                          <div key={`${entry.action}-${entry.performed_at}-${index}`}>
+                            <strong>{humanizeWorkflowLabel(entry.action)}</strong>
+                            <span className="text-muted"> by {entry.performed_by?.name || 'Authorized reviewer'} · {entry.performed_at ? new Date(entry.performed_at).toLocaleString() : 'Date unavailable'}</span>
+                            {entry.reason && <div style={{ marginTop: '0.2rem' }}>{entry.reason}</div>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {(canManagePlansForEvaluation || plans.length > 0) && (
                     <div style={{ background: '#fcfcfd', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
@@ -549,6 +703,45 @@ function HRValidation() {
           </div>
         )}
       </div>
+
+      {sendBackTarget && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="send-back-title"
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15, 23, 42, 0.56)', display: 'grid', placeItems: 'center', padding: '1rem', backdropFilter: 'blur(3px)' }}
+        >
+          <div className="card shadow-lg" style={{ width: 'min(560px, 100%)', padding: '1.5rem', borderRadius: '14px' }}>
+            <h2 id="send-back-title" style={{ margin: '0 0 0.45rem' }}>Send Back for Correction</h2>
+            <p className="text-muted" style={{ margin: '0 0 1rem', lineHeight: 1.55 }}>
+              Explain what is incomplete or inconsistent so the manager can correct and resubmit the evaluation. This is a process correction, not a replacement of the manager’s judgment.
+            </p>
+            <label className="ent-label">Required correction reason</label>
+            <textarea
+              autoFocus
+              className="ent-input"
+              style={{ minHeight: '130px' }}
+              value={returnReason}
+              onChange={(event) => setReturnReason(event.target.value)}
+              placeholder="Example: The score adjustment exceeds 10 points but no objective-based justification was provided."
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
+              <button type="button" className="btn btn--outline" onClick={() => { setSendBackTarget(null); setReturnReason(''); }}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn--primary"
+                style={{ background: '#dc2626', borderColor: '#dc2626' }}
+                disabled={!returnReason.trim() || savingMap[`send_back-${sendBackTarget._id}`]}
+                onClick={submitSendBack}
+              >
+                {savingMap[`send_back-${sendBackTarget._id}`] ? 'Sending...' : 'Send Back for Correction'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

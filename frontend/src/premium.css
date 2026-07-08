@@ -5,13 +5,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=VT323&display=swap');
 
 :root {
-  --primary: #0071E3;
-  --primary-hover: #0056B3;
-  --primary-light: #E8F4FD;
-  --secondary: #34C759;
-  --secondary-hover: #248A3D;
-  --danger: #FF3B30;
-  --warning: #FF9500;
+  --primary: #4F46E5;
+  --primary-hover: #4338CA;
+  --primary-light: #EEF2FF;
+  --secondary: #10B981;
+  --secondary-hover: #059669;
+  --danger: #F43F5E;
+  --warning: #F59E0B;
   --bg-main: #F5F5F7;
   --bg-card: #FFFFFF;
   --text-dark: #1D1D1F;
@@ -31,11 +31,11 @@
 
 /* ========== Dark Mode (Apple Dark Mode Override) ========== */
 body.dark-mode {
-  --primary: #0A84FF;
-  --primary-hover: #3E94FF;
-  --primary-light: rgba(10, 132, 255, 0.15);
-  --secondary: #32D74B;
-  --secondary-hover: #2ED146;
+  --primary: #818CF8;
+  --primary-hover: #6366F1;
+  --primary-light: rgba(129, 140, 248, 0.15);
+  --secondary: #34D399;
+  --secondary-hover: #10B981;
   --bg-main: #000000;
   --bg-card: #1C1C1E;
   --text-dark: #FFFFFF;

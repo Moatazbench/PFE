@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../components/AuthContext';
+import { Link } from 'react-router-dom';
 
 function Evaluations() {
   const { user } = useAuth();
@@ -33,7 +34,7 @@ function Evaluations() {
         const activeCycle = cycleData.find((cycle) => cycle.status !== 'draft') || cycleData[0];
         setSelectedCycleId(activeCycle._id);
       }
-    } catch (err) {
+    } catch {
       setError('Failed to load assessment overview.');
     } finally {
       setLoading(false);
@@ -73,8 +74,8 @@ function Evaluations() {
     <div className="page-container">
       <div className="page-header">
         <div className="page-header__left">
-          <h1 className="page-title">Assessments</h1>
-          <p className="page-subtitle">Cycle phases, objective progress, and evaluation readiness in one place.</p>
+          <h1 className="page-title">Evaluation Readiness</h1>
+          <p className="page-subtitle">Understand each assessment stage and open the correct workflow.</p>
         </div>
         <div className="page-header__actions">
           <select value={selectedCycleId} onChange={(event) => setSelectedCycleId(event.target.value)} className="form-select" style={{ minWidth: '220px' }}>
@@ -94,6 +95,24 @@ function Evaluations() {
         </div>
       ) : (
         <>
+          <div className="card" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
+            <h3 style={{ marginTop: 0 }}>Assessment workflow</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '0.8rem' }}>
+              {[
+                { title: 'Self-assessment', text: 'Employee explains results and provides evidence.', to: '/final-evaluations', color: '#2563eb' },
+                { title: 'Manager review', text: 'Manager confirms achievement and final comments.', to: '/final-evaluations', color: '#7c3aed' },
+                { title: 'Mid-year assessment', text: 'Progress and risks are reviewed during execution.', to: '/midyear-assessments', color: '#f59e0b' },
+                { title: 'Final evaluation', text: 'Weighted end-year score, career recommendations, and final report.', to: '/final-evaluations', color: '#16a34a' },
+                ...(['ADMIN', 'HR'].includes(user?.role) ? [{ title: 'HR review', text: 'HR reviews governance, documentation, and follow-up actions.', to: '/hr-validation', color: '#e11d48' }] : [])
+              ].map((stage) => (
+                <Link key={stage.title} to={stage.to} style={{ padding: '1rem', border: '1px solid #e2e8f0', borderTop: `3px solid ${stage.color}`, borderRadius: '12px', textDecoration: 'none', color: 'inherit', background: '#fff' }}>
+                  <strong>{stage.title}</strong>
+                  <p className="text-muted" style={{ fontSize: '0.82rem', marginBottom: '0.65rem' }}>{stage.text}</p>
+                  <span style={{ color: stage.color, fontWeight: 700, fontSize: '0.8rem' }}>Open workflow →</span>
+                </Link>
+              ))}
+            </div>
+          </div>
           <div className="card" style={{ marginBottom: '1.5rem', padding: '1.5rem' }}>
             <h3 style={{ marginTop: 0 }}>{selectedCycle.name}</h3>
             <p style={{ color: 'var(--text-muted)' }}>Current phase: <strong>{selectedCycle.currentPhase}</strong> · Status: <strong>{selectedCycle.status}</strong></p>

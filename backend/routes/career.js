@@ -20,9 +20,12 @@ router.put('/paths/:id', ctrl.updateCareerPath);
 router.delete('/paths/:id', ctrl.deleteCareerPath);
 
 // Development actions
+router.post('/paths/:pathId/actions', ctrl.createDevelopmentAction);
 router.put('/paths/:pathId/actions/:actionId', ctrl.updateDevAction);
 
 // Career Recommendations
+router.get('/recommendations/my', ctrl.getMyRecommendations);
+router.get('/recommendations/all', role('ADMIN', 'HR', 'TEAM_LEADER'), ctrl.getAllRecommendations);
 router.post('/recommendations/generate', role('ADMIN', 'HR', 'TEAM_LEADER'), ctrl.generateRecommendation);
 router.post('/recommendations', role('ADMIN', 'HR', 'TEAM_LEADER'), ctrl.saveRecommendation);
 

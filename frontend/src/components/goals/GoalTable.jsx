@@ -164,7 +164,14 @@ function GoalTable({ objectives, onGoalClick, onStatusChange, onDelete, onDuplic
                             <div className="goals-table__title-text">
                                 <span className="goals-table__goal-title">{goal.title}</span>
                                 <div className="goals-table__meta-tags">
-                                    {goal.category === 'team' ? <span className="goals-table__team-tag">TEAM</span> : null}
+                                    {goal.category === 'individual' ? <span className="goals-table__team-tag" style={{background: '#eff6ff', color: '#1d4ed8'}}>Individual</span> : null}
+                                    {goal.category === 'team' && goal.team ? (
+                                        <span className="goals-table__team-tag" style={{background: goal.team.parentTeam ? '#f3e8ff' : '#e0e7ff', color: goal.team.parentTeam ? '#7e22ce' : '#4338ca'}}>
+                                            {goal.team.parentTeam ? 'Subteam' : 'Team'} — {goal.team.name}
+                                        </span>
+                                    ) : goal.category === 'team' ? (
+                                        <span className="goals-table__team-tag" style={{background: '#e0e7ff', color: '#4338ca'}}>Team</span>
+                                    ) : null}
                                     {isAssigned ? <span className="goals-table__team-tag goals-table__team-tag--assigned">ASSIGNED</span> : null}
                                 </div>
                             </div>
@@ -237,9 +244,16 @@ function GoalTable({ objectives, onGoalClick, onStatusChange, onDelete, onDuplic
                                 <div><strong>Description:</strong> {goal.description || 'No description'}</div>
                                 <div>
                                     <strong>Weight:</strong> {goal.weight}%
-                                    {/* Team weight is NOT divided per member */}
+                                    {goal.category === 'team' && (
+                                        <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '4px' }}>
+                                            <em>Note: Each assigned member uses {goal.weight}% of their own 100% budget (weight is not divided).</em>
+                                        </div>
+                                    )}
                                 </div>
                                 <div><strong>KPIs:</strong> {goal.kpis?.length || 0}</div>
+                                {goal.category === 'team' && goal.team?.leader && (
+                                    <div><strong>Leader:</strong> {goal.team.leader.name || 'Unknown'}</div>
+                                )}
                                 <div><strong>Priority:</strong> <span style={{ textTransform: 'capitalize' }}>{goal.priority || 'medium'}</span></div>
                                 {goal.successIndicator ? <div><strong>Success indicator:</strong> {goal.successIndicator}</div> : null}
                                 {goal.source === 'manager_assigned' && goal.assignedBy ? <div><strong>Assigned by:</strong> {goal.assignedBy?.name || goal.assignedBy}</div> : null}

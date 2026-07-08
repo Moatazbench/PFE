@@ -2143,9 +2143,9 @@ body.dark-mode .ent-alert--danger { background: rgba(239,68,68,0.1); border-colo
   gap: 1rem;
   padding: 0.85rem 1rem;
   border-radius: 16px;
-  background: linear-gradient(90deg, rgba(248,250,252,0.9) 25%, rgba(226,232,240,0.72) 50%, rgba(248,250,252,0.9) 75%);
+  background: linear-gradient(90deg, rgba(248,250,252,0.9) 25%, rgba(203,213,225,0.85) 50%, rgba(248,250,252,0.9) 75%);
   background-size: 200% 100%;
-  animation: skeleton-loading 1.2s linear infinite;
+  animation: skeleton-loading 0.8s ease-in-out infinite;
 }
 
 .skeleton-avatar {

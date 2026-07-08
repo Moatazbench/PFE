@@ -7136,21 +7136,26 @@
 }
 
 .goals-table__btn {
-  width: 30px;
-  height: 30px;
-  border: none;
-  border-radius: 6px;
+  min-width: 72px;
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid #d8dee9;
+  border-radius: 9px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  background: transparent;
-  transition: background 0.2s;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: #fff;
+  transition: transform 0.16s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .goals-table__btn:hover {
   background: #f1f5f9;
+  border-color: #a5b4fc;
+  box-shadow: 0 5px 14px rgba(79, 70, 229, 0.12);
+  transform: translateY(-1px);
 }
 
 .goals-table__btn--edit:hover {
@@ -7194,6 +7199,45 @@
   color: #7F1D1D;
   margin-top: 8px;
   font-size: 0.85rem;
+}
+
+.goals-table__decision-notice,
+.goal-panel__decision-message {
+  background: #ecfdf5;
+  border: 1px solid #86efac;
+  border-radius: 9px;
+  padding: 10px 12px;
+  color: #065f46;
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+.goal-panel__decision-message {
+  grid-column: 1 / -1;
+  margin: 0 0 10px;
+}
+
+.goal-panel__decision-message p {
+  margin: 5px 0 0;
+  line-height: 1.5;
+}
+
+.goal-panel__decision-message--rejected,
+.goal-panel__decision-message--revision_requested {
+  background: #fff7ed;
+  border-color: #fdba74;
+  color: #9a3412;
+}
+
+@media (max-width: 768px) {
+  .goals-table__action-buttons {
+    flex-wrap: wrap;
+  }
+
+  .goals-table__btn {
+    min-width: 64px;
+    min-height: 36px;
+  }
 }
 
 .goals-table__row-wrapper--rejected {
@@ -7657,7 +7701,7 @@
 @keyframes toast-out { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(10px) scale(0.95); } }
 
 /* === COMMON COMPONENTS === */
-.loading-skeleton { background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; border-radius: 8px; margin-bottom: 12px; }
+.loading-skeleton { background: linear-gradient(90deg, #f3f4f6 25%, #d1d5db 50%, #f3f4f6 75%); background-size: 200% 100%; animation: skeleton-loading 0.8s ease-in-out infinite; border-radius: 8px; margin-bottom: 12px; }
 @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
 .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; text-align: center; background: white; border-radius: 16px; border: 1px dashed #d1d5db; min-height: 300px; }

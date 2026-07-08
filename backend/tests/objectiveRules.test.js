@@ -3,6 +3,7 @@ const {
   sumObjectiveWeights,
   sumTeamObjectiveWeights,
   getUniqueTeamObjectives,
+  getTeamMemberWeightUsage,
 } = require('../utils/objectiveRules');
 
 describe('objective weight rules', () => {
@@ -57,6 +58,53 @@ describe('objective weight rules', () => {
     ];
     expect(getUniqueTeamObjectives(copies)).toHaveLength(2);
     expect(sumTeamObjectiveWeights(copies)).toBe(100);
+  });
+
+  test('a 40% whole-team objective consumes 40% for every assigned member', () => {
+    const members = ['member-a', 'member-b', 'member-c', 'member-d'];
+    const copies = members.map((owner, index) => ({
+      _id: String(index + 1),
+      owner,
+      assignedUsers: members,
+      title: 'Grow revenue',
+      cycle,
+      team,
+      category: 'team',
+      weight: 40,
+      status: 'assigned',
+    }));
+
+    expect(getTeamMemberWeightUsage(copies, members)).toEqual({
+      'member-a': 40,
+      'member-b': 40,
+      'member-c': 40,
+      'member-d': 40,
+    });
+  });
+
+  test('team-objective weights accumulate per member without being divided', () => {
+    const members = ['member-a', 'member-b'];
+    const objectives = [
+      { _id: '1', owner: 'member-a', assignedUsers: members, title: 'Goal one', cycle, team, weight: 40, status: 'assigned' },
+      { _id: '2', owner: 'member-b', assignedUsers: members, title: 'Goal one', cycle, team, weight: 40, status: 'assigned' },
+      { _id: '3', owner: 'member-a', assignedUsers: members, title: 'Goal two', cycle, team, weight: 35, status: 'approved' },
+      { _id: '4', owner: 'member-b', assignedUsers: members, title: 'Goal two', cycle, team, weight: 35, status: 'approved' },
+    ];
+
+    expect(getTeamMemberWeightUsage(objectives, members)).toEqual({
+      'member-a': 75,
+      'member-b': 75,
+    });
+  });
+
+  test('individual and team objectives share one employee 100% budget', () => {
+    const employeeObjectives = [
+      { _id: 'individual-1', owner: 'member-a', category: 'individual', weight: 35, status: 'approved' },
+      { _id: 'individual-2', owner: 'member-a', category: 'individual', weight: 25, status: 'approved' },
+      { _id: 'team-copy', owner: 'member-a', category: 'team', weight: 40, status: 'approved' },
+    ];
+
+    expect(sumObjectiveWeights(employeeObjectives)).toBe(100);
   });
 
   test('excludes the full distributed group while validating an edit', () => {

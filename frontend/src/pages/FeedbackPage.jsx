@@ -33,7 +33,7 @@ function FeedbackPage() {
     var url = tab === 'received' ? '/feedback/received' : tab === 'sent' ? '/feedback/sent' : '/feedback/all';
     Promise.all([
       api.get(url),
-      api.get('/users/filter/list'),
+      api.get('/feedback/recipients'),
     ]).then(function (res) {
       setFeedbacks(res[0].data.feedbacks || []);
       setUsers(Array.isArray(res[1].data) ? res[1].data : (res[1].data.users || []));
@@ -61,7 +61,7 @@ function FeedbackPage() {
   function getTypeInfo(type) { return types.find(function (t) { return t.key === type; }) || { label: type, color: '#6b7280' }; }
 
   var tabs = [{ key: 'received', label: 'Received' }, { key: 'sent', label: 'Sent' }];
-  if (user.role === 'ADMIN' || user.role === 'HR') tabs.push({ key: 'all', label: 'All Feedback' });
+  if (user.role === 'ADMIN') tabs.push({ key: 'all', label: 'All Feedback' });
 
   return (
     <div className="page-container">

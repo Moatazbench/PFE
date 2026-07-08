@@ -196,30 +196,47 @@ async function getTeamWeightCapacity(teamId, cycleId, options) {
   const memberIds = (team.members || []).map((member) => String(member._id || member));
   const query = {
     cycle: cycleId,
-    category: 'team',
     status: { $nin: ['rejected', 'cancelled', 'archived'] },
-    $or: [
-      { team: team._id },
-      {
-        team: null,
-        owner: { $in: memberIds },
-        assignedUsers: { $exists: true, $ne: [] }
-      }
-    ]
+    owner: { $in: memberIds }
   };
 
-  if (options && options.excludeObjectiveId) {
-    query._id = { $ne: options.excludeObjectiveId };
-  }
-
-  const objectives = await Objective.find(query).select('_id weight owner assignedUsers team status');
-  const usedWeight = sumTeamObjectiveWeights(objectives, options && options.excludeObjectiveId ? { excludeId: options.excludeObjectiveId } : undefined);
+  const objectives = await Objective.find(query).select('_id title cycle category weight owner assignedUsers team status');
+  const weightOptions = options && options.excludeObjectiveId ? { excludeId: options.excludeObjectiveId } : undefined;
+  const individualObjectives = objectives.filter((objective) => objective.category !== 'team');
+  const teamObjectives = getUniqueTeamObjectives(
+    objectives.filter((objective) => objective.category === 'team'),
+    weightOptions
+  );
+  const memberCapacities = (team.members || []).map(function (member) {
+    const memberId = String(member._id || member);
+    const individualWeight = sumObjectiveWeights(individualObjectives.filter((objective) => String(objective.owner) === memberId));
+    const teamWeight = teamObjectives.reduce(function (sum, objective) {
+      const assignedIds = Array.isArray(objective.assignedUsers) && objective.assignedUsers.length > 0
+        ? objective.assignedUsers.map(String)
+        : memberIds;
+      return assignedIds.includes(memberId) ? sum + normalizeWeight(objective.weight) : sum;
+    }, 0);
+    const usedWeight = individualWeight + teamWeight;
+    return {
+      memberId,
+      memberName: member.name || '',
+      usedWeight,
+      remainingWeight: Math.max(0, 100 - usedWeight),
+    };
+  });
+  const usedWeight = memberCapacities.reduce(function (maximum, member) {
+    return Math.max(maximum, member.usedWeight);
+  }, 0);
+  const remainingWeight = memberCapacities.reduce(function (minimum, member) {
+    return Math.min(minimum, member.remainingWeight);
+  }, 100);
 
   return {
     error: false,
     team,
     usedWeight,
-    remainingWeight: Math.max(0, 100 - usedWeight)
+    remainingWeight,
+    memberCapacities,
   };
 }
 
@@ -293,9 +310,13 @@ exports.createObjective = async (req, res) => {
         return res.status(teamCapacity.status).json({ success: false, message: teamCapacity.message });
       }
       if (teamCapacity.usedWeight + normalizedWeight > 100) {
+        const constrainedMembers = teamCapacity.memberCapacities
+          .filter((member) => member.remainingWeight < normalizedWeight)
+          .map((member) => `${member.memberName || member.memberId} (${member.remainingWeight}% remaining)`)
+          .join(', ');
         return res.status(400).json({
           success: false,
-          message: `Team weight would exceed 100%. Team ${team.name} is already using ${teamCapacity.usedWeight}% and has ${teamCapacity.remainingWeight}% remaining.`
+          message: `Insufficient team-objective weight. Each assigned member needs ${normalizedWeight}% available. ${constrainedMembers || `The team has ${teamCapacity.remainingWeight}% remaining per member.`}`
         });
       }
 
@@ -324,7 +345,7 @@ exports.createObjective = async (req, res) => {
       const count = await Objective.countDocuments({ owner: ownerId, cycle });
       if (count >= 10) return res.status(400).json({ success: false, message: 'Maximum objectives reached for this cycle.' });
 
-      const existingObjs = await Objective.find({ owner: ownerId, cycle, category: category || 'individual', status: { $nin: ['rejected', 'cancelled', 'archived'] } });
+      const existingObjs = await Objective.find({ owner: ownerId, cycle, status: { $nin: ['rejected', 'cancelled', 'archived'] } });
       const usedWeight = sumObjectiveWeights(existingObjs);
       if (usedWeight + normalizedWeight > 100) return res.status(400).json({ success: false, message: 'Total weight would exceed 100%. Currently used: ' + usedWeight + '%, trying to add: ' + normalizedWeight + '%.' });
 
@@ -364,13 +385,13 @@ exports.getMyObjectives = async (req, res) => {
         .select('title owner cycle team category status priority achievementPercent updatedAt createdAt weight kpis')
         .populate('owner', 'name role profileImage')
         .populate('cycle', 'name year status currentPhase')
-        .populate('team', 'name')
+        .populate('team', 'name parentTeam leader')
         .lean();
     } else {
       objectivesQuery = objectivesQuery
         .populate('owner', 'name email role')
         .populate('cycle', 'name year status')
-        .populate('team', 'name')
+        .populate('team', 'name parentTeam leader')
         .populate('assignedBy', 'name email');
     }
 
@@ -440,13 +461,13 @@ exports.getObjectives = async (req, res) => {
         .select('title owner cycle team category status priority achievementPercent updatedAt createdAt weight kpis')
         .populate('owner', 'name role profileImage')
         .populate('cycle', 'name year status currentPhase')
-        .populate('team', 'name')
+        .populate('team', 'name parentTeam leader')
         .lean();
     } else {
       objectivesQuery = objectivesQuery
         .populate('owner', 'name email role')
         .populate('cycle', 'name year status')
-        .populate('team', 'name')
+        .populate('team', 'name parentTeam leader')
         .populate('parentObjective', 'title')
         .populate('assignedBy', 'name email');
     }
@@ -464,29 +485,28 @@ exports.getObjectives = async (req, res) => {
       uniqueTeamObjectives.forEach(o => {
         if (['approved', 'validated'].includes(o.status)) { teamScoreSum += (o.weightedScore || 0); } 
       });
-      const indScoreRaw = Math.min(indScoreSum, 100);
-      const teamScoreRaw = Math.min(teamScoreSum, 100);
-      const individualScore = Number((indScoreRaw * 0.70).toFixed(2));
-      const teamScore = Number((teamScoreRaw * 0.30).toFixed(2));
-      const compositeScore = Number((individualScore + teamScore).toFixed(2));
+      const indScoreRaw = Number(indScoreSum.toFixed(2));
+      const teamScoreRaw = Number(teamScoreSum.toFixed(2));
+      const compositeScore = Number(Math.min(indScoreRaw + teamScoreRaw, 100).toFixed(2));
       const indWeight = sumObjectiveWeights(individualObjectives);
       const tmWeight = sumTeamObjectiveWeights(teamObjectives);
+      const totalWeight = indWeight + tmWeight;
       const validation = {
         individualCount: individualObjectives.length, minIndividualObjectives: 3,
         isValidIndividualCount: individualObjectives.length >= 3, individualWeight: indWeight,
-        isValidIndividualWeight: indWeight === 100,
+        isValidIndividualWeight: indWeight <= 100,
         individualValidatedCount: individualObjectives.filter(o => ['validated', 'approved'].includes(o.status)).length,
         individualRejectedCount: individualObjectives.filter(o => o.status === 'rejected').length,
-        individualScore: indScoreRaw, individualRemainingWeight: Math.max(0, 100 - indWeight),
-        canAddMoreIndividual: individualObjectives.length < 7 && indWeight < 100,
-        teamCount: uniqueTeamObjectives.length, teamWeight: tmWeight, isValidTeamWeight: tmWeight === 100,
+        individualScore: indScoreRaw, individualRemainingWeight: Math.max(0, 100 - totalWeight),
+        canAddMoreIndividual: individualObjectives.length < 7 && totalWeight < 100,
+        teamCount: uniqueTeamObjectives.length, teamWeight: tmWeight, isValidTeamWeight: tmWeight <= 100,
         teamValidatedCount: uniqueTeamObjectives.filter(o => ['validated', 'approved'].includes(o.status)).length,
-        teamScore: teamScoreRaw, teamRemainingWeight: Math.max(0, 100 - tmWeight),
-        canAddMoreTeam: uniqueTeamObjectives.length < 7 && tmWeight < 100,
+        teamScore: teamScoreRaw, teamRemainingWeight: Math.max(0, 100 - totalWeight),
+        canAddMoreTeam: uniqueTeamObjectives.length < 7 && totalWeight < 100,
         requiredCategoryTotal: 100, compositeScore,
         totalRejected: individualObjectives.filter(o => o.status === 'rejected').length + uniqueTeamObjectives.filter(o => o.status === 'rejected').length,
-        totalWeight: indWeight + tmWeight,
-        isValidTotalWeight: indWeight === 100 && tmWeight === 100,
+        totalWeight,
+        isValidTotalWeight: totalWeight === 100,
         allValidated: objectives.length > 0 && objectives.every(o => ['validated', 'approved', 'evaluated'].includes(o.status)),
       };
       return res.json({ success: true, individualObjectives, teamObjectives, validation });
@@ -500,7 +520,7 @@ exports.getObjectiveById = async (req, res) => {
   try {
     const objective = await Objective.findById(req.params.id)
       .populate('owner', 'name email role').populate('cycle', 'name year status currentPhase')
-      .populate('team', 'name')
+      .populate('team', 'name parentTeam leader')
       .populate('parentObjective', 'title').populate('comments.user', 'name email')
       .populate('progressUpdates.user', 'name email').populate('assignedBy', 'name email')
       .populate('changeRequests.requestedBy', 'name email').populate('changeRequests.resolvedBy', 'name email')
@@ -702,7 +722,6 @@ exports.updateObjective = async (req, res) => {
       const targetObjectives = await Objective.find({
         owner: targetUser,
         cycle: objective.cycle,
-        category: 'individual',
         status: { $nin: ['rejected', 'cancelled', 'archived'] },
       });
       const reassignedWeight = weight !== undefined ? normalizeWeight(weight) : normalizeWeight(objective.weight);
@@ -730,16 +749,19 @@ exports.updateObjective = async (req, res) => {
         }
         const totalWeight = teamCapacity.usedWeight + normalizeWeight(weight);
         if (totalWeight > 100) {
+          const constrainedMembers = teamCapacity.memberCapacities
+            .filter((member) => member.remainingWeight < normalizeWeight(weight))
+            .map((member) => `${member.memberName || member.memberId} (${member.remainingWeight}% remaining)`)
+            .join(', ');
           return res.status(400).json({
             success: false,
-            message: `Team weight would exceed 100%. Team ${team.name} is using ${teamCapacity.usedWeight}% excluding this goal and has ${teamCapacity.remainingWeight}% remaining.`
+            message: `Insufficient team-objective weight. Each assigned member needs ${normalizeWeight(weight)}% available. ${constrainedMembers || `The team has ${teamCapacity.remainingWeight}% remaining per member.`}`
           });
         }
       } else {
         const siblings = await Objective.find({ 
           owner: objective.owner, 
           cycle: objective.cycle, 
-          category: objective.category || 'individual', 
           _id: { $ne: objective._id },
           status: { $nin: ['rejected', 'cancelled', 'archived'] }
         });
@@ -809,7 +831,8 @@ exports.getTeamWeightCapacity = async (req, res) => {
       success: true,
       team: { _id: capacity.team._id, name: capacity.team.name },
       usedWeight: capacity.usedWeight,
-      remainingWeight: capacity.remainingWeight
+      remainingWeight: capacity.remainingWeight,
+      memberCapacities: capacity.memberCapacities,
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -983,6 +1006,9 @@ exports.validateObjective = async (req, res) => {
     } else {
       // approved / validated
       objective.status = status === 'validated' ? 'validated' : 'approved';
+      if (managerComments && managerComments.trim()) {
+        notifMsg = `Your goal "${objective.title}" was approved. Manager message: ${managerComments.trim()}`;
+      }
     }
 
     if (managerAdjustedPercent !== undefined && managerAdjustedPercent !== null) {

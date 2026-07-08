@@ -10,8 +10,11 @@ function CareerPage() {
   var [tab, setTab] = useState('my-path');
   var [careerPaths, setCareerPaths] = useState([]);
   var [competencies, setCompetencies] = useState([]);
+  var [recommendations, setRecommendations] = useState([]);
   var [loading, setLoading] = useState(true);
   var [showPathForm, setShowPathForm] = useState(false);
+  var [newAction, setNewAction] = useState({ title: '', type: 'training', status: 'planned', dueDate: '', notes: '' });
+  var [selectedPathId, setSelectedPathId] = useState('');
   var [showCompForm, setShowCompForm] = useState(false);
   var [pathForm, setPathForm] = useState({ currentRole: '', targetRole: '', targetDate: '', notes: '' });
   var [compForm, setCompForm] = useState({ name: '', description: '', category: 'other', level: 'beginner', skills: '' });
@@ -30,12 +33,15 @@ function CareerPage() {
   function loadData() {
     setLoading(true);
     var pathUrl = tab === 'my-path' ? '/career/paths/my' : '/career/paths/all';
+    var recommendationUrl = tab === 'my-path' ? '/career/recommendations/my' : '/career/recommendations/all';
     Promise.all([
       axios.get(API + pathUrl, { headers: headers }),
-      axios.get(API + '/career/competencies', { headers: headers })
+      axios.get(API + '/career/competencies', { headers: headers }),
+      axios.get(API + recommendationUrl, { headers: headers })
     ]).then(function (res) {
       setCareerPaths(res[0].data.careerPaths || []);
       setCompetencies(res[1].data.competencies || []);
+      setRecommendations(res[2].data.recommendations || []);
     }).catch(function () {}).finally(function () { setLoading(false); });
   }
 
@@ -63,6 +69,19 @@ function CareerPage() {
     axios.delete(API + '/career/competencies/' + id, { headers: headers }).then(function () { loadData(); });
   }
 
+  function handleCreateAction(pathId) {
+    if (!newAction.title) return;
+    axios.post(API + '/career/paths/' + pathId + '/actions', newAction, { headers: headers })
+      .then(function () { setNewAction({ title: '', type: 'training', status: 'planned', dueDate: '', notes: '' }); setSelectedPathId(''); loadData(); })
+      .catch(function (e) { alert(e.response?.data?.message || 'Unable to create development action'); });
+  }
+
+  function updateDevelopmentAction(pathId, actionId, status) {
+    axios.put(API + '/career/paths/' + pathId + '/actions/' + actionId, { status: status }, { headers: headers })
+      .then(function () { loadData(); })
+      .catch(function (e) { alert(e.response?.data?.message || 'Unable to update development action'); });
+  }
+
   var tabs = [{ key: 'my-path', label: 'My Career Path' }, { key: 'competencies', label: 'Competencies' }];
   if (isAdmin || user.role === 'TEAM_LEADER') tabs.splice(1, 0, { key: 'all-paths', label: 'All Paths' });
 
@@ -75,7 +94,7 @@ function CareerPage() {
         </div>
         <div className="page-header__actions">
           {isAdmin && tab === 'competencies' && <button className="btn btn--secondary" onClick={function () { setShowCompForm(!showCompForm); }}>{showCompForm ? 'Cancel' : '+ Competency'}</button>}
-          {(tab === 'my-path' || tab === 'all-paths') && <button className="btn btn--primary" onClick={function () { setShowPathForm(!showPathForm); }}>{showPathForm ? 'Cancel' : '+ Career Path'}</button>}
+          {tab === 'my-path' && <button className="btn btn--primary" onClick={function () { setShowPathForm(!showPathForm); }}>{showPathForm ? 'Cancel' : '+ Career Path'}</button>}
         </div>
       </div>
 
@@ -134,7 +153,27 @@ function CareerPage() {
           </div>
         )
       ) : (
-        careerPaths.length === 0 ? (
+        <>
+        {recommendations.length > 0 && (
+          <section className="card" style={{ padding: '1.25rem', marginBottom: '1.25rem', borderLeft: '4px solid #8b5cf6' }}>
+            <div style={{ marginBottom: '0.9rem' }}>
+              <span style={{ color: '#7c3aed', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase' }}>Evaluation-connected guidance</span>
+              <h2 style={{ margin: '0.25rem 0' }}>Career recommendations</h2>
+              <p className="text-muted" style={{ margin: 0 }}>Generated from final evaluation strengths, gaps, and manager recommendations.</p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.8rem' }}>
+              {recommendations.map(function (recommendation) {
+                return <div key={recommendation._id} style={{ padding: '1rem', borderRadius: '12px', background: '#f5f3ff', border: '1px solid #ddd6fe' }}>
+                  <strong style={{ color: '#5b21b6' }}>{recommendation.suggested_path}</strong>
+                  {recommendation.employee_id?.name && <div className="text-muted" style={{ marginTop: '0.25rem' }}>{recommendation.employee_id.name}</div>}
+                  <div style={{ marginTop: '0.65rem', fontSize: '0.85rem' }}><b>Competency gaps:</b> {(recommendation.skills_to_develop || []).join(', ') || 'No specific gaps recorded'}</div>
+                  {recommendation.basis && <p style={{ marginBottom: 0, fontSize: '0.82rem', color: '#64748b' }}>{recommendation.basis}</p>}
+                </div>;
+              })}
+            </div>
+          </section>
+        )}
+        {careerPaths.length === 0 ? (
           <div className="empty-state"><div className="empty-state__icon">🚀</div><h3>No career path yet</h3><p>Create a career path to plan your professional growth.</p></div>
         ) : (
           <div className="career-list">
@@ -156,12 +195,40 @@ function CareerPage() {
                   {devTotal > 0 && (
                     <div className="career-item__progress"><div className="progress-bar"><div className="progress-bar__fill" style={{ width: (devTotal ? (devCompleted / devTotal) * 100 : 0) + '%' }}></div></div><span className="career-item__progress-text">{devCompleted}/{devTotal} actions completed</span></div>
                   )}
+                  {devTotal > 0 && <div style={{ display: 'grid', gap: '0.5rem', marginTop: '0.75rem' }}>
+                    {p.developmentPlan.map(function (action) {
+                      return <div key={action._id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center', padding: '0.65rem', background: '#f8fafc', borderRadius: '8px' }}>
+                        <div><strong style={{ fontSize: '0.85rem' }}>{action.title}</strong><div className="text-muted" style={{ fontSize: '0.75rem' }}>{action.type} · {action.status.replace(/_/g, ' ')}</div></div>
+                        {action.status !== 'completed' && <button className="btn btn--outline btn--sm" onClick={function () { updateDevelopmentAction(p._id, action._id, action.status === 'planned' ? 'in_progress' : 'completed'); }}>{action.status === 'planned' ? 'Start' : 'Complete'}</button>}
+                      </div>;
+                    })}
+                  </div>}
                   {p.notes && <p className="career-item__notes">{p.notes}</p>}
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <button className="btn btn--outline btn--sm" onClick={function () { setSelectedPathId(selectedPathId === p._id ? '' : p._id); }}>Create action</button>
+                    {selectedPathId === p._id && (
+                      <div style={{ marginTop: '0.6rem', display: 'grid', gap: '0.5rem' }}>
+                        <input className="form-input" placeholder="Action title" value={newAction.title} onChange={function (e) { setNewAction(Object.assign({}, newAction, { title: e.target.value })); }} />
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <select className="form-select" value={newAction.type} onChange={function (e) { setNewAction(Object.assign({}, newAction, { type: e.target.value })); }}>
+                            <option value="training">Training</option><option value="mentoring">Mentoring</option><option value="project">Project</option><option value="certification">Certification</option><option value="reading">Reading</option><option value="other">Other</option>
+                          </select>
+                          <select className="form-select" value={newAction.status} onChange={function (e) { setNewAction(Object.assign({}, newAction, { status: e.target.value })); }}>
+                            <option value="planned">Planned</option><option value="in_progress">In progress</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option>
+                          </select>
+                          <input type="date" className="form-input" value={newAction.dueDate} onChange={function (e) { setNewAction(Object.assign({}, newAction, { dueDate: e.target.value })); }} />
+                        </div>
+                        <textarea className="form-textarea" rows={2} placeholder="Notes" value={newAction.notes} onChange={function (e) { setNewAction(Object.assign({}, newAction, { notes: e.target.value })); }} />
+                        <button className="btn btn--primary btn--sm" onClick={function () { handleCreateAction(p._id); }}>Save action</button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
-        )
+        )}
+        </>
       )}
     </div>
   );

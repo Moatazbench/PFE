@@ -82,14 +82,25 @@ async function resolveFeedScope(currentUser) {
     return { unrestricted: false, userIds: [], teamIds: [] };
   }
 
-  if (['ADMIN', 'HR'].includes(currentUser.role)) {
-    return { unrestricted: true, userIds: [], teamIds: [] };
+  if (currentUser.role === 'ADMIN') {
+    return { unrestricted: true, hrOnly: false, role: currentUser.role, actorId: toIdString(currentUser._id), userIds: [], teamIds: [] };
+  }
+
+  if (currentUser.role === 'HR') {
+    return {
+      unrestricted: false,
+      hrOnly: true,
+      role: currentUser.role,
+      actorId: toIdString(currentUser._id),
+      userIds: [toIdString(currentUser._id)],
+      teamIds: [],
+    };
   }
 
   const userIds = new Set([toIdString(currentUser._id)]);
   const teamIds = new Set();
 
-  if (currentUser.manager) {
+  if (currentUser.role === 'TEAM_LEADER' && currentUser.manager) {
     userIds.add(toIdString(currentUser.manager));
   }
 
@@ -103,19 +114,41 @@ async function resolveFeedScope(currentUser) {
     .select('_id leader members')
     .lean();
 
-  teams.forEach(function (team) {
+  var scopedTeams = teams.slice();
+  if (currentUser.role === 'TEAM_LEADER') {
+    var queue = teams.map(function (team) { return team._id; });
+    var visited = new Set(queue.map(toIdString));
+    while (queue.length > 0) {
+      var children = await Team.find({ parentTeam: { $in: queue } }).select('_id leader members').lean();
+      queue = [];
+      children.forEach(function (team) {
+        var teamId = toIdString(team._id);
+        if (!visited.has(teamId)) {
+          visited.add(teamId);
+          scopedTeams.push(team);
+          queue.push(team._id);
+        }
+      });
+    }
+  }
+
+  scopedTeams.forEach(function (team) {
     teamIds.add(toIdString(team._id));
-    if (team.leader) userIds.add(toIdString(team.leader));
-    (team.members || []).forEach(function (memberId) {
-      userIds.add(toIdString(memberId));
-    });
+    if (currentUser.role === 'TEAM_LEADER') {
+      if (team.leader) userIds.add(toIdString(team.leader));
+      (team.members || []).forEach(function (memberId) {
+        userIds.add(toIdString(memberId));
+      });
+    }
   });
 
   const [teamUsers, directReports] = await Promise.all([
-    teamIds.size > 0
+    currentUser.role === 'TEAM_LEADER' && teamIds.size > 0
       ? User.find({ team: { $in: Array.from(teamIds) }, isActive: true, isDeleted: false }).select('_id').lean()
       : Promise.resolve([]),
-    User.find({ manager: currentUser._id, isActive: true, isDeleted: false }).select('_id').lean(),
+    currentUser.role === 'TEAM_LEADER'
+      ? User.find({ manager: currentUser._id, isActive: true, isDeleted: false }).select('_id').lean()
+      : Promise.resolve([]),
   ]);
 
   teamUsers.forEach(function (user) { userIds.add(toIdString(user._id)); });
@@ -123,6 +156,9 @@ async function resolveFeedScope(currentUser) {
 
   return {
     unrestricted: false,
+    hrOnly: false,
+    role: currentUser.role,
+    actorId: toIdString(currentUser._id),
     userIds: Array.from(userIds).filter(Boolean),
     teamIds: Array.from(teamIds).filter(Boolean),
   };
@@ -130,6 +166,27 @@ async function resolveFeedScope(currentUser) {
 
 function buildObjectiveFilter(scope) {
   if (scope.unrestricted) return {};
+  if (scope.hrOnly) {
+    return {
+      $or: [
+        { owner: scope.actorId },
+        { submittedTo: scope.actorId },
+        { validatedBy: scope.actorId },
+        { assignedBy: scope.actorId },
+      ],
+    };
+  }
+
+  if (scope.role === 'COLLABORATOR') {
+    const collaboratorClauses = [
+      { owner: scope.actorId },
+      { assignedUsers: scope.actorId },
+      { 'comments.user': scope.actorId },
+      { 'progressUpdates.user': scope.actorId },
+      { 'activityLog.user': scope.actorId },
+    ];
+    return { $or: collaboratorClauses };
+  }
 
   const clauses = [
     { owner: { $in: scope.userIds } },
@@ -147,6 +204,9 @@ function buildObjectiveFilter(scope) {
 
 function buildTaskFilter(scope) {
   if (scope.unrestricted) return {};
+  if (scope.hrOnly) {
+    return { $or: [{ assignee: scope.actorId }, { assignedBy: scope.actorId }] };
+  }
 
   const clauses = [
     { assignee: { $in: scope.userIds } },
@@ -165,11 +225,15 @@ function buildFeedbackFilter(scope, currentUser) {
     return { status: 'active' };
   }
 
-  const visibilityClauses = [
-    { visibility: 'public' },
-    { sender: currentUser._id },
-    { recipient: currentUser._id },
-  ];
+  if (scope.hrOnly) {
+    return {
+      status: 'active',
+      $or: [{ sender: currentUser._id }, { recipient: currentUser._id }],
+    };
+  }
+
+  const visibilityClauses = [{ sender: currentUser._id }, { recipient: currentUser._id }];
+  if (currentUser.role === 'TEAM_LEADER') visibilityClauses.push({ visibility: 'public' });
 
   if (currentUser.role === 'TEAM_LEADER') {
     visibilityClauses.push({ visibility: 'manager_only' });
@@ -186,6 +250,7 @@ function buildFeedbackFilter(scope, currentUser) {
 
 function buildCheckInFilter(scope) {
   if (scope.unrestricted) return {};
+  if (scope.hrOnly) return { employee_id: scope.actorId };
   return { employee_id: { $in: scope.userIds } };
 }
 

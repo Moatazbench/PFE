@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Cycle = require('../models/Cycle');
 const Objective = require('../models/Objective');
-const Evaluation = require('../models/Evaluation');
+const FinalEvaluation = require('../models/FinalEvaluation');
 const HRDecision = require('../models/HRDecision');
 const auth = require('../middleware/auth');
 const role = require('../middleware/role');
@@ -69,7 +69,7 @@ router.get('/:id', rateLimiter, auth, async function (req, res) {
 });
 
 // ========== CREATE CYCLE (ADMIN / HR) ==========
-router.post('/', rateLimiter, auth, role('ADMIN', 'HR'), validate(schemas.cycle.create), async function (req, res) {
+router.post('/', rateLimiter, auth, role('ADMIN'), validate(schemas.cycle.create), async function (req, res) {
   try {
     var { name, year, status,
           phase1Start, phase1End, phase2Start, phase2End, phase3Start, phase3End, currentPhase } = req.body;
@@ -112,7 +112,7 @@ router.post('/', rateLimiter, auth, role('ADMIN', 'HR'), validate(schemas.cycle.
 });
 
 // ========== UPDATE CYCLE — PUT (ADMIN / HR / TEAM_LEADER) ==========
-router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), validate(schemas.cycle.update), async function (req, res) {
+router.put('/:id', rateLimiter, auth, role('ADMIN'), validate(schemas.cycle.update), async function (req, res) {
   try {
     var { name, year, status,
           phase1Start, phase1End, phase2Start, phase2End, phase3Start, phase3End, currentPhase } = req.body;
@@ -143,34 +143,19 @@ router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), valida
 
     // Check if transitioning to closed — generate HR decisions
     if (status === 'closed' && cycle.status !== 'closed') {
-      const evaluations = await Evaluation.find({
-        cycleId: cycle._id,
-        status: { $in: ['submitted', 'approved', 'completed'] },
-      });
-
-      const objectiveMap = {};
-      const cycleObjectives = await Objective.find({
-        cycle: cycle._id,
-        status: { $nin: ['rejected', 'cancelled', 'archived'] },
-      });
-      cycleObjectives.forEach(function (objective) {
-        const ownerId = String(objective.owner);
-        if (!objectiveMap[ownerId]) {
-          objectiveMap[ownerId] = { individual: 0, team: 0 };
-        }
-        const weightedScore = Number(objective.weightedScore || 0);
-        if (objective.category === 'team') {
-          objectiveMap[ownerId].team += weightedScore;
-        } else {
-          objectiveMap[ownerId].individual += weightedScore;
-        }
+      const evaluations = await FinalEvaluation.find({
+        cycle_id: cycle._id,
+        status: { $in: ['validated', 'closed'] },
       });
 
       const decisions = [];
       for (const evaluation of evaluations) {
-        const userId = String(evaluation.employeeId);
-        const scores = objectiveMap[userId] || { individual: 0, team: 0 };
-        const finalScore = Number((evaluation.finalScore ?? evaluation.suggestedScore ?? 0).toFixed(2));
+        const userId = String(evaluation.employee_id);
+        const scores = (evaluation.objective_breakdown || []).reduce((result, objective) => {
+          result[objective.category === 'team' ? 'team' : 'individual'] += Number(objective.weighted_points || 0);
+          return result;
+        }, { individual: 0, team: 0 });
+        const finalScore = Number((evaluation.final_score ?? evaluation.manager_score ?? evaluation.auto_score ?? 0).toFixed(2));
 
         let action = 'satisfactory';
         if (finalScore >= 90) action = 'reward';
@@ -179,6 +164,7 @@ router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), valida
         decisions.push({
           user: userId,
           cycle: cycle._id,
+          finalEvaluation: evaluation._id,
           individualScore: Number(Math.min(scores.individual, 100).toFixed(2)),
           teamScore: Number(Math.min(scores.team, 100).toFixed(2)),
           finalScore,
@@ -186,8 +172,8 @@ router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), valida
         });
       }
 
+      await HRDecision.deleteMany({ cycle: cycle._id });
       if (decisions.length > 0) {
-        await HRDecision.deleteMany({ cycle: cycle._id });
         await HRDecision.insertMany(decisions);
       }
 
@@ -216,7 +202,7 @@ router.put('/:id', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), valida
 });
 
 // ========== PATCH CYCLE CONFIG (ADMIN / HR / TEAM_LEADER) — partial update for dates & name ==========
-router.patch('/:id', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), validate(schemas.cycle.update), async function (req, res) {
+router.patch('/:id', rateLimiter, auth, role('ADMIN'), validate(schemas.cycle.update), async function (req, res) {
   try {
     var cycle = await Cycle.findById(req.params.id);
     if (!cycle) {
@@ -265,7 +251,7 @@ router.patch('/:id', rateLimiter, auth, role('ADMIN', 'HR', 'TEAM_LEADER'), vali
 });
 
 // ========== PATCH CYCLE PHASE (ADMIN / HR) — advance or set current phase ==========
-router.patch('/:id/phase', rateLimiter, auth, role('ADMIN', 'HR'), validate(schemas.cycle.updatePhase), async function (req, res) {
+router.patch('/:id/phase', rateLimiter, auth, role('ADMIN'), validate(schemas.cycle.updatePhase), async function (req, res) {
   try {
     var cycle = await Cycle.findById(req.params.id);
     if (!cycle) {
@@ -450,7 +436,7 @@ router.post('/:id/rollback', rateLimiter, auth, role('ADMIN'), async function (r
 });
 
 // ========== DELETE CYCLE (ADMIN / HR — draft only for non-admin) ==========
-router.delete('/:id', rateLimiter, auth, role('ADMIN', 'HR'), async function (req, res) {
+router.delete('/:id', rateLimiter, auth, role('ADMIN'), async function (req, res) {
   try {
     var cycle = await Cycle.findById(req.params.id);
     if (!cycle) {

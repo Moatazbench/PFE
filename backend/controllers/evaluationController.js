@@ -471,7 +471,7 @@ exports.approveEvaluation = async (req, res) => {
     }
 
     if (evaluation.status !== 'submitted') {
-      return res.status(400).json({ success: false, message: 'Only submitted evaluations can be approved.' });
+      return res.status(400).json({ success: false, message: 'Only submitted evaluations can be marked as reviewed.' });
     }
 
     evaluation.status = 'approved';
@@ -487,16 +487,16 @@ exports.approveEvaluation = async (req, res) => {
       recipientId: evaluation.evaluatorId,
       senderId: req.user.id,
       type: 'EVALUATION_APPROVED',
-      title: 'Evaluation Approved',
-      message: 'The evaluation you submitted has been approved.',
+      title: 'Evaluation Process Reviewed',
+      message: 'HR has completed the process review for the evaluation you submitted.',
       link: '/evaluation-list',
     });
     await createNotification({
       recipientId: evaluation.employeeId,
       senderId: req.user.id,
       type: 'EVALUATION_APPROVED',
-      title: 'Evaluation Approved',
-      message: `Your performance evaluation for ${evaluation.period} has been approved.`,
+      title: 'Evaluation Process Reviewed',
+      message: `The process review for your ${evaluation.period} evaluation is complete.`,
       link: '/evaluation-list',
     });
 
@@ -505,7 +505,7 @@ exports.approveEvaluation = async (req, res) => {
       entityId: evaluation._id,
       action: 'approve',
       performedBy: req.user.id,
-      description: 'Evaluation approved.',
+      description: 'Evaluation marked as reviewed by HR.',
     });
 
     res.json({ success: true, evaluation });
@@ -516,20 +516,24 @@ exports.approveEvaluation = async (req, res) => {
 
 exports.rejectEvaluation = async (req, res) => {
   try {
+    const correctionReason = String(req.body.comments || '').trim();
+    if (!correctionReason) {
+      return res.status(400).json({ success: false, message: 'A correction reason is required.' });
+    }
     const evaluation = await Evaluation.findById(req.params.id);
     if (!evaluation) {
       return res.status(404).json({ success: false, message: 'Evaluation not found.' });
     }
 
     if (evaluation.status !== 'submitted') {
-      return res.status(400).json({ success: false, message: 'Only submitted evaluations can be rejected.' });
+      return res.status(400).json({ success: false, message: 'Only submitted evaluations can be sent back for correction.' });
     }
 
     evaluation.status = 'rejected';
     evaluation.approvals.push({
       approverId: req.user.id,
       status: 'rejected',
-      comments: req.body.comments || 'Needs revision',
+      comments: correctionReason,
       date: new Date(),
     });
     await evaluation.save();
@@ -538,8 +542,8 @@ exports.rejectEvaluation = async (req, res) => {
       recipientId: evaluation.evaluatorId,
       senderId: req.user.id,
       type: 'EVALUATION_REJECTED',
-      title: 'Evaluation Rejected',
-      message: `The evaluation you submitted was rejected: ${req.body.comments || 'Needs revision'}`,
+      title: 'Evaluation Sent Back for Correction',
+      message: `HR returned the evaluation for process correction: ${correctionReason}`,
       link: '/evaluation-list',
     });
 
@@ -548,7 +552,7 @@ exports.rejectEvaluation = async (req, res) => {
       entityId: evaluation._id,
       action: 'reject',
       performedBy: req.user.id,
-      description: `Evaluation rejected: ${req.body.comments || ''}`,
+      description: `Evaluation sent back for correction: ${correctionReason}`,
     });
 
     res.json({ success: true, evaluation });

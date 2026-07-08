@@ -9,6 +9,38 @@ const finalEvaluationSchema = new mongoose.Schema({
   manager_score: { type: Number }, // manager override
   final_score: { type: Number }, // resolved final
   rating_label: { type: String, enum: ['exceptional','strong','meets_expectations','needs_improvement','unsatisfactory'] },
+  score_difference: { type: Number, default: 0 },
+  manager_adjustment_justification: { type: String, default: '' },
+  objective_weight_total: { type: Number, default: 0 },
+  objective_score_normalized: { type: Boolean, default: false },
+  objective_breakdown: [{
+    objective_id: { type: ObjectId, ref: 'Objective' },
+    title: String,
+    category: String,
+    weight: Number,
+    employee_achievement: Number,
+    manager_confirmed_achievement: Number,
+    achievement_used: Number,
+    weighted_points: Number,
+    status: String
+  }],
+  evidence_summary: {
+    tasks: {
+      total: { type: Number, default: 0 },
+      completed: { type: Number, default: 0 },
+      completion_rate: { type: Number, default: null }
+    },
+    checkins: {
+      total: { type: Number, default: 0 },
+      approved: { type: Number, default: 0 },
+      approval_rate: { type: Number, default: null },
+      average_progress: { type: Number, default: null }
+    }
+  },
+  consistency_warnings: [String],
+  ai_assisted: { type: Boolean, default: false },
+  ai_draft_generated_at: { type: Date, default: null },
+  ai_reviewed_by_manager: { type: Boolean, default: false },
   // Content
   strengths: [String],
   weaknesses: [String],
@@ -22,6 +54,14 @@ const finalEvaluationSchema = new mongoose.Schema({
   status: { type: String, enum: ['draft','pending_hr','validated','closed'], default: 'draft' },
   hr_validated_by: { type: ObjectId, ref: 'User' },
   hr_validated_at: Date,
+  hr_review_notes: { type: String, default: '' },
+  hr_return_reason: { type: String, default: '' },
+  workflow_history: [{
+    action: { type: String, enum: ['submitted', 'validated', 'sent_back'] },
+    reason: { type: String, default: '' },
+    performed_by: { type: ObjectId, ref: 'User' },
+    performed_at: { type: Date, default: Date.now }
+  }],
   performance_status: {
     type: String,
     enum: ['excellent_performance', 'satisfactory', 'needs_improvement', 'critical_attention', null],

@@ -331,16 +331,31 @@ export function buildObjectiveStatusChart(objectives) {
 }
 
 export function buildTaskStatusChart(tasks) {
-  var summary = getTaskSummary(tasks);
+  var counts = { todo: 0, inProgress: 0, done: 0, cancelled: 0 };
+
+  (tasks || []).forEach(function (task) {
+    var status = String(task?.status || '').toLowerCase();
+    var isCompleted = status === 'done' || String(task?.workflowStage || '').toLowerCase() === 'completed';
+    if (isCompleted) {
+      counts.done += 1;
+    } else if (status === 'in_progress' || status === 'in review' || status === 'submitted') {
+      counts.inProgress += 1;
+    } else if (status === 'cancelled') {
+      counts.cancelled += 1;
+    } else {
+      counts.todo += 1;
+    }
+  });
+
   return [
-    { name: 'Todo', value: summary.todo, color: '#94a3b8' },
-    { name: 'In Progress', value: summary.inProgress, color: '#3b82f6' },
-    { name: 'Done', value: summary.done, color: '#10b981' },
-    { name: 'Cancelled', value: summary.cancelled, color: '#f97316' },
+    { name: 'Todo', value: counts.todo, color: '#94a3b8' },
+    { name: 'In Progress', value: counts.inProgress, color: '#3b82f6' },
+    { name: 'Done', value: counts.done, color: '#10b981' },
+    { name: 'Cancelled', value: counts.cancelled, color: '#f97316' },
   ];
 }
 
-export function buildComparisonChart(activeTab, objectives, teams, user) {
+export function buildComparisonChart(activeTab, objectives, teams) {
   if (activeTab === 'me') {
     return (objectives || []).slice(0, 6).map(function (objective) {
       var title = objective?.title || 'Untitled';
@@ -376,7 +391,7 @@ export function buildComparisonChart(activeTab, objectives, teams, user) {
   });
 }
 
-export function buildLeaderboard(objectives, activeTab, user) {
+export function buildLeaderboard(objectives, activeTab, user, insights) {
   var byOwner = {};
 
   (objectives || []).forEach(function (objective) {
@@ -392,15 +407,27 @@ export function buildLeaderboard(objectives, activeTab, user) {
     byOwner[ownerId].count += 1;
   });
 
-  return Object.values(byOwner)
-    .map(function (entry) {
+  var results = Object.values(byOwner).map(function (entry) {
+    return {
+      label: entry.label,
+      value: entry.count > 0 ? Math.round(entry.total / entry.count) : 0,
+    };
+  }).sort(function (left, right) { return right.value - left.value; });
+
+  if (results.length > 0) {
+    return results.slice(0, 5);
+  }
+
+  if (activeTab !== 'me' && Array.isArray(insights?.subteams) && insights.subteams.length > 0) {
+    return insights.subteams.slice(0, 5).map(function (subteam) {
       return {
-        label: entry.label,
-        value: entry.count > 0 ? Math.round(entry.total / entry.count) : 0,
+        label: subteam.name || 'Team',
+        value: Number(subteam.averageScore || subteam.objectiveProgress || 0),
       };
-    })
-    .sort(function (left, right) { return right.value - left.value; })
-    .slice(0, 5);
+    });
+  }
+
+  return [];
 }
 
 export function buildRecentTimeline(items) {

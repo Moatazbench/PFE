@@ -4,21 +4,25 @@ import { useAuth } from '../AuthContext';
 import UserAvatar from '../UserAvatar';
 import { getScopeLabel } from './dashboardUtils';
 
+const MotionDiv = motion.div;
+const MotionButton = motion.button;
+
 function DashboardHeader({ activeTab, onTabChange, activeCycle, summary, onRefresh, loading }) {
   var auth = useAuth();
   var user = auth.user;
 
-  var tabs = [
-    { key: 'me', label: 'Me' },
-    { key: 'team', label: 'My team' },
-  ];
+  var tabs = [{ key: 'me', label: 'Me' }];
+
+  if (user && ['TEAM_LEADER', 'ADMIN', 'HR'].includes(user.role)) {
+    tabs.push({ key: 'team', label: 'My team' });
+  }
 
   if (user && (user.role === 'ADMIN' || user.role === 'HR')) {
     tabs.push({ key: 'org', label: 'Organization' });
   }
 
   return (
-    <motion.div
+    <MotionDiv
       className="dash-hero"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
@@ -40,7 +44,7 @@ function DashboardHeader({ activeTab, onTabChange, activeCycle, summary, onRefre
         <div className="dash-hero__tabs">
           {tabs.map(function (tab) {
             return (
-              <motion.button
+              <MotionButton
                 key={tab.key}
                 type="button"
                 className={'dash-hero__tab' + (activeTab === tab.key ? ' dash-hero__tab--active' : '')}
@@ -50,7 +54,7 @@ function DashboardHeader({ activeTab, onTabChange, activeCycle, summary, onRefre
                 transition={{ duration: 0.12 }}
               >
                 {tab.label}
-              </motion.button>
+              </MotionButton>
             );
           })}
         </div>
@@ -64,7 +68,7 @@ function DashboardHeader({ activeTab, onTabChange, activeCycle, summary, onRefre
             <span>Completed</span>
             <strong>{summary?.completed || 0}</strong>
           </div>
-          <motion.button
+          <MotionButton
             type="button"
             className="dash-hero__refresh"
             onClick={onRefresh}
@@ -74,10 +78,10 @@ function DashboardHeader({ activeTab, onTabChange, activeCycle, summary, onRefre
             transition={{ duration: 0.12 }}
           >
             {loading ? 'Refreshing...' : 'Refresh'}
-          </motion.button>
+          </MotionButton>
         </div>
       </div>
-    </motion.div>
+    </MotionDiv>
   );
 }
 

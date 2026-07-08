@@ -54,7 +54,8 @@ function RouteGuard({ route, children }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (route?.allowedRoles && route.allowedRoles.indexOf(user.role) === -1) {
+  var allowedRoles = route?.allowedRoles || route?.roles;
+  if (Array.isArray(allowedRoles) && allowedRoles.indexOf(user.role) === -1) {
     return (
       <GuardState
         title={route.accessDeniedTitle || 'This page is not available for your role'}

@@ -30,7 +30,7 @@ exports.getCheckIns = async (req, res) => {
     const filter = { employee_id: req.user.id };
 
     // FIX 4: If team leader, also show check-ins for all team members
-    if (req.user.role === 'TEAM_LEADER') {
+    if (req.user.role === 'TEAM_LEADER' && req.query.scope !== 'self') {
       const Team = require('../models/Team');
       const team = await Team.findOne({ leader: req.user.id });
       if (team && team.members && team.members.length > 0) {
@@ -61,8 +61,18 @@ exports.getTeamCheckIns = async (req, res) => {
     // For now, let's just get check-ins where objective's owner has manager = req.user.id
     // But since CheckIn has employee_id, we can just find check-ins for employees managed by req.user.id
     const User = require('../models/User');
-    const teamMembers = await User.find({ manager: req.user.id }).select('_id');
-    const memberIds = teamMembers.map(m => m._id);
+    const Team = require('../models/Team');
+    const directReports = await User.find({ manager: req.user.id }).select('_id');
+    const managedIds = new Set(directReports.map((member) => String(member._id)));
+    const rootTeams = await Team.find({ leader: req.user.id }).select('_id members');
+    rootTeams.forEach((team) => (team.members || []).forEach((member) => managedIds.add(String(member))));
+    let queue = rootTeams.map((team) => team._id);
+    while (queue.length) {
+      const children = await Team.find({ parentTeam: { $in: queue } }).select('_id members');
+      children.forEach((team) => (team.members || []).forEach((member) => managedIds.add(String(member))));
+      queue = children.map((team) => team._id);
+    }
+    const memberIds = Array.from(managedIds);
 
     const checkIns = await CheckIn.find({ employee_id: { $in: memberIds }, cycle_id })
       .populate('objective_id', 'title dueDate')

@@ -1,14 +1,20 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import EnterpriseSidebar from './EnterpriseSidebar';
 import TopHeader from './TopHeader';
+import useScrollReveal from '../hooks/useScrollReveal';
 
 function DashboardLayout({ children }) {
     var { user } = useAuth();
+    var location = useLocation();
+    var pageRef = useRef(null);
     var [sidebarCollapsed, setSidebarCollapsed] = useState(function() {
         return localStorage.getItem('sidebarCollapsed') === 'true';
     });
     var [mobileOpen, setMobileOpen] = useState(false);
+
+    useScrollReveal(pageRef, location.pathname);
 
     function handleToggleSidebar(collapsed) {
         setSidebarCollapsed(collapsed);
@@ -37,7 +43,7 @@ function DashboardLayout({ children }) {
                 onNavigate={function () { setMobileOpen(false); }}
             />
 
-            <div style={{
+            <div className="app-shell__workspace" style={{
                 flex: 1,
                 marginLeft: sidebarWidth,
                 width: `calc(100% - ${sidebarWidth})`,
@@ -48,8 +54,8 @@ function DashboardLayout({ children }) {
                 transition: 'margin-left 0.3s ease, width 0.3s ease'
             }}>
                 <TopHeader onMobileToggle={function () { setMobileOpen(!mobileOpen); }} />
-                <main style={{ flex: 1, padding: '24px', maxWidth: '1400px', margin: '0 auto', width: '100%', minWidth: 0 }}>
-                    <div style={{ width: '100%' }}>{children}</div>
+                <main className="app-shell__main">
+                    <div className="app-shell__page" ref={pageRef}>{children}</div>
                 </main>
             </div>
         </div>

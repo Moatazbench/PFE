@@ -4,6 +4,7 @@ import { useAuth } from '../components/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import './MyTeamPage.css';
 import { formatRoleLabel } from '../utils/roles';
+import UserAvatar from '../components/UserAvatar';
 
 function MyTeamPage() {
     const { user } = useAuth();
@@ -11,6 +12,8 @@ function MyTeamPage() {
     const { id } = useParams();
     const [teamMembers, setTeamMembers] = useState([]);
     const [teamHierarchy, setTeamHierarchy] = useState({ team: null, subTeams: [] });
+    const [subteamSummaries, setSubteamSummaries] = useState({});
+    const [selectedSubteamId, setSelectedSubteamId] = useState('all');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -29,6 +32,7 @@ function MyTeamPage() {
                     team: data,
                     subTeams: data.subTeams || []
                 });
+                await loadSubteamSummaries(data.subTeams || []);
                 
                 const allMembers = [];
                 if (data.leader) allMembers.push({ ...data.leader, role: 'TEAM_LEADER' });
@@ -58,6 +62,7 @@ function MyTeamPage() {
                     team: hierarchyRes.data?.team || null,
                     subTeams: Array.isArray(hierarchyRes.data?.subTeams) ? hierarchyRes.data.subTeams : []
                 });
+                await loadSubteamSummaries(Array.isArray(hierarchyRes.data?.subTeams) ? hierarchyRes.data.subTeams : []);
             }
         } catch (err) {
             console.error('Failed to load team dashboard:', err);
@@ -65,6 +70,17 @@ function MyTeamPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const loadSubteamSummaries = async (subTeams) => {
+        const results = await Promise.allSettled((subTeams || []).map((team) => api.get(`/teams/${team._id}/summary`)));
+        const next = {};
+        results.forEach((result) => {
+            if (result.status === 'fulfilled' && result.value.data?.summary) {
+                next[result.value.data.summary.teamId] = result.value.data.summary;
+            }
+        });
+        setSubteamSummaries(next);
     };
 
     const getInitials = (name) => {
@@ -143,19 +159,53 @@ function MyTeamPage() {
                     </div>
 
                     {teamHierarchy.subTeams.length > 0 && (
-                        <div className="my-team-page__members-grid">
-                            {teamHierarchy.subTeams.map((subTeam) => (
-                                <div key={subTeam._id} className="my-team-page__member-card" onClick={() => navigate(`/teams/${subTeam._id}`)} style={{ cursor: 'pointer' }}>
-                                    <div className="my-team-page__person-name">{subTeam.name}</div>
-                                    <div className="my-team-page__person-email">
-                                        {subTeam.leader ? `Leader: ${subTeam.leader.name}` : 'No leader assigned'}
-                                    </div>
-                                    <div className="my-team-page__person-role">
-                                        {subTeam.members?.length || 0} member{subTeam.members?.length === 1 ? '' : 's'}
-                                    </div>
-                                </div>
-                            ))}
+                        <>
+                        <div style={{ marginBottom: '1rem' }}>
+                            <label style={{ fontWeight: 700, marginRight: '0.6rem' }}>Filter members by subteam</label>
+                            <select className="form-select" value={selectedSubteamId} onChange={(event) => setSelectedSubteamId(event.target.value)} style={{ display: 'inline-block', width: 'auto' }}>
+                                <option value="all">All subteams</option>
+                                {teamHierarchy.subTeams.map((subTeam) => <option key={subTeam._id} value={subTeam._id}>{subTeam.name}</option>)}
+                            </select>
                         </div>
+                        <div className="my-team-page__members-grid">
+                            {teamHierarchy.subTeams.map((subTeam) => {
+                                const summary = subteamSummaries[subTeam._id] || {};
+                                return (
+                                <div key={subTeam._id} className={`subteam-summary-card${selectedSubteamId === subTeam._id ? ' subteam-summary-card--selected' : ''}`} onClick={() => setSelectedSubteamId(subTeam._id)}>
+                                    <div className="subteam-summary-card__header">
+                                        <div className="subteam-summary-card__title">{subTeam.name}</div>
+                                        <button className="btn btn--outline btn--sm subteam-summary-card__button" onClick={(event) => { event.stopPropagation(); navigate(`/teams/${subTeam._id}`); }}>
+                                            Open Subteam
+                                        </button>
+                                    </div>
+                                    <div className="subteam-summary-card__leader">
+                                        <UserAvatar user={subTeam.leader || { name: 'Unassigned' }} size={36} />
+                                        <div>
+                                            <span>Leader</span>
+                                            <strong>{subTeam.leader?.name || 'No leader assigned'}</strong>
+                                        </div>
+                                    </div>
+                                    <div className="subteam-summary-card__metrics">
+                                        <div><span>Members</span><strong>{summary.memberCount ?? subTeam.members?.length ?? 0}</strong></div>
+                                        <div><span>Objectives</span><strong>{summary.objectiveProgress == null ? '—' : `${summary.objectiveProgress}%`}</strong></div>
+                                        <div><span>Tasks</span><strong>{summary.taskCompletion == null ? '—' : `${summary.taskCompletion}%`}</strong></div>
+                                        <div><span>Avg Score</span><strong>{summary.averagePerformanceScore == null ? '—' : `${summary.averagePerformanceScore}%`}</strong></div>
+                                    </div>
+                                    {summary.weightHealth && (
+                                        <div style={{ padding: '10px 16px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+                                            <span style={{color: '#64748b', fontWeight: 500}}>Weight Health</span>
+                                            <div style={{display: 'flex', gap: '8px'}}>
+                                                {summary.weightHealth.ok > 0 && <span style={{color: '#059669', fontWeight: 600}} title="<= 80%">{summary.weightHealth.ok} OK</span>}
+                                                {summary.weightHealth.nearLimit > 0 && <span style={{color: '#d97706', fontWeight: 600}} title="80% - 100%">{summary.weightHealth.nearLimit} Near</span>}
+                                                {summary.weightHealth.overloaded > 0 && <span style={{color: '#dc2626', fontWeight: 600}} title="> 100%">{summary.weightHealth.overloaded} Over</span>}
+                                                {summary.weightHealth.average > 0 && <span style={{marginLeft: '4px', color: '#0f172a', fontWeight: 700}}>~{summary.weightHealth.average}% avg</span>}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );})}
+                        </div>
+                        </>
                     )}
                 </div>
             )}
@@ -168,7 +218,12 @@ function MyTeamPage() {
                 </div>
             ) : (
                 <div className="team-grid">
-                    {teamMembers.map((member) => {
+                    {teamMembers.filter((member) => {
+                        if (selectedSubteamId === 'all') return true;
+                        const selected = teamHierarchy.subTeams.find((subTeam) => String(subTeam._id) === String(selectedSubteamId));
+                        const allowed = [selected?.leader?._id, ...(selected?.members || []).map((item) => item._id || item)].filter(Boolean).map(String);
+                        return allowed.includes(String(member.id || member._id));
+                    }).map((member) => {
                         const memberId = member.id || member._id;
                         const isMe = user && (String(memberId) === String(user.id || user._id));
                         const roleText = formatRoleLabel(member.role || 'Employee');

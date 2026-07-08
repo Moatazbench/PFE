@@ -16,15 +16,18 @@ router.get('/received', ctrl.getReceived);
 // Get feedback sent by me
 router.get('/sent', ctrl.getSent);
 
-// Get all feedback (admin/HR only)
-router.get('/all', role('ADMIN', 'HR'), ctrl.getAll);
+// Recipient picker scoped to the current user's permitted work relationships
+router.get('/recipients', ctrl.getAvailableRecipients);
+
+// Get all feedback (admin only)
+router.get('/all', role('ADMIN'), ctrl.getAll);
 
 // Get feedback stats for current user or specific user
 router.get('/stats', ctrl.getStats);
-router.get('/stats/:userId', role('ADMIN', 'HR', 'TEAM_LEADER'), ctrl.getStats);
+router.get('/stats/:userId', role('ADMIN', 'TEAM_LEADER'), ctrl.getStats);
 
 // Get feedback for a specific user (manager view)
-router.get('/user/:userId', role('ADMIN', 'HR', 'TEAM_LEADER'), ctrl.getForUser);
+router.get('/user/:userId', role('ADMIN', 'TEAM_LEADER'), ctrl.getForUser);
 
 // Delete feedback
 router.delete('/:id', ctrl.deleteFeedback);

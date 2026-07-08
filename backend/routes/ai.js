@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const role = require('../middleware/role');
 const aiController = require('../controllers/aiController');
 
 router.post('/goal-suggestions', auth, aiController.generateGoalSuggestions);
@@ -18,7 +19,9 @@ router.post('/review/midyear', auth, aiController.generateMidyearReview);
 router.post('/review/final-self', auth, aiController.generateFinalSelfReview);
 router.post('/review/manager', auth, aiController.generateManagerReview);
 router.post('/development-plan', auth, aiController.generateDevelopmentPlan);
-router.post('/generate-evaluation', auth, aiController.generateEvaluationDraft);
+router.post('/generate-evaluation', auth, role('ADMIN', 'TEAM_LEADER'), aiController.generateEvaluationDraft);
+router.get('/performance-users', auth, aiController.getPerformancePredictionUsers);
+router.get('/performance-predictions/:employeeId', auth, aiController.getEmployeePerformancePrediction);
 router.post('/predict-performance', auth, aiController.predictEmployeePerformance);
 
 module.exports = router;

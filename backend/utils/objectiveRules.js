@@ -95,6 +95,27 @@ function sumTeamObjectiveWeights(objectives, options) {
   }, 0);
 }
 
+function getTeamMemberWeightUsage(objectives, memberIds, options) {
+  const usage = {};
+  (memberIds || []).map(String).filter(Boolean).forEach(function (memberId) {
+    usage[memberId] = 0;
+  });
+
+  getUniqueTeamObjectives(objectives, options).forEach(function (objective) {
+    const assignedIds = Array.isArray(objective.assignedUsers) && objective.assignedUsers.length > 0
+      ? objective.assignedUsers.map(String)
+      : [objective.owner?._id || objective.owner].filter(Boolean).map(String);
+
+    assignedIds.forEach(function (memberId) {
+      if (Object.prototype.hasOwnProperty.call(usage, memberId)) {
+        usage[memberId] += normalizeWeight(objective.weight);
+      }
+    });
+  });
+
+  return usage;
+}
+
 module.exports = {
   normalizeWeight,
   isWeightBearingObjective,
@@ -103,4 +124,5 @@ module.exports = {
   getTeamObjectiveGroupKey,
   getUniqueTeamObjectives,
   sumTeamObjectiveWeights,
+  getTeamMemberWeightUsage,
 };

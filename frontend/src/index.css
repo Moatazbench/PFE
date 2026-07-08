@@ -136,3 +136,31 @@ button:disabled {
   transform: none; /* prevent scale on active when disabled */
   filter: none; /* prevent hover brightness when disabled */
 }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fadeIn 300ms ease-in-out both;
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-shimmer {
+  background: linear-gradient(90deg, var(--ds-bg-hover, #F1F5F9) 25%, var(--ds-border, #E2E8F0) 50%, var(--ds-bg-hover, #F1F5F9) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

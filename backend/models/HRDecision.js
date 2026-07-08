@@ -11,6 +11,11 @@ const HRDecisionSchema = new mongoose.Schema({
     ref: 'Cycle',
     required: true
   },
+  finalEvaluation: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'FinalEvaluation',
+    required: true
+  },
   individualScore: {
     type: Number,
     default: 0
