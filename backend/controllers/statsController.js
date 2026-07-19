@@ -9,6 +9,7 @@ const HRDecision = require('../models/HRDecision');
 const CareerPath = require('../models/CareerPath');
 const BonusPenalty = require('../models/BonusPenalty');
 const ImprovementPlan = require('../models/ImprovementPlan');
+const { filterVisibleObjectives } = require('../utils/objectiveVisibility');
 
 function round(value) {
   return Number(Number(value || 0).toFixed(1));
@@ -87,9 +88,10 @@ exports.getDashboardStats = async (req, res) => {
     }
 
     const objectives = await Objective.find(objectiveFilter)
-      .select('_id title owner status achievementPercent finalSelfSubmittedAt managerAdjustedPercent updatedAt createdAt')
+      .select('_id title owner status achievementPercent finalSelfSubmittedAt managerAdjustedPercent updatedAt createdAt category source')
       .lean();
-    const objectiveIds = objectives.map((objective) => objective._id);
+    const visibleObjectives = filterVisibleObjectives(objectives, req.user, { teamMemberIds: scoped.employeeIds });
+    const objectiveIds = visibleObjectives.map((objective) => objective._id);
     const [tasks, checkIns, evaluations, careerPaths, pendingCompensation, cycles] = await Promise.all([
       Task.find({
         assignee: { $in: scoped.employeeIds },
@@ -107,14 +109,13 @@ exports.getDashboardStats = async (req, res) => {
       Cycle.find({ status: { $ne: 'draft' } }).select('_id name year').sort({ year: 1 }).lean()
     ]);
 
-    const [usersCount, teamsCount, objectivesCount, cyclesCount] = await Promise.all([
+    const [usersCount, teamsCount, cyclesCount] = await Promise.all([
       scope === 'me' ? 1 : scoped.employeeIds.length,
       scope === 'me' ? Team.countDocuments({ $or: [{ leader: scoped.employeeIds[0] }, { members: scoped.employeeIds[0] }] }) : scoped.teams.length,
-      Objective.countDocuments(objectiveFilter),
       Cycle.countDocuments()
     ]);
 
-    const activeObjectives = objectives.filter((objective) => !['draft', 'rejected', 'cancelled', 'archived'].includes(objective.status));
+    const activeObjectives = visibleObjectives.filter((objective) => !['draft', 'rejected', 'cancelled', 'archived'].includes(objective.status));
     const completedTasks = tasks.filter((task) => task.status === 'done' || task.workflowStage === 'completed');
     const pendingTasks = tasks.filter((task) => !['done', 'cancelled'].includes(task.status));
     const overdueTasks = pendingTasks.filter((task) => task.dueDate && new Date(task.dueDate) < new Date());
@@ -149,9 +150,9 @@ exports.getDashboardStats = async (req, res) => {
       || Number(evaluation.final_score || 0) < 50
     );
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const subteams = await buildSubteamSummaries(scoped.teams, objectives, tasks, evaluations);
+    const subteams = await buildSubteamSummaries(scoped.teams, visibleObjectives, tasks, evaluations);
     const recentActivity = []
-      .concat(objectives.map((objective) => ({ id: `objective-${objective._id}`, type: 'Objective', title: objective.title, status: objective.status, date: objective.updatedAt || objective.createdAt })))
+      .concat(visibleObjectives.map((objective) => ({ id: `objective-${objective._id}`, type: 'Objective', title: objective.title, status: objective.status, date: objective.updatedAt || objective.createdAt })))
       .concat(completedTasks.map((task) => ({ id: `task-${task._id}`, type: 'Task completed', title: task.title, status: 'completed', date: task.completedAt || task.updatedAt })))
       .concat(checkIns.map((checkIn) => ({ id: `checkin-${checkIn._id}`, type: 'Check-in', title: `${checkIn.progress_percent || 0}% progress update`, status: checkIn.status, date: checkIn.submitted_at || checkIn.updatedAt })))
       .concat(evaluations.map((evaluation) => ({ id: `evaluation-${evaluation._id}`, type: 'Final evaluation', title: `${evaluation.status.replace(/_/g, ' ')} · ${evaluation.final_score || 0}%`, status: evaluation.status, date: evaluation.updatedAt || evaluation.createdAt })))
@@ -161,7 +162,7 @@ exports.getDashboardStats = async (req, res) => {
     return res.json({
       users: usersCount,
       teams: teamsCount,
-      objectives: objectivesCount,
+      objectives: visibleObjectives.length,
       cycles: cyclesCount,
       insights: {
         activeObjectives: activeObjectives.length,
@@ -227,9 +228,18 @@ exports.getScoreDistribution = async (req, res) => {
 
 exports.getObjectivesByStatus = async (req, res) => {
   try {
-    const stats = await Objective.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]);
+    const scope = req.query.scope || 'me';
+    const scoped = await resolveDashboardScope(req, scope);
+    if (scoped.error) return res.status(scoped.error.status).json({ success: false, message: scoped.error.message });
+
+    const objectives = await Objective.find({ owner: { $in: scoped.employeeIds } })
+      .select('_id owner status category source')
+      .lean();
+    const visibleObjectives = filterVisibleObjectives(objectives, req.user, { teamMemberIds: scoped.employeeIds });
     const result = { draft: 0, active: 0, submitted: 0, validated: 0, rejected: 0, completed: 0 };
-    stats.forEach((entry) => { if (entry._id) result[entry._id] = entry.count; });
+    visibleObjectives.forEach((objective) => {
+      if (objective.status) result[objective.status] = (result[objective.status] || 0) + 1;
+    });
     res.json(result);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });

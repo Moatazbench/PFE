@@ -460,6 +460,18 @@ exports.updateEvaluation = async (req, res) => {
     if (evaluation.status === 'closed' || evaluation.status === 'validated') {
       return res.status(400).json({ success: false, message: 'Cannot edit validated or closed evaluation' });
     }
+    if (evaluation.status === 'pending_hr' && status === 'pending_hr') {
+      return res.status(409).json({
+        success: false,
+        message: 'This evaluation has already been submitted to HR review.'
+      });
+    }
+    if (evaluation.status === 'pending_hr' && status !== undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'This evaluation is locked while it awaits HR review.'
+      });
+    }
 
     if (manager_score !== undefined) {
       const parsedManagerScore = Number(manager_score);
@@ -472,10 +484,10 @@ exports.updateEvaluation = async (req, res) => {
     if (manager_adjustment_justification !== undefined) {
       evaluation.manager_adjustment_justification = String(manager_adjustment_justification || '').trim();
     }
-    if (strengths !== undefined) evaluation.strengths = strengths;
-    if (weaknesses !== undefined) evaluation.weaknesses = weaknesses;
-    if (improvement_suggestions !== undefined) evaluation.improvement_suggestions = improvement_suggestions;
-    if (manager_comments !== undefined) evaluation.manager_comments = manager_comments;
+    if (strengths !== undefined) evaluation.strengths = normalizeDraftList(strengths);
+    if (weaknesses !== undefined) evaluation.weaknesses = normalizeDraftList(weaknesses);
+    if (improvement_suggestions !== undefined) evaluation.improvement_suggestions = normalizeDraftList(improvement_suggestions);
+    if (manager_comments !== undefined) evaluation.manager_comments = String(manager_comments || '').trim();
     if (recommendation) evaluation.recommendation = recommendation;
     if (status && !['draft', 'pending_hr'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid manager evaluation status.' });
@@ -494,38 +506,48 @@ exports.updateEvaluation = async (req, res) => {
         errors: [{ field: 'manager_adjustment_justification', message: 'Explain the significant score adjustment.' }]
       });
     }
-    if (status === 'pending_hr' && !String(evaluation.manager_comments || '').trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Manager final comments are required before submitting to HR.',
-        errors: [{ field: 'manager_comments', message: 'Add final manager comments.' }]
-      });
-    }
     if (status === 'pending_hr') {
+      const submissionErrors = [];
+      if (!String(evaluation.manager_comments || '').trim()) {
+        submissionErrors.push({ field: 'manager_comments', message: 'Add final manager comments.' });
+      }
+      if (!Array.isArray(evaluation.strengths) || evaluation.strengths.length === 0) {
+        submissionErrors.push({ field: 'strengths', message: 'Add at least one strength.' });
+      }
+      if (!Array.isArray(evaluation.weaknesses) || evaluation.weaknesses.length === 0) {
+        submissionErrors.push({ field: 'weaknesses', message: 'Add at least one area for improvement.' });
+      }
+      if (!Array.isArray(evaluation.objective_breakdown) || evaluation.objective_breakdown.length === 0) {
+        submissionErrors.push({ field: 'objectives', message: 'Objective contribution breakdown is missing. Recalculate or regenerate the final evaluation before submitting.' });
+      }
+
       const objectives = await Objective.find({
         owner: evaluation.employee_id,
         cycle: evaluation.cycle_id,
         status: { $nin: EXCLUDED_EVALUATION_OBJECTIVE_STATUSES }
       }).select('title finalSelfSubmittedAt managerAdjustedPercent');
-      const missingSelfAssessments = objectives.filter((objective) => !objective.finalSelfSubmittedAt).length;
-      const unconfirmedObjectives = objectives.filter((objective) => objective.managerAdjustedPercent == null).length;
+      const missingSelfAssessmentObjectives = objectives.filter((objective) => !objective.finalSelfSubmittedAt);
+      const unconfirmedObjectives = objectives.filter((objective) => objective.managerAdjustedPercent == null);
 
-      if (missingSelfAssessments > 0) {
-        return res.status(400).json({
-          success: false,
-          message: `${missingSelfAssessments} active objective(s) still require employee self-assessment before HR submission.`,
-          errors: objectives
-            .filter((objective) => !objective.finalSelfSubmittedAt)
-            .map((objective) => ({ field: 'objectives', objectiveId: objective._id, message: `${objective.title}: employee self-assessment is missing.` }))
-        });
+      if (missingSelfAssessmentObjectives.length > 0) {
+        submissionErrors.push(...missingSelfAssessmentObjectives.map((objective) => ({
+          field: 'objectives',
+          objectiveId: objective._id,
+          message: `${objective.title}: employee self-assessment is missing.`
+        })));
       }
-      if (unconfirmedObjectives > 0) {
+      if (unconfirmedObjectives.length > 0) {
+        submissionErrors.push(...unconfirmedObjectives.map((objective) => ({
+          field: 'objectives',
+          objectiveId: objective._id,
+          message: `${objective.title}: manager achievement confirmation is missing.`
+        })));
+      }
+      if (submissionErrors.length > 0) {
         return res.status(400).json({
           success: false,
-          message: `${unconfirmedObjectives} active objective achievement(s) still require manager confirmation before HR submission.`,
-          errors: objectives
-            .filter((objective) => objective.managerAdjustedPercent == null)
-            .map((objective) => ({ field: 'objectives', objectiveId: objective._id, message: `${objective.title}: manager achievement confirmation is missing.` }))
+          message: 'Complete the required final-review fields before submitting to HR.',
+          errors: submissionErrors
         });
       }
     }
@@ -560,6 +582,7 @@ exports.updateEvaluation = async (req, res) => {
 
     const populated = await FinalEvaluation.findById(evaluation._id)
       .populate('employee_id', 'name email profileImage')
+      .populate('cycle_id', 'name year')
       .populate('evaluator_id', 'name role')
       .populate('hr_validated_by', 'name');
 

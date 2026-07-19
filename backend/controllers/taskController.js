@@ -1,6 +1,9 @@
 const Task = require('../models/Task');
 const User = require('../models/User');
 const Team = require('../models/Team');
+const Objective = require('../models/Objective');
+const Cycle = require('../models/Cycle');
+const mongoose = require('mongoose');
 const { createAuditLog } = require('../utils/auditHelper');
 
 async function getManagedTeamIds(userId) {
@@ -26,8 +29,8 @@ function resolveWorkflowStage(inputStage, inputStatus, existingTask) {
 
   const status = inputStatus || existingTask?.status;
   if (status === 'done') return 'completed';
+  if (status === 'cancelled' || status === 'canceled') return 'cancelled';
   if (status === 'in_progress') return existingTask?.workflowStage === 'review' ? 'review' : 'in_progress';
-  if (status === 'cancelled') return 'todo';
   return existingTask?.workflowStage || 'todo';
 }
 
@@ -35,6 +38,7 @@ function resolveStatus(inputStatus, inputStage, existingTask) {
   if (inputStatus) return inputStatus;
 
   const workflowStage = inputStage || existingTask?.workflowStage;
+  if (workflowStage === 'cancelled') return 'cancelled';
   if (workflowStage === 'completed') return 'done';
   if (workflowStage === 'in_progress' || workflowStage === 'review') return 'in_progress';
   return existingTask?.status || 'todo';
@@ -125,11 +129,84 @@ function isDuplicateSession(left, right) {
 }
 
 function canManageTask(task, user) {
-  return String(task?.assignedBy?._id || task?.assignedBy || '') === String(user?._id || user?.id || '');
+  const actorId = String(user?._id || user?.id || '');
+  if (!actorId) return false;
+  if (user?.role === 'ADMIN') return true;
+  return String(task?.assignedBy?._id || task?.assignedBy || '') === actorId
+    || String(task?.assignee?._id || task?.assignee || '') === actorId;
 }
 
 function canTrackTask(task, user) {
-  return canManageTask(task, user);
+  const actorId = String(user?._id || user?.id || '');
+  if (!actorId) return false;
+  return String(task?.assignee?._id || task?.assignee || '') === actorId;
+}
+
+function isTerminalTask(task) {
+  const status = String(task?.status || '').toLowerCase();
+  const workflowStage = String(task?.workflowStage || '').toLowerCase();
+  return ['done', 'completed', 'cancelled', 'canceled'].includes(status)
+    || ['completed', 'cancelled', 'canceled'].includes(workflowStage);
+}
+
+function isActiveCycle(cycle) {
+  return cycle
+    && ['open', 'active', 'in_progress'].includes(String(cycle.status || ''))
+    && String(cycle.currentPhase || '') !== 'closed';
+}
+
+async function getCurrentCycle() {
+  return Cycle.findOne({
+    status: { $in: ['open', 'active', 'in_progress'] },
+    currentPhase: { $ne: 'closed' },
+  }).sort({ year: -1, createdAt: -1 });
+}
+
+async function canAccessObjective(objective, user) {
+  const actorId = String(user?._id || user?.id || '');
+  if (!objective || !actorId) return false;
+  if (user?.role === 'ADMIN') return true;
+  if (String(objective.owner?._id || objective.owner || '') === actorId) return true;
+
+  if (user?.role === 'TEAM_LEADER') {
+    const managedTeamIds = await getManagedTeamIds(actorId);
+    if (objective.team && managedTeamIds.includes(String(objective.team?._id || objective.team))) {
+      return true;
+    }
+    const member = await Team.findOne({
+      _id: { $in: managedTeamIds },
+      members: objective.owner?._id || objective.owner,
+    }).select('_id');
+    return Boolean(member);
+  }
+
+  return false;
+}
+
+async function validateLinkableObjective(objectiveId, user) {
+  if (objectiveId === undefined) return { ok: true, value: undefined };
+  if (!objectiveId) return { ok: true, value: null };
+  if (!mongoose.isValidObjectId(objectiveId)) {
+    return { ok: false, status: 400, message: 'Linked objective ID is invalid.' };
+  }
+
+  const objective = await Objective.findById(objectiveId)
+    .populate('cycle', 'name year status currentPhase')
+    .select('_id owner team cycle title');
+  if (!objective) {
+    return { ok: false, status: 400, message: 'Linked objective was not found.' };
+  }
+  if (!isActiveCycle(objective.cycle)) {
+    return { ok: false, status: 400, message: 'Tasks can only be linked to objectives in the current active cycle.' };
+  }
+  const currentCycle = await getCurrentCycle();
+  if (currentCycle && String(objective.cycle?._id || objective.cycle) !== String(currentCycle._id)) {
+    return { ok: false, status: 400, message: 'Tasks can only be linked to objectives in the current active cycle.' };
+  }
+  if (!(await canAccessObjective(objective, user))) {
+    return { ok: false, status: 403, message: 'You are not allowed to link tasks to this objective.' };
+  }
+  return { ok: true, value: objective._id };
 }
 
 function addTaskSearch(filter, search) {
@@ -199,6 +276,11 @@ exports.createTask = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Assignee not found' });
     }
 
+    const objectiveValidation = await validateLinkableObjective(linkedGoal || req.body.objective_id || null, req.user);
+    if (!objectiveValidation.ok) {
+      return res.status(objectiveValidation.status).json({ success: false, message: objectiveValidation.message });
+    }
+
     const nextTimeTracking = sanitizeTimeTracking({
       ...(timeTracking && typeof timeTracking === 'object' ? timeTracking : {}),
       totalTimeSpent,
@@ -218,7 +300,8 @@ exports.createTask = async (req, res) => {
       progress: clampProgress(progress),
       dueDate: dueDate || null,
       recurring: recurring || 'none',
-      linkedGoal: linkedGoal || null,
+      linkedGoal: objectiveValidation.value || null,
+      objective_id: objectiveValidation.value || null,
       linkedMeeting: linkedMeeting || null,
       team: team || null,
       notes: notes || '',
@@ -231,7 +314,7 @@ exports.createTask = async (req, res) => {
     const populated = syncTaskTimerFields(await Task.findById(task._id)
       .populate('assignee', 'name email role')
       .populate('assignedBy', 'name email role')
-      .populate('linkedGoal', 'title')
+      .populate('linkedGoal', 'title cycle')
       .populate('linkedMeeting', 'title'));
 
     await createAuditLog({
@@ -257,7 +340,7 @@ exports.getMyTasks = async (req, res) => {
     const tasks = (await Task.find(filter)
       .populate('assignee', 'name email role')
       .populate('assignedBy', 'name email role')
-      .populate('linkedGoal', 'title goalStatus')
+      .populate('linkedGoal', 'title goalStatus cycle')
       .populate('linkedMeeting', 'title date')
       .sort({ dueDate: 1, createdAt: -1 })
       .skip((page - 1) * limit)
@@ -276,7 +359,7 @@ exports.getAssignedByMe = async (req, res) => {
   try {
     const tasks = (await Task.find({ assignedBy: req.user._id })
       .populate('assignee', 'name email role')
-      .populate('linkedGoal', 'title')
+      .populate('linkedGoal', 'title cycle')
       .sort({ createdAt: -1 })
       .limit(100)
       .lean()).map(syncTaskTimerFields);
@@ -303,7 +386,7 @@ exports.getTeamTasks = async (req, res) => {
     const tasks = (await Task.find({ team: teamId })
       .populate('assignee', 'name email role')
       .populate('assignedBy', 'name email role')
-      .populate('linkedGoal', 'title')
+      .populate('linkedGoal', 'title cycle')
       .sort({ dueDate: 1, createdAt: -1 })
       .lean()).map(syncTaskTimerFields);
 
@@ -344,7 +427,7 @@ exports.getTasksByTeams = async (req, res) => {
     let query = Task.find({ team: { $in: allowedTeamIds } })
       .populate('assignee', 'name email role')
       .populate('assignedBy', 'name email role')
-      .populate('linkedGoal', 'title')
+      .populate('linkedGoal', 'title cycle')
       .sort({ dueDate: 1, createdAt: -1 });
 
     if (Number.isFinite(limit) && limit > 0) {
@@ -371,7 +454,7 @@ exports.getAllTasks = async (req, res) => {
     const tasks = (await Task.find(filter)
       .populate('assignee', 'name email role')
       .populate('assignedBy', 'name email role')
-      .populate('linkedGoal', 'title')
+      .populate('linkedGoal', 'title cycle')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
@@ -387,17 +470,29 @@ exports.getAllTasks = async (req, res) => {
 // Update task
 exports.updateTask = async (req, res) => {
   try {
-    const task = await Task.findOne({ _id: req.params.id, assignedBy: req.user._id });
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Task ID is invalid' });
+    }
+    const task = await Task.findById(req.params.id);
     if (!task) {
       return res.status(404).json({ success: false, message: 'Task not found' });
     }
 
-    // Only assignee, assigner, or admin can update
     if (!canManageTask(task, req.user)) {
       return res.status(403).json({ success: false, message: 'Not authorized to update this task' });
     }
 
     const updates = req.body;
+    const requestedObjectiveId = updates.linkedGoal !== undefined ? updates.linkedGoal : updates.objective_id;
+    const objectiveValidation = await validateLinkableObjective(requestedObjectiveId, req.user);
+    if (!objectiveValidation.ok) {
+      return res.status(objectiveValidation.status).json({ success: false, message: objectiveValidation.message });
+    }
+    if (objectiveValidation.value !== undefined) {
+      updates.linkedGoal = objectiveValidation.value;
+      updates.objective_id = objectiveValidation.value;
+    }
+
     if (updates.progress !== undefined) {
       updates.progress = clampProgress(updates.progress);
     }
@@ -430,7 +525,7 @@ exports.updateTask = async (req, res) => {
     const updated = syncTaskTimerFields(await Task.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true })
       .populate('assignee', 'name email role')
       .populate('assignedBy', 'name email role')
-      .populate('linkedGoal', 'title achievementPercent')
+      .populate('linkedGoal', 'title achievementPercent cycle')
       .populate('linkedMeeting', 'title'));
 
     // Auto-update objective progress
@@ -460,10 +555,13 @@ exports.updateTask = async (req, res) => {
 
 exports.appendTimeEntry = async (req, res) => {
   try {
-    const task = await Task.findOne({ _id: req.params.id, assignedBy: req.user._id })
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Task ID is invalid' });
+    }
+    const task = await Task.findById(req.params.id)
       .populate('assignee', 'name email role')
       .populate('assignedBy', 'name email role')
-      .populate('linkedGoal', 'title achievementPercent')
+      .populate('linkedGoal', 'title achievementPercent cycle')
       .populate('linkedMeeting', 'title');
 
     if (!task) {
@@ -472,6 +570,9 @@ exports.appendTimeEntry = async (req, res) => {
 
     if (!canTrackTask(task, req.user)) {
       return res.status(403).json({ success: false, message: 'Not authorized to track time for this task' });
+    }
+    if (isTerminalTask(task)) {
+      return res.status(400).json({ success: false, message: 'Completed or cancelled tasks cannot be tracked.' });
     }
 
     const entry = sanitizeSingleSession(req.body);
@@ -521,9 +622,15 @@ exports.appendTimeEntry = async (req, res) => {
 // Delete task
 exports.deleteTask = async (req, res) => {
   try {
-    const task = await Task.findOne({ _id: req.params.id, assignedBy: req.user._id });
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Task ID is invalid' });
+    }
+    const task = await Task.findById(req.params.id);
     if (!task) {
       return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+    if (!canManageTask(task, req.user)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to delete this task' });
     }
 
     await Task.findByIdAndDelete(req.params.id);
@@ -544,11 +651,11 @@ exports.getStats = async (req, res) => {
     const userId = req.user._id;
     const [byStatus, overdue, total] = await Promise.all([
       Task.aggregate([
-        { $match: { assignedBy: userId } },
+        { $match: { assignee: userId } },
         { $group: { _id: '$status', count: { $sum: 1 } } }
       ]),
-      Task.countDocuments({ assignedBy: userId, status: { $in: ['todo', 'in_progress'] }, dueDate: { $lt: new Date() } }),
-      Task.countDocuments({ assignedBy: userId })
+      Task.countDocuments({ assignee: userId, status: { $in: ['todo', 'in_progress'] }, dueDate: { $lt: new Date() } }),
+      Task.countDocuments({ assignee: userId })
     ]);
 
     const statusMap = {};
@@ -575,4 +682,6 @@ exports._private = {
   canManageTask,
   canTrackTask,
   addTaskSearch,
+  isTerminalTask,
+  validateLinkableObjective,
 };

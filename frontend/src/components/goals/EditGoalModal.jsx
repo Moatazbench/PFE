@@ -5,6 +5,7 @@ import { normalizeWeight, sumObjectiveWeights, sumTeamObjectiveWeights, validate
 
 function EditGoalModal({ goal, onClose, onUpdated, cycles, existingObjectives }) {
     var { user } = useAuth();
+    var goalId = goal._id || goal.id || goal.objectiveId;
     var [form, setForm] = useState({
         title: goal.title || '',
         description: goal.description || '',
@@ -25,12 +26,12 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, existingObjectives })
     var [correctionReason, setCorrectionReason] = useState('');
     var [showCorrectionInput, setShowCorrectionInput] = useState(false);
     var [serverFieldErrors, setServerFieldErrors] = useState({});
-    var [capacityInfo, setCapacityInfo] = useState({ usedWeight: null, remainingWeight: null, message: '' });
+    var [capacityInfo, setCapacityInfo] = useState({ usedWeight: null, remainingWeight: null, message: '', memberCapacities: [], bucketLabel: 'Team' });
     var teamId = goal.team?._id || goal.team || '';
 
     var currentCycleObjectives = (existingObjectives || []).filter(function (objective) {
         var objectiveCycleId = objective.cycle?._id || objective.cycle;
-        if (objectiveCycleId !== form.cycle || objective.category !== form.category || objective._id === goal._id) {
+        if (objectiveCycleId !== form.cycle || objective.category !== form.category || objective._id === goalId) {
             return false;
         }
         if (form.category === 'team') {
@@ -44,7 +45,7 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, existingObjectives })
     var localUsedWeight = form.category === 'team' ? sumTeamObjectiveWeights(currentCycleObjectives) : sumObjectiveWeights(currentCycleObjectives);
     var usedWeight = typeof capacityInfo.usedWeight === 'number' ? capacityInfo.usedWeight : localUsedWeight;
     var remainingWeight = typeof capacityInfo.remainingWeight === 'number' ? capacityInfo.remainingWeight : Math.max(0, 100 - localUsedWeight);
-    var maxWeight = Math.min(40, remainingWeight);
+    var maxWeight = Math.max(1, Math.min(100, remainingWeight));
     var cycleData = (cycles || []).find(function (cycle) { return cycle._id === form.cycle; }) || goal.cycle || {};
     var currentPhase = cycleData?.currentPhase || 'phase1';
     var isAdmin = user.role === 'ADMIN';
@@ -62,7 +63,7 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, existingObjectives })
 
     useEffect(function () {
         if (form.category !== 'team' || !teamId || !form.cycle) {
-            setCapacityInfo({ usedWeight: null, remainingWeight: null, message: '' });
+            setCapacityInfo({ usedWeight: null, remainingWeight: null, message: '', memberCapacities: [], bucketLabel: 'Team' });
             return;
         }
 
@@ -72,21 +73,29 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, existingObjectives })
                     params: {
                         teamId: teamId,
                         cycleId: form.cycle,
-                        excludeId: goal._id
+                        excludeId: goalId
                     }
                 });
+                var members = Array.isArray(res.data.memberCapacities) ? res.data.memberCapacities : [];
+                var constrainedMember = members.slice().sort(function (a, b) { return Number(b.usedWeight || 0) - Number(a.usedWeight || 0); })[0];
+                var hasBucketUsage = constrainedMember && Number(constrainedMember.usedWeight || 0) > 0;
+                var bucketLabel = res.data.bucketType === 'subteam' ? 'Subteam' : 'Team';
                 setCapacityInfo({
                     usedWeight: Number(res.data.usedWeight || 0),
                     remainingWeight: Number(res.data.remainingWeight || 0),
-                    message: (res.data.team?.name || 'Selected team') + ' is using ' + Number(res.data.usedWeight || 0) + '% excluding this goal and has ' + Number(res.data.remainingWeight || 0) + '% remaining.'
+                    memberCapacities: members,
+                    bucketLabel: bucketLabel,
+                    message: hasBucketUsage
+                        ? (res.data.team?.name || 'Selected team') + ' ' + bucketLabel.toLowerCase() + ' capacity is limited by ' + (constrainedMember.memberName || 'a member') + ': used ' + Number(constrainedMember.usedWeight || 0) + '%, remaining ' + Number(constrainedMember.remainingWeight || 0) + '%.'
+                        : (res.data.team?.name || 'Selected team') + ' has ' + Number(res.data.remainingWeight || 0) + '% remaining in the ' + bucketLabel.toLowerCase() + ' objective bucket per assigned member.'
                 });
             } catch (err) {
-                setCapacityInfo({ usedWeight: null, remainingWeight: null, message: '' });
+                setCapacityInfo({ usedWeight: null, remainingWeight: null, message: '', memberCapacities: [], bucketLabel: 'Team' });
             }
         }
 
         fetchTeamCapacity();
-    }, [form.category, form.cycle, goal._id, teamId]);
+    }, [form.category, form.cycle, goalId, teamId]);
 
     function handleChange(field, value) {
         setForm(function (prev) { return Object.assign({}, prev, { [field]: value }); });
@@ -150,11 +159,10 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, existingObjectives })
                     successIndicator: validation.sanitized.successIndicator,
                     weight: validation.sanitized.weight,
                     priority: form.priority,
-                    cycle: form.cycle, category: form.category,
                     visibility: form.visibility,
                 };
             }
-            await api.put('/objectives/' + goal._id, payload);
+            await api.put('/objectives/' + goalId, payload);
             if (onUpdated) onUpdated();
             onClose();
         } catch (err) {
@@ -342,18 +350,29 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, existingObjectives })
                     )}
 
                     {refinementResult && (
-                        <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff' }}>
-                            <strong>AI refinement suggestions</strong>
-                            {refinementResult.warning && <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#92400e' }}>{refinementResult.warning}</div>}
-                            <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#475569' }}>{refinementResult.recommendedFormat}</div>
-                            {(refinementResult.suggestions || []).slice(0, 3).map(function (suggestion, index) {
-                                return (
-                                    <div key={index} style={{ marginTop: '0.65rem', paddingTop: '0.65rem', borderTop: index === 0 ? 'none' : '1px solid #e2e8f0' }}>
-                                        <div style={{ fontSize: '0.85rem', color: '#0f172a' }}>{suggestion.suggestion}</div>
-                                        {suggestion.example && <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.2rem' }}>Example: {suggestion.example}</div>}
-                                    </div>
-                                );
-                            })}
+                        <div className="ai-refinement-card" style={{ marginBottom: '1rem' }}>
+                            <div className="ai-refinement-card__header">
+                                <span className="ai-refinement-card__spark">AI</span>
+                                <div>
+                                    <strong>AI refinement suggestions</strong>
+                                    <p>Sharper wording, clearer targets, and cleaner SMART success signals.</p>
+                                </div>
+                            </div>
+                            {refinementResult.warning && <div className="ai-refinement-card__warning">{refinementResult.warning}</div>}
+                            {refinementResult.recommendedFormat && <div className="ai-refinement-card__format">{refinementResult.recommendedFormat}</div>}
+                            <div className="ai-refinement-card__list">
+                                {(refinementResult.suggestions || []).slice(0, 3).map(function (suggestion, index) {
+                                    return (
+                                        <div key={index} className={'ai-refinement-card__item ai-refinement-card__item--' + ((index % 3) + 1)}>
+                                            <span className="ai-refinement-card__step">{index + 1}</span>
+                                            <div>
+                                                <div className="ai-refinement-card__suggestion">{suggestion.suggestion}</div>
+                                                {suggestion.example && <div className="ai-refinement-card__example"><span>Example</span>{suggestion.example}</div>}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
 
@@ -383,16 +402,31 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, existingObjectives })
                                 <input type="range" min="1" max={maxWeight || 1} value={Math.min(normalizeWeight(form.weight), maxWeight || 1)} onChange={function (e) { handleChange('weight', e.target.value); }} disabled={isPhaseThreeLocked} />
                                 <div className="weight-capacity-bar">
                                     <div className="weight-capacity-bar__track">
-                                        <div className="weight-capacity-bar__used" style={{ width: usedWeight + '%' }}></div>
-                                        <div className="weight-capacity-bar__new" style={{ width: Math.min(normalizeWeight(form.weight), remainingWeight) + '%', left: usedWeight + '%' }}></div>
+                                        <div className="weight-capacity-bar__used" style={{ width: Math.min(100, usedWeight) + '%' }}></div>
+                                        <div className="weight-capacity-bar__new" style={{ width: Math.min(normalizeWeight(form.weight), remainingWeight) + '%', left: Math.min(100, usedWeight) + '%' }}></div>
                                     </div>
                                     <div className="weight-capacity-bar__labels">
-                                        <span>Used: {usedWeight}%</span>
+                                        <span>{form.category === 'team' ? (capacityInfo.bucketLabel || 'Team') + ' used' : 'Individual used'}: {usedWeight}%</span>
                                         <span>This goal: {normalizeWeight(form.weight)}%</span>
                                         <span>Remaining: {Math.max(0, remainingWeight - normalizeWeight(form.weight))}%</span>
                                     </div>
                                 </div>
                                 {capacityInfo.message && <div style={{ fontSize: '0.75rem', marginTop: '4px', color: '#475569' }}>{capacityInfo.message}</div>}
+                                {form.category === 'team' && capacityInfo.memberCapacities && capacityInfo.memberCapacities.length > 0 && (
+                                    <div style={{ marginTop: '8px', display: 'grid', gap: '6px' }}>
+                                        {capacityInfo.memberCapacities.slice(0, 4).map(function (member) {
+                                            var used = Number(member.usedWeight || 0);
+                                            var remaining = Number(member.remainingWeight || 0);
+                                            var tone = used > 100 ? '#dc2626' : used >= 90 ? '#d97706' : '#059669';
+                                            return (
+                                                <div key={member.memberId} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', alignItems: 'center', fontSize: '0.72rem', color: '#475569' }}>
+                                                    <span>{member.memberName || 'Member'}: Individual {member.individualWeight || 0}% / Team {member.teamWeight || 0}% / Subteam {member.subteamWeight || 0}%</span>
+                                                    <strong style={{ color: tone }}>Used {used}% · Remaining {remaining}%</strong>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                                 {fieldErrors.weight && <div className="goal-modal__error" style={{ margin: 0 }}>{fieldErrors.weight}</div>}
                             </>
                         )}

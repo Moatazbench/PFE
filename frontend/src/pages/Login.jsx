@@ -77,7 +77,46 @@ function Login() {
       </button>
       <div className="auth-card">
         <div className="auth-header">
-          <div className="auth-logo">PT</div>
+          <div className="auth-logo auth-logo--brand" aria-hidden="true">
+            <svg className="auth-logo__svg" viewBox="0 0 240 240" role="img">
+              <defs>
+                <linearGradient id="loginLogoBg" x1="18" y1="222" x2="222" y2="18" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stopColor="#051344" />
+                  <stop offset="0.52" stopColor="#17208a" />
+                  <stop offset="1" stopColor="#6d28d9" />
+                </linearGradient>
+                <linearGradient id="loginLogoAccent" x1="52" y1="168" x2="196" y2="70" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stopColor="#5b21ff" />
+                  <stop offset="0.45" stopColor="#0284ff" />
+                  <stop offset="1" stopColor="#22e6ff" />
+                </linearGradient>
+                <linearGradient id="loginLogoText" x1="78" y1="205" x2="178" y2="205" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stopColor="#ffffff" />
+                  <stop offset="0.52" stopColor="#039bff" />
+                  <stop offset="1" stopColor="#8b5cf6" />
+                </linearGradient>
+              </defs>
+              <rect x="8" y="8" width="224" height="224" rx="44" fill="url(#loginLogoBg)" />
+              <path
+                d="M48 170V66c0-9 7-16 16-16h55c37 0 63 23 63 56 0 25-13 43-36 51v-21c12-6 19-17 19-30 0-20-17-35-43-35H76v99c0 14-10 24-28 24z"
+                fill="#fff"
+              />
+              <rect x="83" y="116" width="13" height="35" rx="3" fill="#05aaff" />
+              <rect x="105" y="103" width="13" height="44" rx="3" fill="#3468ff" />
+              <rect x="127" y="87" width="13" height="55" rx="3" fill="#7c3cff" />
+              <path
+                d="M49 171c46-9 90-30 125-62l-17-7 40-20-6 43-13-13c-33 40-75 63-129 78z"
+                fill="url(#loginLogoAccent)"
+              />
+              <path
+                d="M171 147l24-34 16 15v21c0 5-4 9-9 9h-22v38c0 5-4 9-9 9h-16c-5 0-9-4-9-9v-38z"
+                fill="#049bff"
+              />
+              <text x="46" y="215" fill="#fff" fontFamily="Arial, Helvetica, sans-serif" fontSize="19" fontWeight="800" letterSpacing="8">PERF</text>
+              <text x="123" y="215" fill="url(#loginLogoText)" fontFamily="Arial, Helvetica, sans-serif" fontSize="19" fontWeight="900" letterSpacing="3">TRACK</text>
+            </svg>
+          </div>
+          <div className="auth-brand-eyebrow">BIAT Performance Suite</div>
           <h1>Perf Track</h1>
           <p>Sign in to your account</p>
         </div>

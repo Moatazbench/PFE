@@ -2,20 +2,22 @@ import React, { useMemo, useState } from 'react';
 import { DndContext, DragOverlay, PointerSensor, closestCenter, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { KANBAN_COLUMNS, formatDuration, getTrackedSeconds, getWorkflowStage } from '../../utils/workManagement';
+import { KANBAN_COLUMNS, formatDuration, getTaskId, getTrackedSeconds, getWorkflowStage, isTerminalTask } from '../../utils/workManagement';
 
 function TaskCardItem({ task, activeTimerTaskId, savingTimer, selectedTaskId, currentUserId, onSelectTask, onStartTimer, onStopTimer, dragOverlay }) {
-  var sortable = useSortable({ id: task._id, data: { type: 'task', stage: getWorkflowStage(task) } });
+  var taskId = getTaskId(task);
+  var sortable = useSortable({ id: taskId, data: { type: 'task', stage: getWorkflowStage(task) } });
   var style = {
     transform: CSS.Transform.toString(sortable.transform),
     transition: sortable.transition,
     opacity: sortable.isDragging && !dragOverlay ? 0.35 : 1,
   };
   var tracked = getTrackedSeconds(task);
-  var isActiveTimer = activeTimerTaskId === task._id;
-  var isSelected = selectedTaskId === task._id;
+  var isActiveTimer = activeTimerTaskId === taskId;
+  var isSelected = selectedTaskId === taskId;
   var canTrackTask = String(task?.assignee?._id || task?.assignee || '') === String(currentUserId || '');
-  var anotherTaskIsActive = Boolean(activeTimerTaskId && activeTimerTaskId !== task._id);
+  var terminal = isTerminalTask(task);
+  var anotherTaskIsActive = Boolean(activeTimerTaskId && activeTimerTaskId !== taskId);
 
   function handleAction(event, callback) {
     event.preventDefault();
@@ -29,9 +31,9 @@ function TaskCardItem({ task, activeTimerTaskId, savingTimer, selectedTaskId, cu
       style={style}
       {...sortable.attributes}
       {...(dragOverlay ? {} : sortable.listeners)}
-      className={'wm-kanban-card' + (sortable.isDragging && !dragOverlay ? ' wm-kanban-card--dragging' : '') + (dragOverlay ? ' wm-kanban-card--overlay' : '') + (isSelected ? ' wm-kanban-card--selected' : '')}
+      className={'wm-kanban-card' + (sortable.isDragging && !dragOverlay ? ' wm-kanban-card--dragging' : '') + (dragOverlay ? ' wm-kanban-card--overlay' : '') + (isSelected ? ' wm-kanban-card--selected' : '') + (terminal ? ' wm-kanban-card--terminal' : '')}
       onClick={function () {
-        if (onSelectTask) onSelectTask(task._id);
+        if (onSelectTask) onSelectTask(taskId);
       }}
     >
       <div className="wm-kanban-card__top">
@@ -51,7 +53,7 @@ function TaskCardItem({ task, activeTimerTaskId, savingTimer, selectedTaskId, cu
         <button
           type="button"
           className="btn btn--secondary btn--sm"
-          disabled={!canTrackTask || isActiveTimer || anotherTaskIsActive || savingTimer}
+          disabled={!canTrackTask || terminal || isActiveTimer || anotherTaskIsActive || savingTimer}
           onPointerDown={function (event) { event.stopPropagation(); }}
           onClick={function (event) { handleAction(event, function () { onStartTimer(task, false); }); }}
         >
@@ -69,7 +71,7 @@ function TaskCardItem({ task, activeTimerTaskId, savingTimer, selectedTaskId, cu
         <button
           type="button"
           className="btn btn--ghost btn--sm"
-          disabled={!canTrackTask || isActiveTimer || anotherTaskIsActive || savingTimer}
+          disabled={!canTrackTask || terminal || isActiveTimer || anotherTaskIsActive || savingTimer}
           onPointerDown={function (event) { event.stopPropagation(); }}
           onClick={function (event) { handleAction(event, function () { onStartTimer(task, true); }); }}
         >
@@ -94,7 +96,7 @@ function Column({ column, tasks, activeTimerTaskId, savingTimer, selectedTaskId,
           <p>{tasks.length} tasks</p>
         </div>
       </header>
-      <SortableContext items={tasks.map(function (task) { return task._id; })} strategy={verticalListSortingStrategy}>
+      <SortableContext items={tasks.map(getTaskId)} strategy={verticalListSortingStrategy}>
         <div className="wm-kanban-column__body">
           {tasks.length === 0 ? (
             <div className="wm-kanban-column__empty">Drop work here</div>
@@ -102,7 +104,7 @@ function Column({ column, tasks, activeTimerTaskId, savingTimer, selectedTaskId,
             tasks.map(function (task) {
               return (
                 <TaskCardItem
-                  key={task._id}
+                  key={getTaskId(task)}
                   task={task}
                   activeTimerTaskId={activeTimerTaskId}
                   savingTimer={savingTimer}
@@ -141,7 +143,7 @@ function KanbanBoard({ tasks, onMoveTask, activeTimerTaskId, savingTimer, select
   }, [tasks]);
 
   var activeTask = useMemo(function () {
-    return (tasks || []).find(function (task) { return task._id === activeTaskId; }) || null;
+    return (tasks || []).find(function (task) { return getTaskId(task) === activeTaskId; }) || null;
   }, [activeTaskId, tasks]);
 
   function handleDragStart(event) {

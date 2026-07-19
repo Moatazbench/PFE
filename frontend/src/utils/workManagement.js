@@ -4,16 +4,30 @@ export var KANBAN_COLUMNS = [
   { key: 'in_progress', label: 'In Progress' },
   { key: 'review', label: 'Review' },
   { key: 'completed', label: 'Completed' },
+  { key: 'cancelled', label: 'Cancelled' },
 ];
 
+export function getTaskId(task) {
+  return String(task?._id || task?.id || task?.task_id || '');
+}
+
+export function isTerminalTask(task) {
+  var status = String(task?.status || '').toLowerCase();
+  var stage = String(task?.workflowStage || '').toLowerCase();
+  return ['done', 'completed', 'cancelled', 'canceled'].includes(status)
+    || ['completed', 'cancelled', 'canceled'].includes(stage);
+}
+
 export function getWorkflowStage(task) {
+  if (['cancelled', 'canceled'].includes(String(task?.status || '').toLowerCase())) return 'cancelled';
+  if (['done', 'completed'].includes(String(task?.status || '').toLowerCase())) return 'completed';
   if (task?.workflowStage) return task.workflowStage;
-  if (task?.status === 'done') return 'completed';
   if (task?.status === 'in_progress') return 'in_progress';
   return 'todo';
 }
 
 export function getStatusForStage(stage) {
+  if (stage === 'cancelled') return 'cancelled';
   if (stage === 'completed') return 'done';
   if (stage === 'in_progress' || stage === 'review') return 'in_progress';
   return 'todo';

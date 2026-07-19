@@ -106,6 +106,12 @@ function MyTeamPage() {
         }
     };
 
+    const getWeightTone = (usedWeight) => {
+        if (usedWeight > 100) return { label: `Over by ${usedWeight - 100}%`, color: '#dc2626', bg: '#fef2f2', border: '#fecaca' };
+        if (usedWeight >= 90) return { label: `${Math.max(0, 100 - usedWeight)}% remaining`, color: '#d97706', bg: '#fffbeb', border: '#fde68a' };
+        return { label: `${Math.max(0, 100 - usedWeight)}% remaining`, color: '#059669', bg: '#ecfdf5', border: '#bbf7d0' };
+    };
+
     if (loading) {
         return (
             <div className="team-dashboard dashboard-loading">
@@ -228,6 +234,11 @@ function MyTeamPage() {
                         const isMe = user && (String(memberId) === String(user.id || user._id));
                         const roleText = formatRoleLabel(member.role || 'Employee');
                         const dept = member.department || 'General';
+                        const individualUsed = Number(member.weightBreakdown?.individualWeight || 0);
+                        const teamUsed = Number(member.weightBreakdown?.teamWeight || 0);
+                        const subteamUsed = Number(member.weightBreakdown?.subteamWeight || 0);
+                        const bucketPeak = Math.max(individualUsed, teamUsed, subteamUsed);
+                        const bucketTone = getWeightTone(bucketPeak);
                         return (
                             <div key={memberId || Math.random()} className="user-card">
                                 <div className={`status-indicator status--${member.status || 'available'}`}>
@@ -276,6 +287,27 @@ function MyTeamPage() {
                                         ></div>
                                     </div>
                                 </div>
+
+                                {member.weightBreakdown && (
+                                    <div style={{ marginTop: '14px', padding: '12px', borderRadius: '10px', border: '1px solid ' + bucketTone.border, background: bucketTone.bg }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                                            <strong style={{ color: '#0f172a', fontSize: '0.86rem' }}>Objective Weight Buckets</strong>
+                                            <span style={{ color: bucketTone.color, fontWeight: 800, fontSize: '0.82rem' }}>
+                                                Highest bucket {bucketPeak}%
+                                            </span>
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '6px', fontSize: '0.74rem', color: '#475569' }}>
+                                            <span>Individual <strong>{individualUsed}%</strong><br /><small>{Math.max(0, 100 - individualUsed)}% remaining</small></span>
+                                            <span>Team <strong>{teamUsed}%</strong><br /><small>{Math.max(0, 100 - teamUsed)}% remaining</small></span>
+                                            <span>Subteam <strong>{subteamUsed}%</strong><br /><small>{Math.max(0, 100 - subteamUsed)}% remaining</small></span>
+                                        </div>
+                                        {(bucketPeak >= 90 || bucketPeak > 100) && (
+                                            <div style={{ marginTop: '7px', fontSize: '0.74rem', color: bucketTone.color, fontWeight: 700 }}>
+                                                {bucketTone.label}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
                                 <div className="user-card__stats">
                                     <div className="stat-item">

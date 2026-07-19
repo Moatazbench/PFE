@@ -4,6 +4,7 @@ const {
   sumTeamObjectiveWeights,
   getUniqueTeamObjectives,
   getTeamMemberWeightUsage,
+  calculateMemberWeightBreakdowns,
 } = require('../utils/objectiveRules');
 
 describe('objective weight rules', () => {
@@ -40,14 +41,16 @@ describe('objective weight rules', () => {
     expect(sumObjectiveWeights([assigned])).toBe(30);
   });
 
-  test('does not count rejected, cancelled, or archived objectives', () => {
-    ['rejected', 'cancelled', 'archived'].forEach((status) => {
+  test('counts rejected objectives as plan weight but excludes cancelled and archived objectives', () => {
+    expect(isWeightBearingObjective({ status: 'rejected' })).toBe(true);
+    ['cancelled', 'archived'].forEach((status) => {
       expect(isWeightBearingObjective({ status })).toBe(false);
     });
     expect(sumObjectiveWeights([
       { weight: 20, status: 'approved' },
+      { weight: 15, status: 'rejected' },
       { weight: 70, status: 'cancelled' },
-    ])).toBe(20);
+    ])).toBe(35);
   });
 
   test('deduplicates distributed team-objective copies', () => {
@@ -97,14 +100,15 @@ describe('objective weight rules', () => {
     });
   });
 
-  test('individual and team objectives share one employee 100% budget', () => {
+  test('individual and team objectives are measured in separate buckets', () => {
     const employeeObjectives = [
       { _id: 'individual-1', owner: 'member-a', category: 'individual', weight: 35, status: 'approved' },
       { _id: 'individual-2', owner: 'member-a', category: 'individual', weight: 25, status: 'approved' },
       { _id: 'team-copy', owner: 'member-a', category: 'team', weight: 40, status: 'approved' },
     ];
 
-    expect(sumObjectiveWeights(employeeObjectives)).toBe(100);
+    expect(sumObjectiveWeights(employeeObjectives.filter((objective) => objective.category !== 'team'))).toBe(60);
+    expect(sumTeamObjectiveWeights(employeeObjectives.filter((objective) => objective.category === 'team'))).toBe(40);
   });
 
   test('excludes the full distributed group while validating an edit', () => {
@@ -114,5 +118,58 @@ describe('objective weight rules', () => {
       { _id: 'c', title: 'Improve quality', cycle, team, weight: 50, status: 'approved' },
     ];
     expect(sumTeamObjectiveWeights(copies, { excludeId: 'a' })).toBe(50);
+  });
+
+  test('calculates per-employee mixed objective usage without multiplying team objectives', () => {
+    const members = ['member-a', 'member-b', 'member-c', 'member-d'];
+    const subteam = '64b000000000000000000003';
+    const objectives = [
+      { _id: 'individual-1', owner: 'member-a', category: 'individual', cycle, weight: 25, status: 'pending' },
+      { _id: 'team-a', owner: 'member-a', assignedUsers: members, title: 'Team objective', cycle, team, category: 'team', weight: 30, status: 'approved' },
+      { _id: 'team-b', owner: 'member-b', assignedUsers: members, title: 'Team objective', cycle, team, category: 'team', weight: 30, status: 'approved' },
+      { _id: 'team-c', owner: 'member-c', assignedUsers: members, title: 'Team objective', cycle, team, category: 'team', weight: 30, status: 'approved' },
+      { _id: 'team-d', owner: 'member-d', assignedUsers: members, title: 'Team objective', cycle, team, category: 'team', weight: 30, status: 'approved' },
+      { _id: 'subteam-a', owner: 'member-a', assignedUsers: ['member-a'], title: 'Subteam objective', cycle, team: subteam, category: 'team', weight: 10, status: 'validated' },
+      { _id: 'draft', owner: 'member-a', category: 'individual', cycle, weight: 20, status: 'draft' },
+      { _id: 'rejected', owner: 'member-a', category: 'individual', cycle, weight: 15, status: 'rejected' },
+      { _id: 'old-cycle', owner: 'member-a', category: 'individual', cycle: 'old-cycle', weight: 50, status: 'approved' },
+    ];
+
+    const breakdowns = calculateMemberWeightBreakdowns(objectives, members, { cycleId: cycle, teamId: team });
+
+    expect(breakdowns['member-a']).toMatchObject({
+      individualWeight: 60,
+      teamWeight: 30,
+      subteamWeight: 10,
+      individualRemainingWeight: 40,
+      teamRemainingWeight: 70,
+      subteamRemainingWeight: 90,
+      usedWeight: 60,
+      remainingWeight: 40,
+    });
+    expect(breakdowns['member-b'].usedWeight).toBe(30);
+  });
+
+  test('does not add individual, team, and subteam buckets together', () => {
+    const members = ['member-a'];
+    const subteam = '64b000000000000000000004';
+    const objectives = [
+      { _id: 'individual', owner: 'member-a', category: 'individual', cycle, weight: 65, status: 'approved' },
+      { _id: 'team', owner: 'member-a', assignedUsers: members, title: 'Team objective', cycle, team, category: 'team', weight: 100, status: 'approved' },
+      { _id: 'subteam', owner: 'member-a', assignedUsers: members, title: 'Subteam objective', cycle, team: subteam, category: 'team', weight: 45, status: 'approved' },
+    ];
+
+    const breakdowns = calculateMemberWeightBreakdowns(objectives, members, { cycleId: cycle, teamId: team });
+
+    expect(breakdowns['member-a']).toMatchObject({
+      individualWeight: 65,
+      teamWeight: 100,
+      subteamWeight: 45,
+      usedWeight: 100,
+      individualRemainingWeight: 35,
+      teamRemainingWeight: 0,
+      subteamRemainingWeight: 55,
+      isOverAllocated: false,
+    });
   });
 });

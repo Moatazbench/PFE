@@ -33,7 +33,7 @@ export default function AIDraftModal({ open, title, description, fields = [], dr
 
   return (
     <div className="modal-overlay" style={{ zIndex: 1200 }}>
-      <div className="modal form-card" style={{ maxWidth: '760px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
+      <div className="modal form-card ai-draft-modal" style={{ maxWidth: '760px', width: '95%' }}>
         <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
           <div>
             <h2 style={{ margin: 0 }}>{title || 'AI-generated draft'}</h2>
@@ -44,6 +44,7 @@ export default function AIDraftModal({ open, title, description, fields = [], dr
           <button type="button" className="close-btn" style={{ background: 'transparent', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }} onClick={onClose}>×</button>
         </div>
 
+        <div className="ai-draft-modal__body">
         {loading ? (
           <div style={{ padding: '3rem 0', textAlign: 'center', color: '#475569' }}>
             <div className="spinner" style={{ margin: '0 auto 1rem auto' }} />
@@ -84,8 +85,9 @@ export default function AIDraftModal({ open, title, description, fields = [], dr
             </div>
           </>
         )}
+        </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
+        <div className="ai-draft-modal__footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
           <button type="button" className="btn btn--outline" onClick={onRegenerate} disabled={loading}>
             Regenerate
           </button>

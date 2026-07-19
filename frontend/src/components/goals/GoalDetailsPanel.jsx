@@ -44,9 +44,17 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
     var isAssigned = detail.status === 'assigned';
     var isCompleted = detail.achievementPercent >= 100;
     var currentPhase = detail.cycle?.currentPhase || 'phase1';
+    var isPhaseTwo = currentPhase === 'phase2';
+    var canCheckIn = isActive && isPhaseTwo;
     var isPhaseThreeLocked = currentPhase === 'phase3' && !isAdmin;
     var isPhaseTwoStructuralLock = currentPhase === 'phase2' && !isAdmin;
     var structuralLockLabel = isPhaseThreeLocked ? 'Read-only in Phase 3' : isPhaseTwoStructuralLock ? 'Structural edits locked — Mid-Year Execution' : 'Editable in Phase 1';
+    var showSubGoalControls = false;
+    var assignedMembers = Array.isArray(detail.assignedUsers) ? detail.assignedUsers : [];
+    var assignedMemberList = assignedMembers.map(function (member) {
+        return member?.name || member?.email || member;
+    }).filter(Boolean);
+    var teamKind = detail.team?.parentTeam ? 'Subteam' : 'Team';
 
     useEffect(function () { fetchDetail(); fetchChildren(); }, [goal._id]);
     useEffect(function () {
@@ -167,31 +175,58 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
         );
     }
 
+    function DetailItem({ label, value, wide }) {
+        return (
+            <div className={'goal-panel__detail-item' + (wide ? ' goal-panel__detail-item--wide' : '')}>
+                <span>{label}</span>
+                <strong>{value || '—'}</strong>
+            </div>
+        );
+    }
+
     return (
-        <div className="goal-panel-overlay" onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(2px)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }}>
-            <div className="goal-panel" onClick={function (e) { e.stopPropagation(); }} style={{ width: 'min(72vw, 1100px)', height: '100vh', overflowY: 'auto', background: 'var(--bg-surface, #fff)', boxShadow: '-8px 0 40px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column', borderRadius: '16px 0 0 16px' }}>
+        <div className="goal-panel-overlay" onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.58)', backdropFilter: 'blur(3px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 'clamp(18px, 3vw, 42px)' }}>
+            <div className="goal-panel" onClick={function (e) { e.stopPropagation(); }} style={{ width: 'min(96vw, 1320px)', minHeight: 'min(760px, calc(100dvh - 64px))', maxHeight: 'calc(100dvh - 48px)', overflowY: 'auto', background: 'var(--bg-surface, #fff)', boxShadow: '0 30px 90px rgba(15,23,42,0.35)', display: 'flex', flexDirection: 'column', borderRadius: '18px' }}>
                 {/* Header */}
-                <div className="goal-panel__header" style={{ padding: '2rem 2.5rem 1.5rem', borderBottom: '1px solid var(--border-color)' }}>
+                <div className="goal-panel__header" style={{ padding: '2.25rem 3rem 1.75rem', borderBottom: '1px solid #e2e8f0', background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', marginBottom: '0.75rem' }}>
-                        <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, flex: 1 }}>{detail.title}</h2>
-                        <button className="goal-panel__close" onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#64748b' }}>✕</button>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                                <span style={{ padding: '6px 12px', borderRadius: '999px', background: '#ede9fe', color: '#5b21b6', fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase' }}>
+                                    {detail.category === 'team' ? teamKind + ' Objective' : 'Individual Objective'}
+                                </span>
+                                <span style={{ padding: '6px 12px', borderRadius: '999px', background: isPendingApproval ? '#fef3c7' : isActive ? '#dcfce7' : '#f1f5f9', color: isPendingApproval ? '#92400e' : isActive ? '#166534' : '#334155', fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase' }}>
+                                    {isPendingApproval ? 'Awaiting Review' : isActive ? 'Approved' : detail.status || 'Draft'}
+                                </span>
+                            </div>
+                            <h2 style={{ margin: 0, fontSize: 'clamp(1.85rem, 2.2vw, 2.55rem)', lineHeight: 1.1, fontWeight: 850, color: '#0f172a', letterSpacing: 0 }}>{detail.title}</h2>
+                        </div>
+                        <button className="goal-panel__close" onClick={onClose} style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #cbd5e1', fontSize: '1.2rem', cursor: 'pointer', color: '#334155', flexShrink: 0 }}>✕</button>
                     </div>
-                    <p style={{ color: '#64748b', margin: '0 0 1rem 0' }}>{detail.description || 'No description'}</p>
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-                        <span style={{ padding: '4px 10px', borderRadius: '999px', background: '#e2e8f0', color: '#334155', fontSize: '0.75rem', fontWeight: 700 }}>
-                            {currentPhase === 'phase1' ? 'Phase 1' : currentPhase === 'phase2' ? 'Phase 2' : currentPhase === 'phase3' ? 'Phase 3' : 'Closed'}
-                        </span>
-                        <span style={{ padding: '4px 10px', borderRadius: '999px', background: isPhaseThreeLocked || isPhaseTwoStructuralLock ? '#fee2e2' : '#dcfce7', color: isPhaseThreeLocked || isPhaseTwoStructuralLock ? '#b91c1c' : '#166534', fontSize: '0.75rem', fontWeight: 700 }}>
-                            {structuralLockLabel}
-                        </span>
+                    <p style={{ color: '#475569', margin: '0 0 1.5rem 0', maxWidth: '920px', fontSize: '1.02rem', lineHeight: 1.65 }}>{detail.description || 'No description provided.'}</p>
+
+                    <div className="goal-panel__summary-grid">
+                        <div className="goal-panel__summary-card goal-panel__summary-card--weight">
+                            <div>Weight</div>
+                            <strong>{detail.weight || 0}%</strong>
+                        </div>
+                        <div className="goal-panel__summary-card">
+                            <div>Status</div>
+                            <GoalStatusBadge status={detail.status} type="workflow" />
+                        </div>
+                        <div className="goal-panel__summary-card">
+                            <div>Phase</div>
+                            <strong>{currentPhase === 'phase1' ? 'Phase 1 - Planning' : currentPhase === 'phase2' ? 'Phase 2 - Check-ins' : currentPhase === 'phase3' ? 'Phase 3 - Evaluation' : 'Closed'}</strong>
+                        </div>
+                        <div className="goal-panel__summary-card">
+                            <div>Action</div>
+                            <strong style={{ color: canReview ? '#92400e' : '#0f172a' }}>{canReview ? 'Manager review' : ['revision_requested', 'rejected'].includes(detail.status) && isOwner ? 'Resubmit required' : canCheckIn ? 'Check-in available' : isActive && currentPhase === 'phase1' ? 'Check-ins open in Phase 2' : isActive && currentPhase === 'phase3' ? 'Check-ins closed' : 'No action'}</strong>
+                        </div>
                     </div>
 
                     {/* Workflow action buttons */}
                     <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-                        {/* Employee: Submit draft to team leader */}
-                        {isOwner && detail.status === 'draft' && (
-                            <button onClick={async function() { try { await api.post('/objectives/submit/' + goal._id); toast.success('Objective submitted to Team Leader!'); fetchDetail(); if (onRefresh) onRefresh(); } catch (err) { toast.error(err.response?.data?.message || 'Failed to submit'); } }} style={{ background: 'linear-gradient(135deg,#3b82f6,#60a5fa)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>📤 Submit to Team Leader</button>
-                        )}
+                        {/* First-time draft submission happens through Submit All Objectives on the main page. */}
                         {/* Employee: Resubmit after revision/rejection */}
                         {isOwner && ['revision_requested', 'rejected'].includes(detail.status) && (
                             <button onClick={handleSubmitForApproval} style={{ background: 'linear-gradient(135deg,#3b82f6,#60a5fa)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>🚀 Resubmit for Approval</button>
@@ -212,8 +247,12 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
                             <button onClick={function () { setShowEvaluateModal(true); }} style={{ background: 'linear-gradient(135deg,#7c3aed,#a78bfa)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>📊 Evaluate</button>
                         )}
                         {/* Sub-goal + Check-in */}
-                        {false && isActive && <button onClick={function () { setShowSubGoalForm(!showSubGoalForm); }}>Add Sub-objective</button>}
-                        {isActive && <button className="btn btn--primary" onClick={function () { setShowCheckInModal(true); }} style={{ marginLeft: 'auto' }}>Check-in</button>}
+                        {showSubGoalControls && isActive && <button onClick={function () { setShowSubGoalForm(!showSubGoalForm); }}>Add Sub-objective</button>}
+                        {canCheckIn ? (
+                            <button className="btn btn--primary" onClick={function () { setShowCheckInModal(true); }} style={{ marginLeft: 'auto' }}>Check-in</button>
+                        ) : isActive ? (
+                            <button className="btn btn--secondary" disabled title="Check-ins are available during Phase 2." style={{ marginLeft: 'auto', cursor: 'not-allowed' }}>Check-in locked</button>
+                        ) : null}
                     </div>
 
                     {/* Rejection / Revision notice */}
@@ -235,7 +274,7 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
                     )}
 
                     {/* Sub-goal form */}
-                    {false && showSubGoalForm && (
+                    {showSubGoalControls && showSubGoalForm && (
                         <form onSubmit={handleCreateSubGoal} style={{ background: 'var(--bg-main,#f8fafc)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '1.25rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             <strong>🔗 Create Sub-goal</strong>
                             <input type="text" placeholder="Sub-objective title *" value={subGoalForm.title} onChange={function(e) { setSubGoalForm(function(p) { return {...p, title: e.target.value}; }); }} required style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.9rem' }} />
@@ -263,7 +302,7 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
                 </div>
 
                 {/* Tabs */}
-                <div style={{ display: 'flex', gap: '0.25rem', padding: '0.75rem 2.5rem', borderBottom: '1px solid var(--border-color)', overflowX: 'auto' }}>
+                <div style={{ display: 'flex', gap: '0.45rem', padding: '0.9rem 3rem', borderBottom: '1px solid #e2e8f0', overflowX: 'auto', background: '#fff' }}>
                     {tabs.map(function (tab) {
                         return (<button key={tab} className={'goal-panel__tab' + (activeTab === tab ? ' goal-panel__tab--active' : '')} onClick={function () { setActiveTab(tab); }} style={{ whiteSpace: 'nowrap' }}>
                             {tab === 'kpis' ? 'KPIs' : tab === 'changes' ? 'Changes (' + (detail.changeRequests || []).filter(function(cr) { return cr.status === 'pending'; }).length + ')' : tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -272,23 +311,59 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
                 </div>
 
                 {/* Tab content */}
-                <div className="goal-panel__content" style={{ flex: 1, padding: '2rem 2.5rem', overflowY: 'auto' }}>
+                <div className="goal-panel__content" style={{ flex: 1, padding: '2rem 3rem 2.5rem', overflowY: 'auto', background: '#f8fafc' }}>
                     {activeTab === 'details' && (
-                        <div className="goal-panel__details">
+                        <div className="goal-panel__details goal-panel__details--desktop">
                             {detail.managerComments && ['approved', 'validated', 'rejected', 'revision_requested'].includes(detail.status) ? (
                                 <div className={'goal-panel__decision-message goal-panel__decision-message--' + detail.status}>
                                     <strong>Manager decision message</strong>
                                     <p>{detail.managerComments}</p>
                                 </div>
                             ) : null}
-                            <div className="goal-panel__detail-row"><span>Owner:</span><span>{detail.owner?.name || 'Unknown'}</span></div>
-                            <div className="goal-panel__detail-row"><span>Source:</span><span>{detail.source === 'manager_assigned' ? '📌 Manager Assigned' : '✎ Self Created'}</span></div>
-                            {detail.assignedBy && <div className="goal-panel__detail-row"><span>Assigned By:</span><span>{detail.assignedBy?.name || detail.assignedBy}</span></div>}
-                            <div className="goal-panel__detail-row"><span>Category:</span><span>{detail.category || 'individual'}</span></div>
-                            <div className="goal-panel__detail-row"><span>Weight:</span><span>{detail.weight}%</span></div>
-                            <div className="goal-panel__detail-row"><span>Visibility:</span><span>{detail.visibility || 'public'}</span></div>
-                            <div className="goal-panel__detail-row"><span>Priority:</span><span style={{ textTransform: 'capitalize' }}>{detail.priority || 'medium'}</span></div>
-                            {detail.successIndicator && <div className="goal-panel__detail-row"><span>Success Indicator:</span><span>{detail.successIndicator}</span></div>}
+                            <section className="goal-panel__detail-section">
+                                <h3>Ownership</h3>
+                                <div className="goal-panel__detail-grid">
+                                    <DetailItem label="Owner" value={detail.owner?.name || 'Unknown'} />
+                                    <DetailItem label="Source" value={detail.source === 'manager_assigned' ? 'Manager assigned' : 'Self created'} />
+                                    <DetailItem label="Assigned by" value={detail.assignedBy?.name || detail.assignedBy || 'Not assigned'} />
+                                    <DetailItem label="Visibility" value={detail.visibility || 'public'} />
+                                </div>
+                            </section>
+
+                            <section className="goal-panel__detail-section">
+                                <h3>Assignment</h3>
+                                <div className="goal-panel__detail-grid">
+                                    <DetailItem label="Category" value={detail.category || 'individual'} />
+                                    {detail.category === 'team' && <DetailItem label={'Assigned ' + teamKind} value={detail.team?.name || 'Unassigned'} />}
+                                    <DetailItem label="Weight" value={(detail.weight || 0) + '%'} />
+                                    <DetailItem label="Priority" value={detail.priority || 'medium'} />
+                                    {detail.category === 'team' && (
+                                        <div className="goal-panel__detail-item goal-panel__detail-item--wide">
+                                            <span>Assigned members</span>
+                                            <div className="goal-panel__member-list">
+                                                {assignedMemberList.length > 0 ? assignedMemberList.map(function (name) {
+                                                    return <strong key={name} className="goal-panel__member-chip">{name}</strong>;
+                                                }) : <strong>No assigned members listed</strong>}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </section>
+
+                            <section className="goal-panel__detail-section">
+                                <h3>Workflow</h3>
+                                <div className="goal-panel__detail-grid">
+                                    <div className="goal-panel__detail-item"><span>Status</span><strong><GoalStatusBadge status={detail.status} type="workflow" /></strong></div>
+                                    <DetailItem label="Phase" value={currentPhase === 'phase1' ? 'Phase 1 - Objective Planning' : currentPhase === 'phase2' ? 'Phase 2 - Check-ins' : currentPhase === 'phase3' ? 'Phase 3 - Final Evaluation' : 'Closed'} />
+                                    <DetailItem label="Submission" value={isPendingApproval ? 'Awaiting manager review' : ['revision_requested', 'rejected'].includes(detail.status) ? 'Correction required' : isActive ? 'Approved for execution' : detail.status === 'draft' ? 'Draft - submit with Submit All' : detail.status} />
+                                    <DetailItem label="Action required" value={canReview ? 'Manager review required' : ['revision_requested', 'rejected'].includes(detail.status) && isOwner ? 'Employee resubmission required' : canCheckIn ? 'Check-in available' : isActive && currentPhase === 'phase1' ? 'Check-ins available during Phase 2' : isActive && currentPhase === 'phase3' ? 'Check-in creation is closed in Phase 3' : 'No action required'} />
+                                </div>
+                            </section>
+
+                            <section className="goal-panel__detail-section goal-panel__detail-section--wide">
+                                <h3>Success Indicator</h3>
+                                <p className="goal-panel__success-text">{detail.successIndicator || 'No success indicator provided.'}</p>
+                            </section>
                         </div>
                     )}
 
@@ -317,7 +392,7 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
 
                     {activeTab === 'updates' && (
                         <div className="goal-panel__updates">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}><h3 style={{ margin: 0 }}>Progress Updates</h3>{isActive && <button className="submit-btn" style={{ padding: '6px 14px', fontSize: '0.85rem' }} onClick={function() { setShowCheckInModal(true); }}>+ Check-in</button>}</div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}><h3 style={{ margin: 0 }}>Progress Updates</h3>{canCheckIn ? <button className="submit-btn" style={{ padding: '6px 14px', fontSize: '0.85rem' }} onClick={function() { setShowCheckInModal(true); }}>+ Check-in</button> : isActive && currentPhase === 'phase3' ? <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Check-in creation closed</span> : null}</div>
                             {(detail.progressUpdates || []).length === 0 ? <p className="goal-panel__empty">No updates yet.</p> :
                                 (detail.progressUpdates || []).slice().reverse().map(function (upd, i) {
                                     return (<div key={upd._id || i} className="goal-panel__update-item"><div className="goal-panel__update-header"><strong>{upd.user?.name || 'Unknown'}</strong><span>{formatDateTime(upd.createdAt)}</span></div><p>{upd.message}</p></div>);

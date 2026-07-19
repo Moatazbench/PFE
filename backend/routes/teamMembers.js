@@ -6,7 +6,9 @@ const User = require('../models/User');
 const Task = require('../models/Task');
 const Objective = require('../models/Objective');
 const Evaluation = require('../models/Evaluation');
+const Cycle = require('../models/Cycle');
 const rateLimiter = require('../middleware/rateLimiter');
+const { calculateMemberWeightBreakdowns } = require('../utils/objectiveRules');
 
 // GET /api/team-members
 router.get('/', rateLimiter, auth, async (req, res) => {
@@ -52,7 +54,15 @@ router.get('/', rateLimiter, auth, async (req, res) => {
     }
 
     const userIds = usersToProcess.map(user => user._id);
-    const [taskStats, objectiveStats, evaluationStats] = await Promise.all([
+    const activeCycle = await Cycle.findOne({ status: { $in: ['open', 'active', 'in_progress'] } }).sort({ year: -1 }).select('_id').lean();
+    const objectiveMatch = {
+      owner: { $in: userIds },
+      status: { $nin: ['draft', 'rejected', 'cancelled', 'archived', 'deleted'] }
+    };
+    if (activeCycle) {
+      objectiveMatch.cycle = activeCycle._id;
+    }
+    const [taskStats, objectiveDocs, evaluationStats] = await Promise.all([
       Task.aggregate([
         { $match: { assignee: { $in: userIds } } },
         {
@@ -71,22 +81,7 @@ router.get('/', rateLimiter, auth, async (req, res) => {
           }
         }
       ]),
-      Objective.aggregate([
-        {
-          $match: {
-            owner: { $in: userIds },
-            status: { $nin: ['draft', 'rejected', 'cancelled', 'archived', 'locked'] }
-          }
-        },
-        {
-          $group: {
-            _id: '$owner',
-            activeObjectivesCount: { $sum: 1 },
-            totalWeightedScore: { $sum: { $ifNull: ['$weightedScore', 0] } },
-            totalWeight: { $sum: { $ifNull: ['$weight', 0] } }
-          }
-        }
-      ]),
+      Objective.find(objectiveMatch).select('_id title owner cycle category team assignedUsers status weight weightedScore').lean(),
       Evaluation.aggregate([
         {
           $match: {
@@ -107,10 +102,18 @@ router.get('/', rateLimiter, auth, async (req, res) => {
       acc[String(item._id)] = item;
       return acc;
     }, {});
-    const objectiveStatsByUser = objectiveStats.reduce((acc, item) => {
-      acc[String(item._id)] = item;
+    const objectiveStatsByUser = (objectiveDocs || []).reduce((acc, objective) => {
+      const ownerId = String(objective.owner?._id || objective.owner || '');
+      if (!ownerId) return acc;
+      if (!acc[ownerId]) {
+        acc[ownerId] = { activeObjectivesCount: 0, totalWeightedScore: 0, totalWeight: 0 };
+      }
+      acc[ownerId].activeObjectivesCount += 1;
+      acc[ownerId].totalWeightedScore += Number(objective.weightedScore || 0);
+      acc[ownerId].totalWeight += Number(objective.weight || 0);
       return acc;
     }, {});
+    const weightBreakdowns = calculateMemberWeightBreakdowns(objectiveDocs || [], userIds);
     const evaluationStatsByUser = evaluationStats.reduce((acc, item) => {
       acc[String(item._id)] = item;
       return acc;
@@ -123,6 +126,15 @@ router.get('/', rateLimiter, auth, async (req, res) => {
         const userTaskStats = taskStatsByUser[normalizedUserId] || {};
         const userObjectiveStats = objectiveStatsByUser[normalizedUserId] || {};
         const userEvaluationStats = evaluationStatsByUser[normalizedUserId] || {};
+        const weightBreakdown = weightBreakdowns[normalizedUserId] || {
+          individualWeight: 0,
+          teamWeight: 0,
+          subteamWeight: 0,
+          usedWeight: 0,
+          remainingWeight: 100,
+          isOverAllocated: false,
+          isNearLimit: false,
+        };
         const tasksCompletedCount = userTaskStats.tasksCompletedCount || 0;
         const tasksActiveCount = userTaskStats.tasksActiveCount || 0;
         const activeObjectivesCount = userObjectiveStats.activeObjectivesCount || 0;
@@ -155,7 +167,10 @@ router.get('/', rateLimiter, auth, async (req, res) => {
           tasksCompleted: tasksCompletedCount,
           activeTasks: tasksActiveCount,
           activeGoals: activeObjectivesCount,
-          pendingReviews: pendingReviewsCount
+          pendingReviews: pendingReviewsCount,
+          usedWeight: weightBreakdown.usedWeight,
+          remainingWeight: weightBreakdown.remainingWeight,
+          weightBreakdown
         };
       } catch (innerError) {
         console.error(`Error processing user ${user?._id}:`, innerError);
@@ -171,7 +186,18 @@ router.get('/', rateLimiter, auth, async (req, res) => {
           tasksCompleted: 0,
           activeTasks: 0,
           activeGoals: 0,
-          pendingReviews: 0
+          pendingReviews: 0,
+          usedWeight: 0,
+          remainingWeight: 100,
+          weightBreakdown: {
+            individualWeight: 0,
+            teamWeight: 0,
+            subteamWeight: 0,
+            usedWeight: 0,
+            remainingWeight: 100,
+            isOverAllocated: false,
+            isNearLimit: false
+          }
         };
       }
     }));

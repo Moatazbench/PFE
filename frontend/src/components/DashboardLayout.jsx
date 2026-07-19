@@ -28,7 +28,7 @@ function DashboardLayout({ children }) {
     var sidebarWidth = sidebarCollapsed ? '64px' : '260px';
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', width: '100%', backgroundColor: 'var(--shell-bg, #F8FAFC)' }}>
+        <div className="app-shell" style={{ display: 'flex', height: '100dvh', minHeight: '100dvh', width: '100%', backgroundColor: 'var(--shell-bg, #F8FAFC)', overflow: 'hidden' }}>
             {mobileOpen && (
                 <div
                     style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9998 }}
@@ -49,8 +49,10 @@ function DashboardLayout({ children }) {
                 width: `calc(100% - ${sidebarWidth})`,
                 display: 'flex',
                 flexDirection: 'column',
-                minHeight: '100vh',
+                height: '100dvh',
+                minHeight: 0,
                 minWidth: 0,
+                overflow: 'hidden',
                 transition: 'margin-left 0.3s ease, width 0.3s ease'
             }}>
                 <TopHeader onMobileToggle={function () { setMobileOpen(!mobileOpen); }} />

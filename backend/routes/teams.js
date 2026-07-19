@@ -9,6 +9,7 @@ const { createNotification } = require('../utils/notificationHelper');
 const Objective = require('../models/Objective');
 const Task = require('../models/Task');
 const FinalEvaluation = require('../models/FinalEvaluation');
+const { calculateMemberWeightBreakdowns } = require('../utils/objectiveRules');
 
 function populateTeamQuery(query) {
   return query
@@ -248,14 +249,14 @@ router.get('/:id/summary', rateLimiter, auth, async function (req, res) {
       return res.status(403).json({ success: false, message: 'Not authorized to view this team summary.' });
     }
     const memberIds = uniqueIds([team.leader?._id, ...(team.members || []).map((member) => member._id || member)]);
-    const objectiveFilter = { owner: { $in: memberIds }, status: { $nin: ['draft', 'rejected', 'cancelled', 'archived'] } };
+    const objectiveFilter = { owner: { $in: memberIds }, status: { $nin: ['draft', 'rejected', 'cancelled', 'archived', 'deleted'] } };
     const evaluationFilter = { employee_id: { $in: memberIds }, status: { $in: ['validated', 'closed'] } };
     if (req.query.cycleId) {
       objectiveFilter.cycle = req.query.cycleId;
       evaluationFilter.cycle_id = req.query.cycleId;
     }
     const [objectives, tasks, evaluations] = await Promise.all([
-      Objective.find(objectiveFilter).select('achievementPercent finalSelfPercent managerAdjustedPercent weight owner').lean(),
+      Objective.find(objectiveFilter).select('_id title cycle category team assignedUsers status achievementPercent finalSelfPercent managerAdjustedPercent weight owner').lean(),
       Task.find({ assignee: { $in: memberIds } }).select('status workflowStage').lean(),
       FinalEvaluation.find(evaluationFilter).select('final_score').lean()
     ]);
@@ -267,14 +268,9 @@ router.get('/:id/summary', rateLimiter, auth, async function (req, res) {
       ? evaluations.reduce((sum, evaluation) => sum + Number(evaluation.final_score || 0), 0) / evaluations.length
       : null;
 
-    // Weight Health Calculation
-    const weightPerMember = {};
-    memberIds.forEach(id => weightPerMember[id.toString()] = 0);
-    objectives.forEach(obj => {
-      const oid = obj.owner?.toString() || obj.owner;
-      if (oid && weightPerMember[oid] !== undefined) {
-        weightPerMember[oid] += (obj.weight || 0);
-      }
+    const memberWeightBreakdowns = calculateMemberWeightBreakdowns(objectives, memberIds, {
+      cycleId: req.query.cycleId || null,
+      teamId: team._id,
     });
 
     let overloaded = 0;
@@ -282,10 +278,15 @@ router.get('/:id/summary', rateLimiter, auth, async function (req, res) {
     let ok = 0;
     let totalWeight = 0;
 
-    Object.values(weightPerMember).forEach(w => {
-      totalWeight += w;
-      if (w > 100) overloaded++;
-      else if (w >= 80) nearLimit++;
+    Object.values(memberWeightBreakdowns).forEach(breakdown => {
+      const bucketPeak = Math.max(
+        Number(breakdown.individualWeight || 0),
+        Number(breakdown.teamWeight || 0),
+        Number(breakdown.subteamWeight || 0)
+      );
+      totalWeight += bucketPeak;
+      if (breakdown.isOverAllocated || bucketPeak > 100) overloaded++;
+      else if (bucketPeak >= 80) nearLimit++;
       else ok++;
     });
 

@@ -137,11 +137,13 @@ function GoalTable({ objectives, onGoalClick, onStatusChange, onDelete, onDuplic
 
         var ownerOfGoal = isGoalOwner(goal);
         var isAssignedByCurrentUser = goal.assignedBy && String(goal.assignedBy._id || goal.assignedBy) === String(currentUser?._id || currentUser?.id);
-        var canManageGoalMenu = onGoalClick && (ownerOfGoal || isAdmin || (isTeamLeader && isAssignedByCurrentUser));
-        var canEditGoal = onEdit && ['draft', 'revision_requested', 'rejected'].includes(goal.status) && (ownerOfGoal || isAdmin || (isTeamLeader && isAssignedByCurrentUser));
-        var canEditGoalInMenu = onEdit && (ownerOfGoal || isAdmin || (isTeamLeader && isAssignedByCurrentUser));
-        var canDeleteGoal = onDelete && (ownerOfGoal || isAdmin || (isTeamLeader && isAssignedByCurrentUser));
-        var canSubmitGoal = onSubmit && ['draft', 'revision_requested', 'rejected'].includes(goal.status) && (ownerOfGoal || isAdmin);
+        var canManageGoal = ownerOfGoal || isAdmin || (isTeamLeader && isAssignedByCurrentUser);
+        var canEditStatus = ['draft', 'revision_requested', 'rejected'].includes(goal.status);
+        var canManageGoalMenu = onGoalClick && canManageGoal;
+        var canEditGoal = onEdit && canEditStatus && canManageGoal;
+        var canEditGoalInMenu = onEdit && canManageGoal;
+        var canDeleteGoal = onDelete && canManageGoal;
+        var canSubmitGoal = onSubmit && ['revision_requested', 'rejected'].includes(goal.status) && (ownerOfGoal || isAdmin);
         var weightTone = getWeightTone(goal.weight || 0);
         var validationMessages = validationErrors && validationErrors[goal._id] ? validationErrors[goal._id] : null;
 
@@ -173,6 +175,9 @@ function GoalTable({ objectives, onGoalClick, onStatusChange, onDelete, onDuplic
                                         <span className="goals-table__team-tag" style={{background: '#e0e7ff', color: '#4338ca'}}>Team</span>
                                     ) : null}
                                     {isAssigned ? <span className="goals-table__team-tag goals-table__team-tag--assigned">ASSIGNED</span> : null}
+                                    {goal.status === 'rejected' || goal.status === 'revision_requested' ? (
+                                        <span className="goals-table__team-tag" style={{ background: '#fff7ed', color: '#c2410c' }}>Needs Revision</span>
+                                    ) : null}
                                 </div>
                             </div>
                         </div>
@@ -202,9 +207,9 @@ function GoalTable({ objectives, onGoalClick, onStatusChange, onDelete, onDuplic
                                         type="button"
                                         className="goals-table__btn goals-table__btn--submit"
                                         onClick={function () { onSubmit(goal._id); }}
-                                        title={goal.status === 'revision_requested' ? 'Resubmit' : 'Submit'}
+                                        title="Resubmit"
                                     >
-                                        {goal.status === 'revision_requested' ? 'Resubmit' : 'Submit'}
+                                        Resubmit
                                     </button>
                                 ) : null}
                                 {onValidate && canReview ? (
@@ -229,7 +234,13 @@ function GoalTable({ objectives, onGoalClick, onStatusChange, onDelete, onDuplic
                                         </button>
                                         <div className="goals-table__dropdown" onClick={function (event) { event.stopPropagation(); }}>
                                             <button type="button" onClick={function () { setOpenMenuId(null); onGoalClick(goal); }}>View details</button>
-                                            {canEditGoalInMenu ? <button type="button" onClick={function () { setOpenMenuId(null); onEdit(goal); }}>Edit objective</button> : null}
+                                            {canEditGoalInMenu ? (
+                                                canEditGoal ? (
+                                                    <button type="button" onClick={function () { setOpenMenuId(null); onEdit(goal); }}>Edit objective</button>
+                                                ) : (
+                                                    <button type="button" disabled title="Only draft or sent-back objectives can be edited.">Edit locked</button>
+                                                )
+                                            ) : null}
                                             {canDeleteGoal ? <button type="button" className="goals-table__dropdown--danger" onClick={function () { setOpenMenuId(null); onDelete(goal._id); }}>Delete objective</button> : null}
                                         </div>
                                     </div>

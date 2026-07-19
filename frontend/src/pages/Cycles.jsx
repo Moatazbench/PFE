@@ -24,7 +24,6 @@ function Cycles() {
   });
   var [error, setError] = useState('');
 
-  // Role checks
   var isAdmin = user.role === 'ADMIN';
   var isHR = user.role === 'HR';
   var isManager = user.role === 'TEAM_LEADER';
@@ -51,7 +50,6 @@ function Cycles() {
     return function() { clearTimeout(timer); };
   }, [searchTerm]);
 
-  // Search is now handled by the backend
   var filteredCycles = cycles;
 
   function openCreateModal() {
@@ -74,25 +72,21 @@ function Cycles() {
     setShowModal(true); setError(''); setFieldErrors({});
   }
 
-  // ========== FRONTEND VALIDATION ==========
   function validateForm() {
     var errors = {};
 
-    // Name validation
     if (!formData.name || !formData.name.trim()) {
       errors.name = 'Cycle name is required.';
     } else if (formData.name.trim().length > 100) {
       errors.name = 'Cycle name cannot exceed 100 characters.';
     }
 
-    // Year validation
     if (!formData.year) {
       errors.year = 'Year is required.';
     } else if (formData.year < 2020 || formData.year > 2050) {
       errors.year = 'Year must be between 2020 and 2050.';
     }
 
-    // Phase date pairs validation
     var phaseFields = [
       { startKey: 'phase1Start', endKey: 'phase1End', label: 'Phase 1' },
       { startKey: 'phase2Start', endKey: 'phase2End', label: 'Phase 2' },
@@ -113,7 +107,6 @@ function Cycles() {
       }
     });
 
-    // Every role must respect the same strict, non-overlapping phase order.
     var orderedDates = [
         { key: 'phase1Start', label: 'Phase 1 Start' },
         { key: 'phase1End', label: 'Phase 1 End' },
@@ -232,7 +225,6 @@ async function handlePhasePreCheck(cycle) {
     return 'Closed';
   }
 
-  // Helper: render inline field error
   function renderFieldError(fieldKey) {
     if (!fieldErrors[fieldKey]) return null;
     return (
@@ -242,7 +234,6 @@ async function handlePhasePreCheck(cycle) {
     );
   }
 
-  // Helper: input border style when error
   function inputErrorStyle(fieldKey) {
     if (!fieldErrors[fieldKey]) return {};
     return { borderColor: 'var(--shell-danger, #EF4444)', boxShadow: '0 0 0 2px rgba(239,68,68,0.15)' };
@@ -257,29 +248,27 @@ async function handlePhasePreCheck(cycle) {
 
   return (
     <div>
-      {/* Page Header */}
       <div className="ent-page-header">
         <div>
           <h1 className="ent-page-header__title">Annual Cycles</h1>
           <p className="ent-page-header__subtitle">Configure and manage the 3-phase performance lifecycle</p>
         </div>
-        <div className="ent-page-header__actions" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          {/* Search Bar */}
-          <div style={{ position: 'relative' }}>
+        <div className="ent-page-header__actions cycles-header-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div className="cycles-toolbar-search">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--shell-text-tertiary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
             <input
               type="text"
-              className="ent-input"
+              className="ent-input cycles-search-input"
               placeholder="Search cycles..."
               value={searchTerm}
               onChange={function(e) { setSearchTerm(e.target.value); }}
-              style={{ paddingLeft: '36px', width: '220px', fontSize: '13px' }}
+              style={{ paddingLeft: '38px', fontSize: '13px' }}
             />
           </div>
           {canCreate && (
-            <button onClick={openCreateModal} className="ent-btn ent-btn--primary">
+            <button onClick={openCreateModal} className="ent-btn ent-btn--primary cycles-create-btn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Create Cycle
             </button>
@@ -287,7 +276,6 @@ async function handlePhasePreCheck(cycle) {
         </div>
       </div>
 
-      {/* Cycles Grid */}
       {filteredCycles.length === 0 ? (
         <div className="ent-empty">
           <div className="ent-empty__icon">
@@ -313,7 +301,6 @@ async function handlePhasePreCheck(cycle) {
 
             return (
               <div key={cycle._id} className={'ent-card' + (isActive ? ' ent-card--active' : '')}>
-                {/* Card Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                   <div>
                     <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700, letterSpacing: '-0.3px' }}>{cycle.name}</h3>
@@ -324,7 +311,6 @@ async function handlePhasePreCheck(cycle) {
                   </span>
                 </div>
 
-                {/* Phase Timeline */}
                 <div style={{ background: 'var(--shell-bg-inset)', borderRadius: 'var(--shell-radius-md)', padding: '14px 16px', marginBottom: '20px' }}>
                   {phases.map(function(p) {
                     var isCurrent = isActive && cycle.currentPhase === p.key;
@@ -340,7 +326,6 @@ async function handlePhasePreCheck(cycle) {
                   })}
                 </div>
 
-                {/* Actions — role-scoped */}
                 {canEdit && (
                   <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--shell-border)', paddingTop: '16px' }}>
                     <button className="ent-btn ent-btn--secondary ent-btn--sm" onClick={function(){openEditModal(cycle);}}>Edit</button>
@@ -361,38 +346,50 @@ async function handlePhasePreCheck(cycle) {
         </div>
       )}
 
-      {/* CREATE / EDIT MODAL */}
       {showModal && (
         <div className="ent-modal-overlay">
-          <div className="ent-modal">
-            {/* Modal Header */}
+          <div className="ent-modal cycle-modal">
             <div className="ent-modal__header">
-              <h3 className="ent-modal__title">{editingCycle ? 'Edit Cycle' : 'Create Cycle'}</h3>
+              <div>
+                <p className="cycle-modal__eyebrow">Annual cycle setup</p>
+                <h3 className="ent-modal__title">{editingCycle ? 'Edit Cycle' : 'Create Cycle'}</h3>
+              </div>
               <button className="ent-modal__close" onClick={function(){setShowModal(false);}}>×</button>
             </div>
 
-            {/* Modal Body */}
             <div className="ent-modal__body">
               {error && <div className="ent-alert ent-alert--danger" style={{marginBottom:'16px'}}>{error}</div>}
 
-              <form id="cycleForm" onSubmit={handleSubmit}>
-                <div style={{ marginBottom:'20px' }}>
+              <form id="cycleForm" className="cycle-form" onSubmit={handleSubmit}>
+                <section className="cycle-form__section">
+                  <div>
+                    <h4 className="cycle-form__section-title">Cycle information</h4>
+                    <p className="cycle-form__section-note">Name the annual review cycle and confirm the working year.</p>
+                  </div>
+                  <div className="cycle-form__field cycle-form__field--wide">
                   <label className="ent-label">Cycle Name <span style={{color:'var(--shell-danger)'}}>*</span></label>
                   <input className="ent-input" type="text" value={formData.name} onChange={function(e){setFormData({...formData, name: e.target.value}); if (fieldErrors.name) { var fe = {...fieldErrors}; delete fe.name; setFieldErrors(fe); }}} placeholder="e.g., Annual Performance 2026" style={inputErrorStyle('name')} />
                   {renderFieldError('name')}
-                </div>
+                  </div>
 
-                <div style={{ display:'flex', gap:'16px', marginBottom:'24px' }}>
-                  <div style={{ flex:1 }}>
+                  <div className="cycle-form__grid">
+                  <div className="cycle-form__field">
                     <label className="ent-label">Year <span style={{color:'var(--shell-danger)'}}>*</span></label>
                     <input className="ent-input" type="number" value={formData.year} onChange={function(e){setFormData({...formData, year: e.target.value}); if (fieldErrors.year) { var fe = {...fieldErrors}; delete fe.year; setFieldErrors(fe); }}} min="2020" max="2050" style={inputErrorStyle('year')} />
                     {renderFieldError('year')}
                   </div>
-                  <div style={{ flex:1 }}>
+                  <div className="cycle-form__field">
                     <label className="ent-label">Status</label>
                     <select className="ent-select" value={formData.status} disabled><option value="draft">Draft</option><option value="in_progress">In Progress</option><option value="closed">Closed</option></select>
                   </div>
-                </div>
+                  </div>
+                </section>
+
+                <section className="cycle-form__section">
+                  <div>
+                    <h4 className="cycle-form__section-title">Phase windows</h4>
+                    <p className="cycle-form__section-note">Dates must be sequential and non-overlapping.</p>
+                  </div>
 
                 {[
                   { label: 'Phase 1: Goal Setting', startKey: 'phase1Start', endKey: 'phase1End', color: '#4F46E5' },
@@ -400,15 +397,15 @@ async function handlePhasePreCheck(cycle) {
                   { label: 'Phase 3: End-Year Review', startKey: 'phase3Start', endKey: 'phase3End', color: '#7C3AED' }
                 ].map(function(phase) {
                   return (
-                    <div key={phase.label} style={{ background:'var(--shell-bg-inset)', borderRadius:'var(--shell-radius-md)', padding:'16px', marginBottom:'12px', borderLeft:'3px solid ' + phase.color }}>
-                      <h4 style={{ margin:'0 0 12px', fontSize:'13px', fontWeight:600, color: phase.color }}>{phase.label}</h4>
-                      <div style={{ display:'flex', gap:'12px' }}>
-                        <div style={{ flex:1 }}>
+                    <div key={phase.label} className="cycle-phase-card" style={{ borderLeftColor: phase.color }}>
+                      <h4 className="cycle-phase-card__title" style={{ color: phase.color }}>{phase.label}</h4>
+                      <div className="cycle-phase-card__grid">
+                        <div className="cycle-form__field">
                           <label className="ent-label" style={{ fontSize:'12px', color:'var(--shell-text-secondary)' }}>Start</label>
                           <input className="ent-input" type="date" required value={formData[phase.startKey]} onChange={function(e){var upd = {}; upd[phase.startKey] = e.target.value; setFormData({...formData, ...upd}); if (fieldErrors[phase.startKey]) { var fe = {...fieldErrors}; delete fe[phase.startKey]; setFieldErrors(fe); }}} style={inputErrorStyle(phase.startKey)} />
                           {renderFieldError(phase.startKey)}
                         </div>
-                        <div style={{ flex:1 }}>
+                        <div className="cycle-form__field">
                           <label className="ent-label" style={{ fontSize:'12px', color:'var(--shell-text-secondary)' }}>End</label>
                           <input className="ent-input" type="date" required value={formData[phase.endKey]} onChange={function(e){var upd = {}; upd[phase.endKey] = e.target.value; setFormData({...formData, ...upd}); if (fieldErrors[phase.endKey]) { var fe = {...fieldErrors}; delete fe[phase.endKey]; setFieldErrors(fe); }}} style={inputErrorStyle(phase.endKey)} />
                           {renderFieldError(phase.endKey)}
@@ -417,10 +414,10 @@ async function handlePhasePreCheck(cycle) {
                     </div>
                   );
                 })}
+                </section>
               </form>
             </div>
 
-            {/* Modal Footer */}
             <div className="ent-modal__footer">
               {isAdmin && editingCycle && editingCycle.currentPhase === 'phase2' && (
                 <button type="button" className="ent-btn ent-btn--secondary" onClick={function(){handleRollback(editingCycle);}}>
@@ -434,7 +431,6 @@ async function handlePhasePreCheck(cycle) {
         </div>
       )}
 
-      {/* Phase Advance Confirmation */}
       {confirmPhaseStart && (function() {
         var cycle = confirmPhaseStart;
         var nextPhase = 'phase1';

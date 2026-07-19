@@ -14,7 +14,9 @@ import {
   formatDurationLong,
   getStatusForStage,
   getTrackedSeconds,
+  getTaskId,
   getWorkflowStage,
+  isTerminalTask,
 } from '../utils/workManagement';
 import '../work-management.css';
 
@@ -181,10 +183,14 @@ function TasksPage() {
   var [searchQuery, setSearchQuery] = useState('');
   var [statusFilter, setStatusFilter] = useState('ALL');
   var [priorityFilter, setPriorityFilter] = useState('ALL');
+  var [objectiveFilter, setObjectiveFilter] = useState('ALL');
+  var [cycleFilter, setCycleFilter] = useState('CURRENT');
+  var [dueFilter, setDueFilter] = useState('ALL');
   var [currentPage, setCurrentPage] = useState(1);
   var ITEMS_PER_PAGE = 10;
   var [tasks, setTasks] = useState([]);
   var [objectives, setObjectives] = useState([]);
+  var [activeCycle, setActiveCycle] = useState(null);
   var [stats, setStats] = useState(null);
   var [selectedTaskId, setSelectedTaskId] = useState('');
   var [loading, setLoading] = useState(true);
@@ -200,11 +206,11 @@ function TasksPage() {
 
   useEffect(function () {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, priorityFilter]);
+  }, [searchQuery, statusFilter, priorityFilter, objectiveFilter, cycleFilter, dueFilter]);
 
   useEffect(function () {
     setSelectedTaskId(function (currentTaskId) {
-      var hasCurrentSelection = currentTaskId && tasks.some(function (task) { return task._id === currentTaskId; });
+      var hasCurrentSelection = currentTaskId && tasks.some(function (task) { return getTaskId(task) === currentTaskId; });
       if (hasCurrentSelection) return currentTaskId;
 
       var activeTaskId = timer.timerState?.taskId || '';
@@ -212,7 +218,7 @@ function TasksPage() {
         return activeTaskId;
       }
 
-      return tasks[0]?._id || '';
+      return getTaskId(tasks[0]) || '';
     });
   }, [tasks, timer.timerState?.taskId]);
 
@@ -231,26 +237,26 @@ function TasksPage() {
 
   async function fetchLinkableObjectives() {
     try {
-      var responses = await Promise.allSettled([
-        api.get('/objectives/my'),
-        api.get('/objectives'),
-      ]);
+      var cycleResponse = await api.getCached('/cycles', undefined, { ttl: 60000, cacheKey: 'cycles:tasks-active' });
+      var cycles = Array.isArray(cycleResponse.data) ? cycleResponse.data : [];
+      var currentCycle = cycles
+        .filter(function (cycle) { return ['open', 'active', 'in_progress'].includes(cycle.status) && cycle.currentPhase !== 'closed'; })
+        .sort(function (left, right) { return Number(right.year || 0) - Number(left.year || 0); })[0] || null;
 
-      var merged = [];
-      responses.forEach(function (result) {
-        if (result.status === 'fulfilled') {
-          merged = merged.concat(normalizeObjectiveResponse(result.value.data));
-        }
-      });
+      setActiveCycle(currentCycle);
 
-      var currentUserId = String(user?._id || user?.id || '');
+      if (!currentCycle?._id) {
+        setObjectives([]);
+        return;
+      }
+
+      var response = await api.get('/objectives', { params: { cycle: currentCycle._id } });
+      var merged = normalizeObjectiveResponse(response.data);
       var deduped = [];
       var seen = {};
 
       merged.forEach(function (objective) {
         if (!objective || !objective._id || seen[objective._id]) return;
-        var ownerId = String(objective.owner?._id || objective.owner || '');
-        if (ownerId !== currentUserId) return;
         seen[objective._id] = true;
         deduped.push(objective);
       });
@@ -302,7 +308,29 @@ function TasksPage() {
   }
 
   function canTrackTask(task) {
-    return String(task?.assignedBy?._id || task?.assignedBy || '') === currentUserId;
+    return String(task?.assignee?._id || task?.assignee || '') === currentUserId;
+  }
+
+  function getTaskCycleId(task) {
+    return String(task?.linkedGoal?.cycle?._id || task?.linkedGoal?.cycle || '');
+  }
+
+  function getTaskLinkedGoalId(task) {
+    return String(task?.linkedGoal?._id || task?.linkedGoal || task?.objective_id?._id || task?.objective_id || '');
+  }
+
+  function isTaskOverdue(task) {
+    return Boolean(task?.dueDate && new Date(task.dueDate) < new Date() && !isTerminalTask(task));
+  }
+
+  function isDueSoon(task) {
+    if (!task?.dueDate || isTerminalTask(task)) return false;
+    var due = new Date(task.dueDate);
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var limit = new Date(today);
+    limit.setDate(limit.getDate() + 7);
+    return due >= today && due <= limit;
   }
 
   function handleCreate() {
@@ -320,15 +348,19 @@ function TasksPage() {
   }
 
   function handleEdit(task) {
+    var taskId = getTaskId(task);
+    var linkedGoalId = getTaskLinkedGoalId(task);
+    var canKeepLinkedGoal = linkedGoalId && objectives.some(function (objective) { return String(objective._id) === linkedGoalId; });
+
     dispatchWorkflow({
       type: 'OPEN_EDIT_FORM',
-      taskId: task._id,
+      taskId: taskId,
       form: {
         title: task.title,
         description: task.description || '',
         priority: task.priority || 'medium',
         dueDate: task.dueDate ? task.dueDate.substring(0, 10) : '',
-        linkedGoal: task.linkedGoal?._id || '',
+        linkedGoal: canKeepLinkedGoal ? linkedGoalId : '',
         notes: task.notes || '',
         workflowStage: getWorkflowStage(task),
         progress: Number(task.progress || (task.status === 'done' ? 100 : 0)),
@@ -351,10 +383,13 @@ function TasksPage() {
   }
 
   function handleStatusChange(id, status) {
-    var workflowStage = status === 'done' ? 'completed' : status === 'in_progress' ? 'in_progress' : 'todo';
+    var workflowStage = status === 'done' ? 'completed' : status === 'cancelled' ? 'cancelled' : status === 'in_progress' ? 'in_progress' : 'todo';
+    var activeTimerWasStopped = timer.timerState?.taskId === id && ['done', 'completed', 'cancelled', 'canceled'].includes(status);
+    if (activeTimerWasStopped) stopAndPersistTimer();
+
     setTasks(function (currentTasks) {
       var nextTasks = currentTasks.map(function (task) {
-        return task._id === id ? Object.assign({}, task, { status: status, workflowStage: workflowStage, progress: status === 'done' ? 100 : task.progress }) : task;
+        return getTaskId(task) === id ? Object.assign({}, task, { status: status, workflowStage: workflowStage, progress: status === 'done' ? 100 : task.progress }) : task;
       });
       setStats(buildLocalStats(nextTasks));
       return nextTasks;
@@ -363,6 +398,7 @@ function TasksPage() {
     api.put('/tasks/' + id, { status: status, workflowStage: workflowStage })
       .then(function () {
         if (status === 'done') toast.success('Task marked as done');
+        if (status === 'cancelled') toast.success('Task cancelled');
       })
       .catch(function () {
         toast.error('Failed to update task');
@@ -373,10 +409,12 @@ function TasksPage() {
   function handleMoveTask(taskId, workflowStage) {
     var status = getStatusForStage(workflowStage);
     var nextProgress = workflowStage === 'completed' ? 100 : undefined;
+    var activeTimerWasStopped = timer.timerState?.taskId === taskId && ['completed', 'cancelled', 'canceled'].includes(workflowStage);
+    if (activeTimerWasStopped) stopAndPersistTimer();
 
     setTasks(function (currentTasks) {
       var nextTasks = currentTasks.map(function (task) {
-        if (task._id !== taskId) return task;
+        if (getTaskId(task) !== taskId) return task;
         return Object.assign({}, task, {
           workflowStage: workflowStage,
           status: status,
@@ -409,13 +447,17 @@ function TasksPage() {
   }
 
   function startTimerForTask(task, focusMode) {
+    if (isTerminalTask(task)) {
+      toast.warning('Completed or cancelled tasks cannot be tracked');
+      return;
+    }
     if (!canTrackTask(task)) {
       toast.warning('You can only track time on tasks assigned to you');
       return;
     }
 
     var startResult = timer.startTimer({
-      taskId: task._id,
+      taskId: getTaskId(task),
       taskTitle: task.title,
       linkedGoal: task?.linkedGoal?.title || '',
       taskSnapshot: task,
@@ -430,11 +472,11 @@ function TasksPage() {
       } else {
         toast.info('This task is already being tracked');
       }
-      setSelectedTaskId(startResult?.timer?.taskId || task._id);
+      setSelectedTaskId(startResult?.timer?.taskId || getTaskId(task));
       return;
     }
 
-    setSelectedTaskId(task._id);
+    setSelectedTaskId(getTaskId(task));
     toast.success(focusMode ? 'Focus session started' : 'Timer started');
   }
 
@@ -442,7 +484,7 @@ function TasksPage() {
     var session = timer.stopTimer();
     if (!session) return;
 
-    var trackedTask = tasks.find(function (task) { return task._id === session.taskId; }) || session.taskSnapshot;
+    var trackedTask = tasks.find(function (task) { return getTaskId(task) === session.taskId; }) || session.taskSnapshot;
     if (!trackedTask) {
       toast.error('Unable to locate task for this session');
       return;
@@ -453,7 +495,7 @@ function TasksPage() {
     setSelectedTaskId(session.taskId);
     setTasks(function (currentTasks) {
       return currentTasks.map(function (task) {
-        return task._id === session.taskId ? updatedTask : task;
+        return getTaskId(task) === session.taskId ? updatedTask : task;
       });
     });
 
@@ -467,6 +509,15 @@ function TasksPage() {
       setSavingTimer(false);
     });
   }
+
+  useEffect(function () {
+    var activeTaskId = timer.timerState?.taskId || '';
+    if (!activeTaskId) return;
+    var activeTask = tasks.find(function (task) { return getTaskId(task) === activeTaskId; });
+    if (!activeTask || !isTerminalTask(activeTask)) return;
+    stopAndPersistTimer();
+    toast.info('Timer stopped because the task is completed or cancelled');
+  }, [tasks, timer.timerState?.taskId]);
 
   function buildTimeEntryPayload(session) {
     return {
@@ -507,6 +558,8 @@ function TasksPage() {
     function persistTimerOnExit(useKeepalive) {
       if (exitPersistenceRef.current) return;
       if (!timerRef.current?.timerState?.taskId) return;
+      var runningTask = tasks.find(function (task) { return getTaskId(task) === timerRef.current.timerState.taskId; }) || timerRef.current.timerState.taskSnapshot;
+      if (isTerminalTask(runningTask)) return;
 
       var session = timerRef.current.consumeTimer({ skipState: true });
       if (!session) return;
@@ -532,7 +585,7 @@ function TasksPage() {
       window.removeEventListener('pagehide', handlePageHide);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, []);
+  }, [tasks]);
 
   var productivity = useMemo(function () {
     return buildProductivitySummary(tasks);
@@ -563,16 +616,25 @@ function TasksPage() {
           t.linkedGoal?.title,
         ].some(function (value) { return String(value || '').toLowerCase().includes(lower); });
       }
-      var matchesStatus = statusFilter === 'ALL' || t.status === statusFilter || t.workflowStage === statusFilter;
+      var matchesStatus = statusFilter === 'ALL' || t.status === statusFilter || t.workflowStage === statusFilter || getWorkflowStage(t) === statusFilter;
       var matchesPriority = priorityFilter === 'ALL' || t.priority === priorityFilter;
-      return matchesSearch && matchesStatus && matchesPriority;
+      var matchesObjective = objectiveFilter === 'ALL' || getTaskLinkedGoalId(t) === objectiveFilter;
+      var matchesCycle = cycleFilter === 'ALL'
+        || (cycleFilter === 'CURRENT' && (!activeCycle?._id || getTaskCycleId(t) === String(activeCycle._id) || !getTaskCycleId(t)))
+        || getTaskCycleId(t) === cycleFilter;
+      var matchesDue = dueFilter === 'ALL'
+        || (dueFilter === 'OVERDUE' && isTaskOverdue(t))
+        || (dueFilter === 'DUE_SOON' && isDueSoon(t))
+        || (dueFilter === 'NO_DUE_DATE' && !t.dueDate);
+      return matchesSearch && matchesStatus && matchesPriority && matchesObjective && matchesCycle && matchesDue;
     });
     return filtered.sort(function (left, right) {
+      if (isTerminalTask(left) !== isTerminalTask(right)) return isTerminalTask(left) ? 1 : -1;
       var leftDue = left?.dueDate ? new Date(left.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
       var rightDue = right?.dueDate ? new Date(right.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
       return leftDue - rightDue;
     });
-  }, [tasks, searchQuery, statusFilter, priorityFilter]);
+  }, [tasks, searchQuery, statusFilter, priorityFilter, objectiveFilter, cycleFilter, dueFilter, activeCycle]);
 
   var totalPages = Math.ceil(filteredTasks.length / ITEMS_PER_PAGE) || 1;
   var paginatedTasks = filteredTasks.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -583,7 +645,7 @@ function TasksPage() {
       return visibleTasks[0] || null;
     }
 
-    return visibleTasks.find(function (task) { return task._id === selectedTaskId; })
+    return visibleTasks.find(function (task) { return getTaskId(task) === selectedTaskId; })
       || (timer.timerState?.taskId === selectedTaskId ? timer.timerState.taskSnapshot || null : null);
   }, [selectedTaskId, timer.timerState, visibleTasks]);
 
@@ -599,7 +661,88 @@ function TasksPage() {
     return getLastWorkedAt(selectedTask);
   }, [selectedTask]);
 
-  var selectedTaskIsActive = Boolean(selectedTask?._id && timer.timerState?.taskId === selectedTask._id);
+  var selectedTaskIsActive = Boolean(getTaskId(selectedTask) && timer.timerState?.taskId === getTaskId(selectedTask));
+  var activeVisibleTasks = visibleTasks.filter(function (task) { return !isTerminalTask(task); });
+  var completedVisibleTasks = visibleTasks.filter(function (task) { return isTerminalTask(task); });
+  var cycleOptions = Array.from(new Map(tasks.map(function (task) {
+    var cycle = task?.linkedGoal?.cycle;
+    var cycleId = getTaskCycleId(task);
+    if (!cycleId) return null;
+    return [cycleId, { id: cycleId, label: cycle?.name || cycle?.year || 'Linked cycle' }];
+  }).filter(Boolean))).map(function (entry) { return entry[1]; });
+
+  function renderTaskItem(task) {
+    var taskId = getTaskId(task);
+    var isOverdue = isTaskOverdue(task);
+    var trackedSeconds = getTrackedSeconds(task);
+    var isActiveTimer = timer.timerState?.taskId === taskId;
+    var terminal = isTerminalTask(task);
+    var taskCanTrack = canTrackTask(task) && !terminal;
+    var anotherTaskIsActive = Boolean(timer.timerState?.taskId && timer.timerState.taskId !== taskId);
+
+    return (
+      <article
+        key={taskId}
+        className={'task-item wm-task-item' + (isOverdue ? ' task-item--overdue' : '') + (terminal ? ' wm-task-item--terminal' : '') + (selectedTaskId === taskId ? ' wm-task-item--selected' : '')}
+        onClick={function () { setSelectedTaskId(taskId); }}
+      >
+        <div className="task-item__left">
+          <span className="task-item__status-dot" style={{ background: statusColors[task.status] || '#6b7280' }} />
+          <div className="task-item__info">
+            <div className="wm-task-item__top">
+              <span className="task-item__title">{task.title}</span>
+              <span className="wm-stage-pill">{String(getWorkflowStage(task)).replace(/_/g, ' ')}</span>
+            </div>
+            {task.description ? <p className="task-item__desc">{task.description}</p> : null}
+            <div className="task-item__meta">
+              <span className="status-chip" style={{ background: priorityColors[task.priority] + '18', color: priorityColors[task.priority] }}>{task.priority}</span>
+              {task.assignee ? <span className="meta-tag">{task.assignee.name}</span> : null}
+              {task.dueDate ? <span className={'meta-tag' + (isOverdue ? ' meta-tag--danger' : '')}>{new Date(task.dueDate).toLocaleDateString()}</span> : null}
+              {task.linkedGoal ? <span className="meta-tag">{task.linkedGoal.title}</span> : null}
+              {task.linkedGoal?.cycle ? <span className="meta-tag">{task.linkedGoal.cycle.name || task.linkedGoal.cycle.year}</span> : null}
+              <span className="meta-tag">Tracked {formatDuration(trackedSeconds)}</span>
+              <span className="meta-tag">Progress {Number(task.status === 'todo' ? 0 : task.progress || (task.status === 'done' ? 100 : 0))}%</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="task-item__right wm-task-item__actions">
+          <div className="wm-task-item__timer">
+            <button
+              className="btn btn--secondary btn--sm"
+              onClick={function (event) { event.stopPropagation(); startTimerForTask(task, false); }}
+              disabled={!taskCanTrack || isActiveTimer || anotherTaskIsActive || savingTimer}
+              title={terminal ? 'Completed or cancelled tasks cannot be tracked' : ''}
+            >
+              Start Timer
+            </button>
+            <button
+              className="btn btn--primary btn--sm"
+              onClick={function (event) { event.stopPropagation(); stopAndPersistTimer(); }}
+              disabled={!canTrackTask(task) || !isActiveTimer || savingTimer}
+            >
+              {savingTimer && isActiveTimer ? 'Saving...' : 'Stop Timer'}
+            </button>
+            <button
+              className="btn btn--ghost btn--sm"
+              onClick={function (event) { event.stopPropagation(); startTimerForTask(task, true); }}
+              disabled={!taskCanTrack || isActiveTimer || anotherTaskIsActive || savingTimer}
+              title={terminal ? 'Completed or cancelled tasks cannot be tracked' : ''}
+            >
+              Focus Session
+            </button>
+          </div>
+          <select className="form-select form-select--sm" value={task.status} onClick={function (event) { event.stopPropagation(); }} onChange={function (event) { handleStatusChange(taskId, event.target.value); }}>
+            {Object.entries(statusLabels).map(function (entry) {
+              return <option key={entry[0]} value={entry[0]}>{entry[1]}</option>;
+            })}
+          </select>
+          <button className="btn btn--ghost btn--sm" onClick={function (event) { event.stopPropagation(); handleEdit(task); }}>Edit</button>
+          <button className="btn btn--ghost btn--sm" style={{ color: '#ef4444' }} onClick={function (event) { event.stopPropagation(); dispatchWorkflow({ type: 'REQUEST_DELETE', taskId: taskId }); }}>Delete</button>
+        </div>
+      </article>
+    );
+  }
 
   return (
     <div className="page-container wm-page">
@@ -694,6 +837,7 @@ function TasksPage() {
                 <option value="in_progress">In Progress</option>
                 <option value="review">Review</option>
                 <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
               </select>
             </div>
             <div className="form-group">
@@ -715,6 +859,7 @@ function TasksPage() {
                   return <option key={objective._id} value={objective._id}>{objective.title}</option>;
                 })}
               </select>
+              <small className="wm-field-hint">{activeCycle ? 'Only goals from ' + activeCycle.name + ' are available.' : 'No active cycle goals are available.'}</small>
             </div>
           </div>
           <div className="form-actions">
@@ -726,16 +871,17 @@ function TasksPage() {
         </div>
       ) : null}
 
-      <div className="filters-container" style={{ marginBottom: '1rem', display: 'flex', gap: '1rem' }}>
+      <div className="filters-container wm-task-filters">
         <input 
           type="text" 
           placeholder="Search tasks..." 
           value={searchQuery} 
           onChange={(e) => setSearchQuery(e.target.value)} 
-          style={{ flex: 1, padding: '0.5rem' }}
+          className="form-input"
         />
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ padding: '0.5rem' }}>
+        <select className="form-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="ALL">All Statuses</option>
+          <option value="backlog">Backlog</option>
           <option value="todo">To Do</option>
           <option value="in_progress">In Progress</option>
           <option value="review">Review</option>
@@ -743,12 +889,31 @@ function TasksPage() {
           <option value="completed">Completed</option>
           <option value="cancelled">Cancelled</option>
         </select>
-        <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} style={{ padding: '0.5rem' }}>
+        <select className="form-select" value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
           <option value="ALL">All Priorities</option>
           <option value="low">Low</option>
           <option value="medium">Medium</option>
           <option value="high">High</option>
           <option value="urgent">Urgent</option>
+        </select>
+        <select className="form-select" value={objectiveFilter} onChange={(e) => setObjectiveFilter(e.target.value)}>
+          <option value="ALL">All Linked Goals</option>
+          {objectives.map(function (objective) {
+            return <option key={objective._id} value={objective._id}>{objective.title}</option>;
+          })}
+        </select>
+        <select className="form-select" value={cycleFilter} onChange={(e) => setCycleFilter(e.target.value)}>
+          <option value="CURRENT">Current Cycle</option>
+          <option value="ALL">All Cycles</option>
+          {cycleOptions.map(function (cycle) {
+            return <option key={cycle.id} value={cycle.id}>{cycle.label}</option>;
+          })}
+        </select>
+        <select className="form-select" value={dueFilter} onChange={(e) => setDueFilter(e.target.value)}>
+          <option value="ALL">All Due Dates</option>
+          <option value="OVERDUE">Overdue</option>
+          <option value="DUE_SOON">Due in 7 days</option>
+          <option value="NO_DUE_DATE">No due date</option>
         </select>
       </div>
 
@@ -790,72 +955,18 @@ function TasksPage() {
             </Suspense>
           ) : (
             <div className="task-list wm-task-list">
-              {visibleTasks.map(function (task) {
-                var isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !['done', 'cancelled'].includes(task.status);
-                var trackedSeconds = getTrackedSeconds(task);
-                var isActiveTimer = timer.timerState?.taskId === task._id;
-                var taskCanTrack = canTrackTask(task);
-                var anotherTaskIsActive = Boolean(timer.timerState?.taskId && timer.timerState.taskId !== task._id);
-                return (
-                  <article
-                    key={task._id}
-                    className={'task-item wm-task-item' + (isOverdue ? ' task-item--overdue' : '') + (selectedTaskId === task._id ? ' wm-task-item--selected' : '')}
-                    onClick={function () { setSelectedTaskId(task._id); }}
-                  >
-                    <div className="task-item__left">
-                      <span className="task-item__status-dot" style={{ background: statusColors[task.status] || '#6b7280' }} />
-                      <div className="task-item__info">
-                        <div className="wm-task-item__top">
-                          <span className="task-item__title">{task.title}</span>
-                          <span className="wm-stage-pill">{String(getWorkflowStage(task)).replace(/_/g, ' ')}</span>
-                        </div>
-                        {task.description ? <p className="task-item__desc">{task.description}</p> : null}
-                        <div className="task-item__meta">
-                          <span className="status-chip" style={{ background: priorityColors[task.priority] + '18', color: priorityColors[task.priority] }}>{task.priority}</span>
-                          {task.assignee ? <span className="meta-tag">{task.assignee.name}</span> : null}
-                          {task.dueDate ? <span className={'meta-tag' + (isOverdue ? ' meta-tag--danger' : '')}>{new Date(task.dueDate).toLocaleDateString()}</span> : null}
-                          {task.linkedGoal ? <span className="meta-tag">{task.linkedGoal.title}</span> : null}
-                          <span className="meta-tag">Tracked {formatDuration(trackedSeconds)}</span>
-                          <span className="meta-tag">Progress {Number(task.status === 'todo' ? 0 : task.progress || (task.status === 'done' ? 100 : 0))}%</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="task-item__right wm-task-item__actions">
-                      <div className="wm-task-item__timer">
-                        <button
-                          className="btn btn--secondary btn--sm"
-                          onClick={function () { startTimerForTask(task, false); }}
-                          disabled={!taskCanTrack || isActiveTimer || anotherTaskIsActive || savingTimer}
-                        >
-                          Start Timer
-                        </button>
-                        <button
-                          className="btn btn--primary btn--sm"
-                          onClick={stopAndPersistTimer}
-                          disabled={!taskCanTrack || !isActiveTimer || savingTimer}
-                        >
-                          {savingTimer && isActiveTimer ? 'Saving...' : 'Stop Timer'}
-                        </button>
-                        <button
-                          className="btn btn--ghost btn--sm"
-                          onClick={function () { startTimerForTask(task, true); }}
-                          disabled={!taskCanTrack || isActiveTimer || anotherTaskIsActive || savingTimer}
-                        >
-                          Focus Session
-                        </button>
-                      </div>
-                      <select className="form-select form-select--sm" value={task.status} onChange={function (event) { handleStatusChange(task._id, event.target.value); }}>
-                        {Object.entries(statusLabels).map(function (entry) {
-                          return <option key={entry[0]} value={entry[0]}>{entry[1]}</option>;
-                        })}
-                      </select>
-                      <button className="btn btn--ghost btn--sm" onClick={function () { handleEdit(task); }}>Edit</button>
-                      <button className="btn btn--ghost btn--sm" style={{ color: '#ef4444' }} onClick={function () { dispatchWorkflow({ type: 'REQUEST_DELETE', taskId: task._id }); }}>Delete</button>
-                    </div>
-                  </article>
-                );
-              })}
+              {activeVisibleTasks.length > 0 ? (
+                <div className="wm-task-section">
+                  <div className="wm-task-section__header"><strong>Active work</strong><span>{activeVisibleTasks.length} tasks</span></div>
+                  {activeVisibleTasks.map(renderTaskItem)}
+                </div>
+              ) : null}
+              {completedVisibleTasks.length > 0 ? (
+                <div className="wm-task-section wm-task-section--terminal">
+                  <div className="wm-task-section__header"><strong>Completed and cancelled</strong><span>{completedVisibleTasks.length} tasks</span></div>
+                  {completedVisibleTasks.map(renderTaskItem)}
+                </div>
+              ) : null}
             </div>
           )}
 

@@ -6,7 +6,12 @@ function normalizeWeight(value) {
 
 function isWeightBearingObjective(objective) {
   const status = objective?.status || 'draft';
-  return !['rejected', 'cancelled', 'archived'].includes(status);
+  return !['cancelled', 'archived', 'deleted'].includes(status);
+}
+
+function isAllocationWeightBearingObjective(objective) {
+  const status = String(objective?.status || 'draft').toLowerCase();
+  return !['cancelled', 'archived', 'deleted'].includes(status);
 }
 
 function getObjectiveTeamId(objective) {
@@ -116,13 +121,82 @@ function getTeamMemberWeightUsage(objectives, memberIds, options) {
   return usage;
 }
 
+function calculateMemberWeightBreakdowns(objectives, memberIds, options = {}) {
+  const members = (memberIds || []).map(String).filter(Boolean);
+  const selectedTeamId = options.teamId ? String(options.teamId) : '';
+  const cycleId = options.cycleId ? String(options.cycleId) : '';
+  const breakdowns = {};
+
+  members.forEach(function (memberId) {
+    breakdowns[memberId] = {
+      memberId,
+      individualWeight: 0,
+      teamWeight: 0,
+      subteamWeight: 0,
+      usedWeight: 0,
+      remainingWeight: 100,
+      individualRemainingWeight: 100,
+      teamRemainingWeight: 100,
+      subteamRemainingWeight: 100,
+      isOverAllocated: false,
+      isNearLimit: false,
+    };
+  });
+
+  const scopedObjectives = (Array.isArray(objectives) ? objectives : []).filter(function (objective) {
+    if (!objective || !isAllocationWeightBearingObjective(objective)) return false;
+    if (!cycleId) return true;
+    const objectiveCycleId = objective.cycle?._id || objective.cycle || '';
+    return String(objectiveCycleId) === cycleId;
+  });
+
+  scopedObjectives.forEach(function (objective) {
+    if (objective.category === 'team') return;
+    const ownerId = String(objective.owner?._id || objective.owner || '');
+    if (Object.prototype.hasOwnProperty.call(breakdowns, ownerId)) {
+      breakdowns[ownerId].individualWeight += normalizeWeight(objective.weight);
+    }
+  });
+
+  getUniqueTeamObjectives(scopedObjectives.filter(function (objective) {
+    return objective.category === 'team';
+  }), options).forEach(function (objective) {
+    const assignedIds = Array.isArray(objective.assignedUsers) && objective.assignedUsers.length > 0
+      ? objective.assignedUsers.map(String)
+      : [objective.owner?._id || objective.owner].filter(Boolean).map(String);
+    const objectiveTeamId = getObjectiveTeamId(objective);
+    const bucket = selectedTeamId && objectiveTeamId && objectiveTeamId !== selectedTeamId ? 'subteamWeight' : 'teamWeight';
+
+    assignedIds.forEach(function (memberId) {
+      if (Object.prototype.hasOwnProperty.call(breakdowns, memberId)) {
+        breakdowns[memberId][bucket] += normalizeWeight(objective.weight);
+      }
+    });
+  });
+
+  Object.keys(breakdowns).forEach(function (memberId) {
+    const breakdown = breakdowns[memberId];
+    breakdown.individualRemainingWeight = Math.max(0, 100 - breakdown.individualWeight);
+    breakdown.teamRemainingWeight = Math.max(0, 100 - breakdown.teamWeight);
+    breakdown.subteamRemainingWeight = Math.max(0, 100 - breakdown.subteamWeight);
+    breakdown.usedWeight = Math.max(breakdown.individualWeight, breakdown.teamWeight, breakdown.subteamWeight);
+    breakdown.remainingWeight = Math.max(0, 100 - breakdown.usedWeight);
+    breakdown.isOverAllocated = breakdown.individualWeight > 100 || breakdown.teamWeight > 100 || breakdown.subteamWeight > 100;
+    breakdown.isNearLimit = !breakdown.isOverAllocated && breakdown.usedWeight >= 80 && breakdown.usedWeight <= 100;
+  });
+
+  return breakdowns;
+}
+
 module.exports = {
   normalizeWeight,
   isWeightBearingObjective,
+  isAllocationWeightBearingObjective,
   sumObjectiveWeights,
   getObjectiveTeamId,
   getTeamObjectiveGroupKey,
   getUniqueTeamObjectives,
   sumTeamObjectiveWeights,
   getTeamMemberWeightUsage,
+  calculateMemberWeightBreakdowns,
 };

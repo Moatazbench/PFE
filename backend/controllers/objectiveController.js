@@ -11,6 +11,7 @@ const {
   getUniqueTeamObjectives,
   sumTeamObjectiveWeights,
 } = require('../utils/objectiveRules');
+const { filterVisibleObjectives } = require('../utils/objectiveVisibility');
 
 // ========== HELPERS ==========
 function calculateKpiProgress(kpis) {
@@ -119,6 +120,17 @@ async function getTeamForLeader(leaderId) {
   return Team.findOne({ leader: leaderId });
 }
 
+async function getTeamMemberIdsForVisibility(user) {
+  if (!user || user.role !== 'TEAM_LEADER') return [];
+  const team = await getTeamForLeader(user.id || user._id);
+  return (team?.members || []).map(String);
+}
+
+async function canViewObjective(objective, user) {
+  const teamMemberIds = await getTeamMemberIdsForVisibility(user);
+  return filterVisibleObjectives([objective], user, { teamMemberIds }).length > 0;
+}
+
 function isTeamMember(team, userId) {
   return team && team.members.some(m => String(m) === String(userId));
 }
@@ -150,6 +162,25 @@ function canModifyObjective(objective, user) {
   const isLeader = user.role === 'TEAM_LEADER';
   const isAssignedBy = objective.assignedBy && String(objective.assignedBy) === userId;
   return isAdmin || isOwner || (isLeader && isAssignedBy);
+}
+
+function getObjectiveWeightBreakdown(objectives) {
+  const items = Array.isArray(objectives) ? objectives : [];
+  const individualWeight = sumObjectiveWeights(items.filter((objective) => objective.category !== 'team'));
+  const teamObjectives = items.filter((objective) => objective.category === 'team' && !(objective.team && objective.team.parentTeam));
+  const subteamObjectives = items.filter((objective) => objective.category === 'team' && objective.team && objective.team.parentTeam);
+  const teamWeight = sumTeamObjectiveWeights(teamObjectives);
+  const subteamWeight = sumTeamObjectiveWeights(subteamObjectives);
+
+  return {
+    individualWeight,
+    teamWeight,
+    subteamWeight,
+    individualRemainingWeight: Math.max(0, 100 - individualWeight),
+    teamRemainingWeight: Math.max(0, 100 - teamWeight),
+    subteamRemainingWeight: Math.max(0, 100 - subteamWeight),
+    isOverAllocated: individualWeight > 100 || teamWeight > 100 || subteamWeight > 100,
+  };
 }
 
 function useCompactObjectiveView(req) {
@@ -194,34 +225,52 @@ async function getTeamWeightCapacity(teamId, cycleId, options) {
   }
 
   const memberIds = (team.members || []).map((member) => String(member._id || member));
+  const selectedTeamId = String(team._id);
+  const bucketType = team.parentTeam ? 'subteam' : 'team';
   const query = {
     cycle: cycleId,
-    status: { $nin: ['rejected', 'cancelled', 'archived'] },
-    owner: { $in: memberIds }
+    status: { $nin: ['cancelled', 'archived'] },
+    owner: { $in: memberIds },
+    category: 'team',
+    team: team._id,
   };
 
   const objectives = await Objective.find(query).select('_id title cycle category weight owner assignedUsers team status');
-  const weightOptions = options && options.excludeObjectiveId ? { excludeId: options.excludeObjectiveId } : undefined;
-  const individualObjectives = objectives.filter((objective) => objective.category !== 'team');
-  const teamObjectives = getUniqueTeamObjectives(
-    objectives.filter((objective) => objective.category === 'team'),
-    weightOptions
-  );
+  const memberUsage = {};
+  memberIds.forEach(function (memberId) {
+    memberUsage[memberId] = 0;
+  });
+
+  getUniqueTeamObjectives(objectives, {
+    excludeId: options && options.excludeObjectiveId ? options.excludeObjectiveId : null,
+  }).forEach(function (objective) {
+    const assignedIds = Array.isArray(objective.assignedUsers) && objective.assignedUsers.length > 0
+      ? objective.assignedUsers.map(String)
+      : [objective.owner?._id || objective.owner].filter(Boolean).map(String);
+
+    assignedIds.forEach(function (memberId) {
+      if (Object.prototype.hasOwnProperty.call(memberUsage, memberId)) {
+        memberUsage[memberId] += normalizeWeight(objective.weight);
+      }
+    });
+  });
+
   const memberCapacities = (team.members || []).map(function (member) {
     const memberId = String(member._id || member);
-    const individualWeight = sumObjectiveWeights(individualObjectives.filter((objective) => String(objective.owner) === memberId));
-    const teamWeight = teamObjectives.reduce(function (sum, objective) {
-      const assignedIds = Array.isArray(objective.assignedUsers) && objective.assignedUsers.length > 0
-        ? objective.assignedUsers.map(String)
-        : memberIds;
-      return assignedIds.includes(memberId) ? sum + normalizeWeight(objective.weight) : sum;
-    }, 0);
-    const usedWeight = individualWeight + teamWeight;
+    const usedWeight = memberUsage[memberId] || 0;
+    const remainingWeight = Math.max(0, 100 - usedWeight);
     return {
       memberId,
       memberName: member.name || '',
+      individualWeight: 0,
+      teamWeight: bucketType === 'team' ? usedWeight : 0,
+      subteamWeight: bucketType === 'subteam' ? usedWeight : 0,
+      selectedBucket: bucketType,
+      selectedTeamId,
       usedWeight,
-      remainingWeight: Math.max(0, 100 - usedWeight),
+      remainingWeight,
+      isOverAllocated: usedWeight > 100,
+      isNearLimit: usedWeight >= 80 && usedWeight <= 100,
     };
   });
   const usedWeight = memberCapacities.reduce(function (maximum, member) {
@@ -234,6 +283,7 @@ async function getTeamWeightCapacity(teamId, cycleId, options) {
   return {
     error: false,
     team,
+    bucketType,
     usedWeight,
     remainingWeight,
     memberCapacities,
@@ -342,12 +392,24 @@ exports.createObjective = async (req, res) => {
     } else {
       const exists = await Objective.findOne({ owner: ownerId, cycle, title });
       if (exists) return res.status(409).json({ success: false, message: 'Duplicate objective title within this cycle.' });
-      const count = await Objective.countDocuments({ owner: ownerId, cycle });
+      const count = await Objective.countDocuments({
+        owner: ownerId,
+        cycle,
+        category: { $ne: 'team' },
+        status: { $nin: ['cancelled', 'archived'] },
+      });
       if (count >= 10) return res.status(400).json({ success: false, message: 'Maximum objectives reached for this cycle.' });
 
-      const existingObjs = await Objective.find({ owner: ownerId, cycle, status: { $nin: ['rejected', 'cancelled', 'archived'] } });
-      const usedWeight = sumObjectiveWeights(existingObjs);
-      if (usedWeight + normalizedWeight > 100) return res.status(400).json({ success: false, message: 'Total weight would exceed 100%. Currently used: ' + usedWeight + '%, trying to add: ' + normalizedWeight + '%.' });
+      const existingObjs = await Objective.find({ owner: ownerId, cycle, status: { $nin: ['cancelled', 'archived'] } })
+        .populate('team', 'parentTeam');
+      const existingBreakdown = getObjectiveWeightBreakdown(existingObjs);
+      const usedWeight = existingBreakdown.individualWeight;
+      if (usedWeight + normalizedWeight > 100) {
+        return res.status(400).json({
+          success: false,
+          message: 'Individual objective weight would exceed 100%. Individual: ' + existingBreakdown.individualWeight + '%, remaining: ' + existingBreakdown.individualRemainingWeight + '%. Team objectives are tracked separately.'
+        });
+      }
 
       const objective = await Objective.create({
         owner: ownerId, cycle, category: 'individual', title, description, successIndicator, weight: normalizedWeight, priority: priority || 'medium',
@@ -385,7 +447,7 @@ exports.getMyObjectives = async (req, res) => {
         .select('title owner cycle team category status priority achievementPercent updatedAt createdAt weight kpis')
         .populate('owner', 'name role profileImage')
         .populate('cycle', 'name year status currentPhase')
-        .populate('team', 'name parentTeam leader')
+        .populate('team', 'name parentTeam leader members')
         .lean();
     } else {
       objectivesQuery = objectivesQuery
@@ -428,6 +490,7 @@ exports.getObjectives = async (req, res) => {
     const targetUserId = req.query.targetUserId;
     const currentUserId = req.user.id || req.user._id;
     let filter = { ...baseFilter };
+    let teamMemberIds = [];
     if (targetUserId) {
       const isSelf = String(targetUserId) === String(currentUserId);
       if (!isSelf && !['ADMIN', 'HR', 'TEAM_LEADER'].includes(req.user.role)) {
@@ -438,6 +501,7 @@ exports.getObjectives = async (req, res) => {
         if (!leaderTeam || !isTeamMember(leaderTeam, targetUserId)) {
           return res.status(403).json({ success: false, message: 'You can only access objectives for your own team.' });
         }
+        teamMemberIds = (leaderTeam.members || []).map(String);
       }
       filter.owner = targetUserId;
     } else {
@@ -446,6 +510,7 @@ exports.getObjectives = async (req, res) => {
         else {
           const team = await getTeamForLeader(req.user.id);
           if (!team) return res.json({ success: true, objectives: [] });
+          teamMemberIds = (team.members || []).map(String);
           filter.owner = { $in: [req.user.id, ...team.members] };
         }
       } else if (req.user.role === 'COLLABORATOR') {
@@ -473,10 +538,11 @@ exports.getObjectives = async (req, res) => {
     }
 
     const objectives = await objectivesQuery;
+    const visibleObjectives = filterVisibleObjectives(objectives, req.user, { teamMemberIds });
 
     if (targetUserId && req.query.cycle) {
-      const individualObjectives = objectives.filter(o => o.category === 'individual');
-      const teamObjectives = objectives.filter(o => o.category === 'team');
+      const individualObjectives = visibleObjectives.filter(o => o.category === 'individual');
+      const teamObjectives = visibleObjectives.filter(o => o.category === 'team');
       const uniqueTeamObjectives = getUniqueTeamObjectives(teamObjectives);
       let indScoreSum = 0, teamScoreSum = 0;
       individualObjectives.forEach(o => { 
@@ -488,30 +554,32 @@ exports.getObjectives = async (req, res) => {
       const indScoreRaw = Number(indScoreSum.toFixed(2));
       const teamScoreRaw = Number(teamScoreSum.toFixed(2));
       const compositeScore = Number(Math.min(indScoreRaw + teamScoreRaw, 100).toFixed(2));
-      const indWeight = sumObjectiveWeights(individualObjectives);
-      const tmWeight = sumTeamObjectiveWeights(teamObjectives);
-      const totalWeight = indWeight + tmWeight;
+      const weightBreakdown = getObjectiveWeightBreakdown(visibleObjectives);
       const validation = {
         individualCount: individualObjectives.length, minIndividualObjectives: 3,
-        isValidIndividualCount: individualObjectives.length >= 3, individualWeight: indWeight,
-        isValidIndividualWeight: indWeight <= 100,
+        isValidIndividualCount: individualObjectives.length >= 3, individualWeight: weightBreakdown.individualWeight,
+        isValidIndividualWeight: weightBreakdown.individualWeight <= 100,
         individualValidatedCount: individualObjectives.filter(o => ['validated', 'approved'].includes(o.status)).length,
-        individualRejectedCount: individualObjectives.filter(o => o.status === 'rejected').length,
-        individualScore: indScoreRaw, individualRemainingWeight: Math.max(0, 100 - totalWeight),
-        canAddMoreIndividual: individualObjectives.length < 7 && totalWeight < 100,
-        teamCount: uniqueTeamObjectives.length, teamWeight: tmWeight, isValidTeamWeight: tmWeight <= 100,
+        individualRejectedCount: individualObjectives.filter(o => ['rejected', 'revision_requested'].includes(o.status)).length,
+        individualScore: indScoreRaw, individualRemainingWeight: weightBreakdown.individualRemainingWeight,
+        canAddMoreIndividual: individualObjectives.length < 7 && weightBreakdown.individualWeight < 100,
+        teamCount: uniqueTeamObjectives.length, teamWeight: weightBreakdown.teamWeight, subteamWeight: weightBreakdown.subteamWeight, isValidTeamWeight: weightBreakdown.teamWeight <= 100,
         teamValidatedCount: uniqueTeamObjectives.filter(o => ['validated', 'approved'].includes(o.status)).length,
-        teamScore: teamScoreRaw, teamRemainingWeight: Math.max(0, 100 - totalWeight),
-        canAddMoreTeam: uniqueTeamObjectives.length < 7 && totalWeight < 100,
+        teamScore: teamScoreRaw, teamRemainingWeight: weightBreakdown.teamRemainingWeight,
+        subteamRemainingWeight: weightBreakdown.subteamRemainingWeight,
+        canAddMoreTeam: uniqueTeamObjectives.length < 7 && weightBreakdown.teamWeight < 100,
         requiredCategoryTotal: 100, compositeScore,
         totalRejected: individualObjectives.filter(o => o.status === 'rejected').length + uniqueTeamObjectives.filter(o => o.status === 'rejected').length,
-        totalWeight,
-        isValidTotalWeight: totalWeight === 100,
-        allValidated: objectives.length > 0 && objectives.every(o => ['validated', 'approved', 'evaluated'].includes(o.status)),
+        totalWeight: weightBreakdown.individualWeight,
+        usedWeight: weightBreakdown.individualWeight,
+        remainingWeight: weightBreakdown.individualRemainingWeight,
+        isOverAllocated: weightBreakdown.isOverAllocated,
+        isValidTotalWeight: weightBreakdown.individualWeight === 100,
+        allValidated: visibleObjectives.length > 0 && visibleObjectives.every(o => ['validated', 'approved', 'evaluated'].includes(o.status)),
       };
       return res.json({ success: true, individualObjectives, teamObjectives, validation });
     }
-    res.json({ success: true, objectives });
+    res.json({ success: true, objectives: visibleObjectives });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
@@ -523,16 +591,18 @@ exports.getObjectiveById = async (req, res) => {
       .populate('team', 'name parentTeam leader')
       .populate('parentObjective', 'title').populate('comments.user', 'name email')
       .populate('progressUpdates.user', 'name email').populate('assignedBy', 'name email')
+      .populate('assignedUsers', 'name email role')
       .populate('changeRequests.requestedBy', 'name email').populate('changeRequests.resolvedBy', 'name email')
       .populate('activityLog.user', 'name email').populate('evaluatedBy', 'name email');
     if (!objective) return res.status(404).json({ success: false, message: 'Objective not found.' });
-    if (req.user.role === 'ADMIN' || req.user.role === 'HR') return res.json({ success: true, objective });
-    if (req.user.role === 'COLLABORATOR' && String(objective.owner._id) === String(req.user.id)) return res.json({ success: true, objective });
+    let teamMemberIds = [];
     if (req.user.role === 'TEAM_LEADER') {
       const team = await getTeamForLeader(req.user.id);
-      if (team && (String(req.user.id) === String(objective.owner._id) || isTeamMember(team, objective.owner._id))) return res.json({ success: true, objective });
+      teamMemberIds = (team?.members || []).map(String);
     }
-    return res.status(403).json({ success: false, message: 'Forbidden' });
+    const visibleObjectives = filterVisibleObjectives([objective], req.user, { teamMemberIds });
+    if (visibleObjectives.length === 0) return res.status(403).json({ success: false, message: 'Forbidden' });
+    return res.json({ success: true, objective });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
@@ -546,7 +616,8 @@ exports.getPendingValidation = async (req, res) => {
       owner: { $in: team.members },
       status: { $in: ['pending', 'submitted', 'pending_approval'] },
     }).populate('owner', 'name email').populate('cycle', 'name year status');
-    res.json(pending);
+    const visiblePending = filterVisibleObjectives(pending, req.user, { teamMemberIds: (team.members || []).map(String) });
+    res.json(visiblePending);
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
@@ -560,7 +631,8 @@ exports.getPendingChangeRequests = async (req, res) => {
       owner: { $in: team.members },
       'changeRequests.status': 'pending',
     }).populate('owner', 'name email').populate('cycle', 'name year status');
-    res.json({ success: true, objectives });
+    const visibleObjectives = filterVisibleObjectives(objectives, req.user, { teamMemberIds: (team.members || []).map(String) });
+    res.json({ success: true, objectives: visibleObjectives });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
@@ -575,7 +647,8 @@ exports.getCompletedAwaitingEvaluation = async (req, res) => {
       status: { $in: ['approved', 'validated'] },
       evaluationRating: '',
     }).populate('owner', 'name email').populate('cycle', 'name year status');
-    res.json({ success: true, objectives });
+    const visibleObjectives = filterVisibleObjectives(objectives, req.user, { teamMemberIds: (team.members || []).map(String) });
+    res.json({ success: true, objectives: visibleObjectives });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
@@ -722,7 +795,7 @@ exports.updateObjective = async (req, res) => {
       const targetObjectives = await Objective.find({
         owner: targetUser,
         cycle: objective.cycle,
-        status: { $nin: ['rejected', 'cancelled', 'archived'] },
+        status: { $nin: ['cancelled', 'archived'] },
       });
       const reassignedWeight = weight !== undefined ? normalizeWeight(weight) : normalizeWeight(objective.weight);
       if (sumObjectiveWeights(targetObjectives) + reassignedWeight > 100) {
@@ -762,8 +835,9 @@ exports.updateObjective = async (req, res) => {
         const siblings = await Objective.find({ 
           owner: objective.owner, 
           cycle: objective.cycle, 
+          category: { $ne: 'team' },
           _id: { $ne: objective._id },
-          status: { $nin: ['rejected', 'cancelled', 'archived'] }
+          status: { $nin: ['cancelled', 'archived'] }
         });
         const totalWeight = sumObjectiveWeights(siblings) + normalizeWeight(weight);
         if (totalWeight > 100) return res.status(400).json({ success: false, message: 'Total weight would exceed 100%.' });
@@ -830,6 +904,7 @@ exports.getTeamWeightCapacity = async (req, res) => {
     return res.json({
       success: true,
       team: { _id: capacity.team._id, name: capacity.team.name },
+      bucketType: capacity.bucketType,
       usedWeight: capacity.usedWeight,
       remainingWeight: capacity.remainingWeight,
       memberCapacities: capacity.memberCapacities,
@@ -847,6 +922,9 @@ exports.submitObjective = async (req, res) => {
 
     if (String(objective.owner) !== String(req.user.id) && String(objective.owner) !== String(req.user._id) && req.user.role !== 'ADMIN') return res.status(403).json({ success: false, message: 'Only the owner can submit.' });
     if (!['draft', 'revision_requested', 'rejected'].includes(objective.status)) return res.status(400).json({ success: false, message: 'Only draft/revision-requested goals can be submitted.' });
+    if (objective.status === 'draft' && (objective.category || 'individual') === 'individual' && objective.source !== 'manager_assigned') {
+      return res.status(400).json({ success: false, message: 'Use Submit All Objectives for first-time draft submissions.' });
+    }
 
     // Phase enforcement: only enforce phase1 for initial draft submissions
     // Revised/rejected goals can be resubmitted in any active phase
@@ -864,6 +942,23 @@ exports.submitObjective = async (req, res) => {
     // Find the employee's team and resolve the team leader
     const team = await getTeamForUser(req.user.id);
     if (!team || !team.leader) return res.status(400).json({ success: false, message: 'You are not assigned to a team with a leader. Cannot submit.' });
+
+    if ((objective.category || 'individual') === 'individual') {
+      const otherObjectives = await Objective.find({
+        owner: objective.owner,
+        cycle: objective.cycle,
+        _id: { $ne: objective._id },
+        status: { $nin: ['cancelled', 'archived'] },
+      }).populate('team', 'parentTeam');
+      const breakdown = getObjectiveWeightBreakdown(otherObjectives);
+      const projectedUsedWeight = breakdown.individualWeight + normalizeWeight(objective.weight);
+      if (projectedUsedWeight > 100) {
+        return res.status(400).json({
+          success: false,
+          message: `Resubmission would exceed individual objective capacity. Individual: ${projectedUsedWeight}%. Team objectives are tracked separately.`
+        });
+      }
+    }
 
     const oldStatus = objective.status;
     objective.status = 'pending';
@@ -916,15 +1011,22 @@ exports.submitObjectives = async (req, res) => {
           'pending_approval',
           'approved',
           'validated',
+          'evaluated',
         ]
       }
-    });
+    }).populate('team', 'parentTeam');
 
     const submittableObjectives = objectives.filter(function (objective) {
-      return ['draft', 'revision_requested', 'rejected'].includes(objective.status);
+      return objective.status === 'draft';
+    });
+    const correctionObjectives = objectives.filter(function (objective) {
+      return ['rejected', 'revision_requested'].includes(objective.status);
+    });
+    const alreadySubmittedObjectives = objectives.filter(function (objective) {
+      return ['pending', 'submitted', 'pending_approval', 'approved', 'validated', 'evaluated'].includes(objective.status);
     });
 
-    if (submittableObjectives.length === 0 && objectives.length > 0) {
+    if (correctionObjectives.length === 0 && submittableObjectives.length === 0 && objectives.length > 0) {
       return res.json({
         success: true,
         alreadySubmitted: true,
@@ -934,8 +1036,47 @@ exports.submitObjectives = async (req, res) => {
     }
 
     if (objectives.length < 3 || objectives.length > 10) return res.status(400).json({ success: false, message: 'You must have between 3 and 10 individual objectives.' });
-    const totalWeight = objectives.reduce((sum, obj) => sum + (obj.weight || 0), 0);
-    if (totalWeight !== 100) return res.status(400).json({ success: false, message: `Total weight must equal 100. Current: ${totalWeight}` });
+    if (correctionObjectives.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `${correctionObjectives.length} objective${correctionObjectives.length === 1 ? ' needs' : 's need'} revision. Edit and resubmit ${correctionObjectives.length === 1 ? 'it' : 'them'} individually.`
+      });
+    }
+    if (alreadySubmittedObjectives.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `${alreadySubmittedObjectives.length} objective${alreadySubmittedObjectives.length === 1 ? ' is' : 's are'} already submitted or finalized. Submit All is only for first-time draft objectives.`
+      });
+    }
+    if (submittableObjectives.length === 0) return res.status(400).json({ success: false, message: 'There are no draft objectives ready for first-time submission.' });
+    const invalidObjective = submittableObjectives.find((objective) => {
+      const title = String(objective.title || '').trim();
+      const successIndicator = String(objective.successIndicator || '').trim();
+      const description = String(objective.description || '');
+      const weight = normalizeWeight(objective.weight);
+      return title.length < 5 || successIndicator.length < 10 || description.length > 500 || weight < 1 || weight > 100;
+    });
+    if (invalidObjective) {
+      const title = String(invalidObjective.title || 'Untitled objective').trim() || 'Untitled objective';
+      const issues = [];
+      if (String(invalidObjective.title || '').trim().length < 5) issues.push('title must be at least 5 characters');
+      if (String(invalidObjective.successIndicator || '').trim().length < 10) issues.push('success indicator must be at least 10 characters');
+      if (String(invalidObjective.description || '').length > 500) issues.push('description cannot exceed 500 characters');
+      const weight = normalizeWeight(invalidObjective.weight);
+      if (weight < 1 || weight > 100) issues.push('weight must be between 1% and 100%');
+      return res.status(400).json({
+        success: false,
+        message: `Cannot submit "${title}" because ${issues.join(', ')}.`
+      });
+    }
+    const individualWeight = objectives.reduce((sum, obj) => sum + normalizeWeight(obj.weight), 0);
+    if (individualWeight !== 100) {
+      return res.status(400).json({
+        success: false,
+        message: `Individual objective weights must equal 100%. Current individual weight: ${individualWeight}%. Team objectives are tracked separately.`
+      });
+    }
+    if (individualWeight <= 0) return res.status(400).json({ success: false, message: 'Individual objective weight must be greater than 0%.' });
 
     const user = await User.findById(req.user.id);
     const team = await getTeamForUser(req.user.id);
@@ -945,7 +1086,7 @@ exports.submitObjectives = async (req, res) => {
     }
 
     await Objective.updateMany(
-      { owner: req.user.id, cycle, status: { $in: ['draft', 'revision_requested', 'rejected'] } }, 
+      { owner: req.user.id, cycle, category: 'individual', source: { $ne: 'manager_assigned' }, status: 'draft' }, 
       { status: 'pending_approval', submittedTo: team.leader, submittedBy: req.user.id }
     );
     await createAuditLog({
@@ -1507,8 +1648,8 @@ exports.submitProgress = async (req, res) => {
     if (String(objective.owner) !== String(req.user.id) && req.user.role !== 'ADMIN') return res.status(403).json({ success: false, message: 'Only the owner can submit progress.' });
     if (objective.cycle && objective.cycle.status === 'closed') return res.status(400).json({ success: false, message: 'Cycle is closed.' });
 
-    // Phase enforcement: progress submission only during Phase 2 or 3
-    const progressPhaseCheck = await enforceObjectivePhase(objective.cycle._id || objective.cycle, ['phase2', 'phase3']);
+    // Phase enforcement: progress check-ins are creation/update actions and only run in Phase 2.
+    const progressPhaseCheck = await enforceObjectivePhase(objective.cycle._id || objective.cycle, ['phase2']);
     if (progressPhaseCheck.error) return res.status(progressPhaseCheck.status).json({ success: false, message: progressPhaseCheck.message });
 
     objective.achievementPercent = achievementPercent;
@@ -1622,9 +1763,10 @@ exports.addProgressUpdate = async (req, res) => {
   try {
     const objective = await Objective.findById(req.params.id);
     if (!objective) return res.status(404).json({ success: false, message: 'Objective not found.' });
+    if (!(await canViewObjective(objective, req.user))) return res.status(403).json({ success: false, message: 'Forbidden' });
 
-    // Phase enforcement: check-ins only during Phase 2 or 3
-    const checkinPhaseCheck = await enforceObjectivePhase(objective.cycle, ['phase2', 'phase3']);
+    // Phase enforcement: check-ins are only available during Phase 2.
+    const checkinPhaseCheck = await enforceObjectivePhase(objective.cycle, ['phase2']);
     if (checkinPhaseCheck.error) return res.status(checkinPhaseCheck.status).json({ success: false, message: checkinPhaseCheck.message });
 
     const { message, kpiUpdates } = req.body;
@@ -1655,6 +1797,7 @@ exports.addComment = async (req, res) => {
   try {
     const objective = await Objective.findById(req.params.id);
     if (!objective) return res.status(404).json({ success: false, message: 'Objective not found.' });
+    if (!(await canViewObjective(objective, req.user))) return res.status(403).json({ success: false, message: 'Forbidden' });
     const { text } = req.body;
     if (!text) return res.status(400).json({ success: false, message: 'Comment text is required.' });
     objective.comments.push({ user: req.user.id, text });
@@ -1686,6 +1829,7 @@ exports.deleteComment = async (req, res) => {
   try {
     const objective = await Objective.findById(req.params.id);
     if (!objective) return res.status(404).json({ success: false, message: 'Objective not found.' });
+    if (!(await canViewObjective(objective, req.user))) return res.status(403).json({ success: false, message: 'Forbidden' });
     objective.comments = objective.comments.filter(c => String(c._id) !== req.params.commentId);
     await objective.save();
     res.json({ success: true, objective });
@@ -1695,8 +1839,12 @@ exports.deleteComment = async (req, res) => {
 // ========== SUB-OBJECTIVES ==========
 exports.getSubObjectives = async (req, res) => {
   try {
+    const parent = await Objective.findById(req.params.id).select('_id owner status category source');
+    if (!parent) return res.status(404).json({ success: false, message: 'Objective not found.' });
+    if (!(await canViewObjective(parent, req.user))) return res.status(403).json({ success: false, message: 'Forbidden' });
     const children = await Objective.find({ parentObjective: req.params.id }).populate('owner', 'name email role').sort({ createdAt: -1 });
-    res.json({ success: true, objectives: children });
+    const teamMemberIds = await getTeamMemberIdsForVisibility(req.user);
+    res.json({ success: true, objectives: filterVisibleObjectives(children, req.user, { teamMemberIds }) });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
@@ -1705,6 +1853,7 @@ exports.duplicateObjective = async (req, res) => {
   try {
     const source = await Objective.findById(req.params.id);
     if (!source) return res.status(404).json({ success: false, message: 'Objective not found.' });
+    if (!(await canViewObjective(source, req.user))) return res.status(403).json({ success: false, message: 'Forbidden' });
     const duplicate = await Objective.create({
       title: source.title + ' (Copy)', description: source.description, successIndicator: source.successIndicator,
       owner: req.user.id, cycle: source.cycle, category: source.category, weight: source.weight,

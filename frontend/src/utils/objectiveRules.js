@@ -6,7 +6,7 @@ export function normalizeWeight(value) {
 
 export function isWeightBearingObjective(objective) {
     var status = objective && objective.status ? objective.status : 'draft';
-    return ['rejected', 'cancelled', 'archived'].indexOf(status) === -1;
+    return ['cancelled', 'archived', 'deleted'].indexOf(status) === -1;
 }
 
 export function getTeamObjectiveGroupKey(objective) {

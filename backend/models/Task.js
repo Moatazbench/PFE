@@ -17,7 +17,7 @@ const TaskSchema = new mongoose.Schema({
   },
   workflowStage: {
     type: String,
-    enum: ['backlog', 'todo', 'in_progress', 'review', 'completed'],
+    enum: ['backlog', 'todo', 'in_progress', 'review', 'completed', 'cancelled'],
     default: 'todo'
   },
   progress: { type: Number, default: 0, min: 0, max: 100 },

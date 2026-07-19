@@ -139,6 +139,14 @@ function AnalyticsPage() {
     : 0;
   var completionRate = objectivesList.length > 0 ? Math.round((approvedCount / objectivesList.length) * 100) : 0;
   var atRiskCount = objectivesList.filter(function (o) { return ['approved', 'validated'].includes(o.status) && (o.achievementPercent || 0) < 30; }).length;
+  var scopeLabel = user && (user.role === 'ADMIN' || user.role === 'HR') ? 'Organization' : user && user.role === 'TEAM_LEADER' ? 'Team' : 'My workspace';
+  var hasAnyAnalyticsData = Boolean(
+    objectivesList.length ||
+    (taskStats.total || 0) ||
+    (feedbackStats.received || 0) ||
+    (feedbackStats.sent || 0) ||
+    (performance && performance.overview)
+  );
 
   // ── Chart data ──
   var objDonutData = {
@@ -220,6 +228,29 @@ function AnalyticsPage() {
           <p className="ds-page-header__subtitle">Performance, task, and feedback insight across the current workspace.</p>
         </div>
       </div>
+
+      <div className="analytics-guidance">
+        <div>
+          <span className="analytics-guidance__eyebrow">Current view</span>
+          <h2>{scopeLabel} analytics</h2>
+          <p>
+            The page combines objective status, progress health, task delivery, feedback activity, and final performance signals when those records exist.
+          </p>
+        </div>
+        <div className="analytics-guidance__chips" aria-label="Analytics sections">
+          <span>Objectives</span>
+          <span>Tasks</span>
+          <span>Feedback</span>
+          <span>Performance</span>
+        </div>
+      </div>
+
+      {!hasAnyAnalyticsData && (
+        <div className="analytics-empty-guidance">
+          <strong>No analytics records yet</strong>
+          <p>Create or seed cycles, objectives, tasks, check-ins, feedback, and final evaluations to populate the charts below.</p>
+        </div>
+      )}
 
       {activeCycle ? (
         <div style={{ background: 'linear-gradient(135deg, #4F46E5 0%, #818CF8 100%)', borderRadius: 16, padding: '18px 24px', marginBottom: 24, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

@@ -1,26 +1,38 @@
 const { _private } = require('../controllers/taskController');
 
-describe('task creator privacy rules', () => {
+describe('task access rules', () => {
   const creator = { _id: '64b000000000000000000001', id: '64b000000000000000000001', role: 'COLLABORATOR' };
-  const otherUser = { _id: '64b000000000000000000002', id: '64b000000000000000000002', role: 'ADMIN' };
+  const assignee = { _id: '64b000000000000000000002', id: '64b000000000000000000002', role: 'COLLABORATOR' };
+  const director = { _id: '64b000000000000000000003', id: '64b000000000000000000003', role: 'ADMIN' };
+  const stranger = { _id: '64b000000000000000000004', id: '64b000000000000000000004', role: 'HR' };
   const task = {
     assignedBy: creator._id,
-    assignee: otherUser._id,
+    assignee: assignee._id,
   };
 
-  test('creator may manage and track their task', () => {
+  test('creator may manage their task but tracking belongs to the assignee', () => {
     expect(_private.canManageTask(task, creator)).toBe(true);
-    expect(_private.canTrackTask(task, creator)).toBe(true);
+    expect(_private.canTrackTask(task, creator)).toBe(false);
   });
 
-  test('assignee and Director cannot access a task they did not create', () => {
-    expect(_private.canManageTask(task, otherUser)).toBe(false);
-    expect(_private.canTrackTask(task, otherUser)).toBe(false);
+  test('assignee may manage and track assigned work', () => {
+    expect(_private.canManageTask(task, assignee)).toBe(true);
+    expect(_private.canTrackTask(task, assignee)).toBe(true);
   });
 
-  test('search remains scoped by the caller-provided creator filter', () => {
-    const filter = _private.addTaskSearch({ assignedBy: creator._id }, 'Quarterly');
-    expect(filter.assignedBy).toBe(creator._id);
+  test('Director may manage globally but cannot track someone else work', () => {
+    expect(_private.canManageTask(task, director)).toBe(true);
+    expect(_private.canTrackTask(task, director)).toBe(false);
+  });
+
+  test('unrelated HR user cannot manage or track unrelated work', () => {
+    expect(_private.canManageTask(task, stranger)).toBe(false);
+    expect(_private.canTrackTask(task, stranger)).toBe(false);
+  });
+
+  test('search remains scoped by the caller-provided visibility filter', () => {
+    const filter = _private.addTaskSearch({ assignee: assignee._id }, 'Quarterly');
+    expect(filter.assignee).toBe(assignee._id);
     expect(filter.$or).toHaveLength(5);
     expect(filter.$or[0].title.$options).toBe('i');
   });

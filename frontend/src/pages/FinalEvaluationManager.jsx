@@ -273,27 +273,36 @@ function FinalEvaluationManager({ cycleId, activeCycle, reportEmployeeId = '' })
   }
 
   async function handleSave(submitToHR = false) {
+    if (saving) return;
     setValidationErrors([]);
-    if (submitToHR) {
-      const errors = [];
-      const score = formData.manager_score === '' ? Number(selectedEvaluation.auto_score) : Number(formData.manager_score);
-      const difference = Math.abs(score - Number(selectedEvaluation.auto_score || 0));
-      if (!String(formData.manager_comments || '').trim()) errors.push('Add final manager comments.');
-      if (difference >= 10 && !String(formData.manager_adjustment_justification || '').trim()) {
-        errors.push('Explain the manager score adjustment of 10 points or more.');
-      }
-      employeeObjectives.forEach((objective) => {
-        if (!objective.finalSelfSubmittedAt) errors.push(`${objective.title}: employee self-assessment is missing.`);
-        if (objective.managerAdjustedPercent == null) errors.push(`${objective.title}: manager achievement confirmation is missing.`);
-      });
-      if (errors.length) {
-        setValidationErrors(errors);
-        toast.error('Complete the highlighted report requirements before HR submission.');
-        return;
-      }
-    }
+    setSaving(true);
     try {
-      setSaving(true);
+      if (submitToHR) {
+        const errors = [];
+        const score = formData.manager_score === '' ? Number(selectedEvaluation.auto_score) : Number(formData.manager_score);
+        const difference = Math.abs(score - Number(selectedEvaluation.auto_score || 0));
+        const requiredObjectives = employeeObjectives.filter((objective) => {
+          const ownerId = objective.owner?._id || objective.owner;
+          return String(ownerId) === String(selectedEmployee?._id);
+        });
+
+        if (!String(formData.manager_comments || '').trim()) errors.push('Add final manager comments.');
+        if (!String(formData.strengths || '').trim()) errors.push('Add at least one strength.');
+        if (!String(formData.weaknesses || '').trim()) errors.push('Add at least one area for improvement.');
+        if (difference >= 10 && !String(formData.manager_adjustment_justification || '').trim()) {
+          errors.push('Explain the manager score adjustment of 10 points or more.');
+        }
+        requiredObjectives.forEach((objective) => {
+          if (!objective.finalSelfSubmittedAt) errors.push(`${objective.title}: employee self-assessment is missing.`);
+          if (objective.managerAdjustedPercent == null) errors.push(`${objective.title}: manager achievement confirmation is missing.`);
+        });
+        if (errors.length) {
+          setValidationErrors(errors);
+          toast.error('Complete the highlighted report requirements before HR submission.');
+          return;
+        }
+      }
+
       const payload = {
         manager_score: formData.manager_score === '' ? selectedEvaluation.auto_score : Number(formData.manager_score),
         manager_adjustment_justification: formData.manager_adjustment_justification,
@@ -305,25 +314,36 @@ function FinalEvaluationManager({ cycleId, activeCycle, reportEmployeeId = '' })
         status: submitToHR ? 'pending_hr' : 'draft'
       };
 
-      await api.put(`/final-evaluations/${selectedEvaluation._id}`, payload);
+      const evaluationResponse = await api.put(`/final-evaluations/${selectedEvaluation._id}`, payload);
+      const updatedEvaluation = evaluationResponse.data?.evaluation;
 
-      if (careerRec.suggested_path) {
-        await api.post('/career/recommendations', {
-          employee_id: selectedEmployee._id,
-          cycle_id: cycleId,
-          suggested_path: careerRec.suggested_path,
-          skills_to_develop: careerRec.skills_to_develop.split('\n').map((item) => item.trim()).filter(Boolean),
-          basis: 'Manager assessment'
-        });
+      if (submitToHR && updatedEvaluation?.status !== 'pending_hr') {
+        throw new Error('The backend did not confirm HR submission.');
       }
 
+      if (careerRec.suggested_path) {
+        try {
+          await api.post('/career/recommendations', {
+            employee_id: selectedEmployee._id,
+            cycle_id: cycleId,
+            suggested_path: careerRec.suggested_path,
+            skills_to_develop: careerRec.skills_to_develop.split('\n').map((item) => item.trim()).filter(Boolean),
+            basis: 'Manager assessment'
+          });
+        } catch (careerErr) {
+          if (!submitToHR) throw careerErr;
+          toast.error(careerErr.response?.data?.message || 'Evaluation submitted, but career recommendation could not be saved.');
+        }
+      }
+
+      setSelectedEvaluation(updatedEvaluation || selectedEvaluation);
       toast.success(submitToHR ? 'Evaluation submitted to HR.' : 'Draft saved successfully.');
       if (!reportEmployeeId) setSelectedEmployee(null);
       await fetchTeamData();
     } catch (err) {
       const backendErrors = (err.response?.data?.errors || []).map((item) => item.message).filter(Boolean);
       setValidationErrors(backendErrors);
-      toast.error(err.response?.data?.message || 'Failed to save evaluation');
+      toast.error(err.response?.data?.message || err.message || 'Failed to save evaluation');
     } finally {
       setSaving(false);
     }

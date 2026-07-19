@@ -1,5 +1,5 @@
 const Competency = require('../models/Competency');
-const CareerPath = require('../models/CareerPath');// test devopssss
+const CareerPath = require('../models/CareerPath');
 const Team = require('../models/Team');
 const { createNotification } = require('../utils/notificationHelper');
 
@@ -16,8 +16,6 @@ async function canManageCareerPath(actor, targetUserId) {
   if (actor.role !== 'TEAM_LEADER') return false;
   return Boolean(await Team.exists({ leader: actor.id || actor._id, members: targetUserId }));
 }
-
-// === COMPETENCY CRUD ===
 
 exports.createCompetency = async (req, res) => {
   try {
@@ -61,8 +59,6 @@ exports.deleteCompetency = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
-
-// === CAREER PATH CRUD ===
 
 exports.createCareerPath = async (req, res) => {
   try {
@@ -185,7 +181,7 @@ exports.createDevelopmentAction = async (req, res) => {
     const action = {
       title: String(title).trim(),
       type: type || 'other',
-      status: ['planned', 'in_progress', 'completed', 'cancelled'].includes(status) ? status : 'planned',
+      status: ['planned', 'in_progress', 'completed', 'overdue', 'cancelled'].includes(status) ? status : 'planned',
       dueDate: dueDate || null,
       notes: notes || '',
       createdFromEvaluation: req.body.finalEvaluation || null,
@@ -214,7 +210,6 @@ exports.createDevelopmentAction = async (req, res) => {
   }
 };
 
-// Update development action status
 exports.updateDevAction = async (req, res) => {
   try {
     const path = await CareerPath.findById(req.params.pathId);
@@ -236,8 +231,6 @@ exports.updateDevAction = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
-
-// === CAREER RECOMMENDATIONS ===
 
 const CareerRecommendation = require('../models/CareerRecommendation');
 const FinalEvaluation = require('../models/FinalEvaluation');
@@ -274,7 +267,6 @@ exports.generateRecommendation = async (req, res) => {
   try {
     const { employee_id, cycle_id } = req.body;
     
-    // Fetch evaluation to analyze weaknesses
     const evaluation = await FinalEvaluation.findOne({ employee_id, cycle_id });
     
     let suggested_path = 'Standard Progression';

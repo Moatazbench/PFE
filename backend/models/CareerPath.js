@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const DevelopmentActionSchema = new mongoose.Schema({
   title: { type: String, required: true },
   type: { type: String, enum: ['training', 'mentoring', 'project', 'certification', 'reading', 'other'], default: 'other' },
-  status: { type: String, enum: ['planned', 'in_progress', 'completed', 'cancelled'], default: 'planned' },
+  status: { type: String, enum: ['planned', 'in_progress', 'completed', 'overdue', 'cancelled'], default: 'planned' },
   dueDate: { type: Date, default: null },
   completedAt: { type: Date, default: null },
   notes: { type: String, default: '' },

@@ -24,7 +24,6 @@ function TopHeader({ onMobileToggle }) {
 
     var routeMeta = getRouteMeta(location.pathname);
     var title = routeMeta?.label || 'Page';
-    var section = routeMeta?.section || '';
     var phaseLabel = currentPhase === 'phase1'
         ? 'Phase 1'
         : currentPhase === 'phase2'
@@ -72,27 +71,27 @@ function TopHeader({ onMobileToggle }) {
             try {
                 var results = [];
                 if (path.startsWith('/goals') || path.startsWith('/objectives')) {
-                    var res = await fetch('/api/objectives?search=' + encodeURIComponent(term), { headers: headers });
-                    var data = await res.json();
-                    results = (data.objectives || data.individualObjectives || []).slice(0, 8).map(function (o) {
+                    var objectivesRes = await fetch('/api/objectives?search=' + encodeURIComponent(term), { headers: headers });
+                    var objectivesData = await objectivesRes.json();
+                    results = (objectivesData.objectives || objectivesData.individualObjectives || []).slice(0, 8).map(function (o) {
                         return { _id: o._id, label: o.title, sub: o.status || '', path: '/goals' };
                     });
                 } else if (path.startsWith('/users')) {
-                    var res = await fetch('/api/users?search=' + encodeURIComponent(term), { headers: headers });
-                    var data = await res.json();
-                    results = (data.users || []).slice(0, 8).map(function (u) {
+                    var usersRes = await fetch('/api/users?search=' + encodeURIComponent(term), { headers: headers });
+                    var usersData = await usersRes.json();
+                    results = (usersData.users || []).slice(0, 8).map(function (u) {
                         return { _id: u._id, label: u.name, sub: u.email || formatRoleLabel(u.role), path: '/users' };
                     });
                 } else if (path.startsWith('/tasks')) {
-                    var res = await fetch('/api/tasks/my?search=' + encodeURIComponent(term), { headers: headers });
-                    var data = await res.json();
-                    results = (data.tasks || []).slice(0, 8).map(function (t) {
+                    var tasksRes = await fetch('/api/tasks/my?search=' + encodeURIComponent(term), { headers: headers });
+                    var tasksData = await tasksRes.json();
+                    results = (tasksData.tasks || []).slice(0, 8).map(function (t) {
                         return { _id: t._id, label: t.title, sub: t.status || '', path: '/tasks' };
                     });
                 } else if (path.startsWith('/teams')) {
-                    var res = await fetch('/api/teams', { headers: headers });
-                    var data = await res.json();
-                    var list = Array.isArray(data) ? data : [];
+                    var teamsRes = await fetch('/api/teams', { headers: headers });
+                    var teamsData = await teamsRes.json();
+                    var list = Array.isArray(teamsData) ? teamsData : [];
                     results = list.filter(function (t) {
                         return t.name && t.name.toLowerCase().includes(term.toLowerCase());
                     }).slice(0, 8).map(function (t) {

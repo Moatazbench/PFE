@@ -41,7 +41,6 @@ function MeetingsPage() {
     async function fetchMeetings() {
         var currentFetchId = ++fetchIdRef.current;
         try {
-            // Append unique timestamp to bypass any browser/proxy cache
             var params = { t: Date.now() };
             if (filter === 'upcoming') { params.upcoming = 'true'; params.status = 'scheduled,in_progress'; }
             if (filter === 'completed') params.status = 'completed';
@@ -51,7 +50,7 @@ function MeetingsPage() {
                 setMeetings(res.data.meetings || []);
             }
         } catch (err) {
-            console.error('Meetings fetch error:', err);
+            toast.error('Failed to load meetings.');
         } finally {
             if (currentFetchId === fetchIdRef.current) {
                 setLoading(false);
@@ -59,32 +58,22 @@ function MeetingsPage() {
         }
     }
 
-    async function fetchUsers() {
-        try {
-            var res = await api.get('/users/filter/list');
-            setUsers(res.data.users || res.data || []);
-        } catch (err) { console.error(err); }
+    async function fetchMeetingMetadata() {
+        var responses = await Promise.allSettled([
+            api.get('/users/filter/list'),
+            api.getCached('/teams', undefined, { ttl: 30000, cacheKey: 'teams:meetings-list' }),
+            api.getCached('/cycles', undefined, { ttl: 60000, cacheKey: 'cycles:meetings-list' })
+        ]);
+        var usersResponse = responses[0].status === 'fulfilled' ? responses[0].value : null;
+        var teamsResponse = responses[1].status === 'fulfilled' ? responses[1].value : null;
+        var cyclesResponse = responses[2].status === 'fulfilled' ? responses[2].value : null;
+
+        setUsers(usersResponse?.data?.users || usersResponse?.data || []);
+        setTeams(Array.isArray(teamsResponse?.data) ? teamsResponse.data : (teamsResponse?.data?.teams || []));
+        setCycles(cyclesResponse?.data || []);
     }
 
-    async function fetchTeams() {
-        try {
-            var res = await api.getCached('/teams', undefined, { ttl: 30000, cacheKey: 'teams:meetings-list' });
-            setTeams(Array.isArray(res.data) ? res.data : (res.data.teams || []));
-        } catch {
-            setTeams([]);
-        }
-    }
-
-    async function fetchCycles() {
-        try {
-            var res = await api.getCached('/cycles', undefined, { ttl: 60000, cacheKey: 'cycles:meetings-list' });
-            setCycles(res.data || []);
-        } catch {
-            setCycles([]);
-        }
-    }
-
-    useEffect(function () { fetchUsers(); fetchTeams(); fetchCycles(); }, []);
+    useEffect(function () { fetchMeetingMetadata(); }, []);
     useEffect(function () { setLoading(true); fetchMeetings(); }, [filter]);
 
     useEffect(function() {

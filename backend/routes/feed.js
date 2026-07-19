@@ -8,6 +8,7 @@ const AuditLog = require('../models/AuditLog');
 const Team = require('../models/Team');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const { filterVisibleObjectives } = require('../utils/objectiveVisibility');
 
 function toIdString(value) {
   if (!value) return '';
@@ -343,6 +344,10 @@ router.get('/', auth, async function (req, res) {
       console.error('Feed source failed:', name, result.reason?.message || result.reason);
       dataBySource[name] = [];
       warnings.push(name + ' feed source is temporarily unavailable.');
+    });
+
+    dataBySource.objectives = filterVisibleObjectives(dataBySource.objectives || [], req.user, {
+      teamMemberIds: scope.userIds || [],
     });
 
     const activities = [];
