@@ -5,6 +5,7 @@ const auth = require('../middleware/auth');
 
 // Dashboard stats
 router.get('/dashboard', auth, statsController.getDashboardStats);
+router.get('/performance', auth, statsController.getPerformanceStats);
 
 // Pie charts
 router.get('/objectives-by-status', auth, statsController.getObjectivesByStatus);

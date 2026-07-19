@@ -62,6 +62,15 @@ const schemas = {
             parentObjective: objectId.allow(null, ''),
             targetUser: objectId.allow(null, ''),
             correctionReason: Joi.string().trim().min(1),
+            cycle: Joi.any().forbidden().messages({
+                'any.unknown': 'Objective cycle cannot be changed after creation.'
+            }),
+            cycleId: Joi.any().forbidden().messages({
+                'any.unknown': 'Objective cycle cannot be changed after creation.'
+            }),
+            evaluationCycle: Joi.any().forbidden().messages({
+                'any.unknown': 'Objective cycle cannot be changed after creation.'
+            }),
         }).min(1).required().messages({
             'object.min': 'At least one field must be provided for update.'
         }),

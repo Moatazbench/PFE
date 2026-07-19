@@ -207,6 +207,78 @@ exports.getDashboardStats = async (req, res) => {
   }
 };
 
+exports.getPerformanceStats = async (req, res) => {
+  try {
+    if (!['ADMIN', 'HR'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions for performance analytics.' });
+    }
+
+    const cycle = req.query.cycleId
+      ? await Cycle.findById(req.query.cycleId).select('_id name year').lean()
+      : await Cycle.findOne({ status: { $ne: 'draft' } }).select('_id name year').sort({ year: -1 }).lean();
+
+    const filter = { status: { $in: ['validated', 'closed'] } };
+    if (cycle) filter.cycle_id = cycle._id;
+
+    const evaluations = await FinalEvaluation.find(filter)
+      .select('_id employee_id cycle_id final_score performance_status status rating_label updatedAt')
+      .populate('employee_id', 'name email role')
+      .sort({ final_score: -1, updatedAt: -1 })
+      .lean();
+
+    const scoredEvaluations = evaluations
+      .filter((evaluation) => Number.isFinite(Number(evaluation.final_score)))
+      .map((evaluation) => ({
+        _id: evaluation._id,
+        cycleId: evaluation.cycle_id,
+        user: evaluation.employee_id,
+        finalScore: Number(evaluation.final_score || 0),
+        performanceStatus: evaluation.performance_status,
+        ratingLabel: evaluation.rating_label,
+        status: evaluation.status
+      }));
+
+    const companyAverage = scoredEvaluations.length
+      ? round(scoredEvaluations.reduce((sum, evaluation) => sum + evaluation.finalScore, 0) / scoredEvaluations.length)
+      : 0;
+
+    const redFlagsCount = scoredEvaluations.filter((evaluation) =>
+      ['needs_improvement', 'critical_attention'].includes(evaluation.performanceStatus)
+      || evaluation.finalScore < 50
+    ).length;
+
+    const distribution = {
+      '0-49': 0,
+      '50-74': 0,
+      '75-89': 0,
+      '90-100': 0
+    };
+
+    scoredEvaluations.forEach((evaluation) => {
+      if (evaluation.finalScore >= 90) distribution['90-100'] += 1;
+      else if (evaluation.finalScore >= 75) distribution['75-89'] += 1;
+      else if (evaluation.finalScore >= 50) distribution['50-74'] += 1;
+      else distribution['0-49'] += 1;
+    });
+
+    return res.json({
+      success: true,
+      cycle: cycle ? { _id: cycle._id, name: cycle.name, year: cycle.year } : null,
+      overview: {
+        companyAverage,
+        redFlagsCount,
+        totalEvaluations: scoredEvaluations.length
+      },
+      topPerformers: scoredEvaluations.slice(0, 5),
+      bottomPerformers: scoredEvaluations.slice().sort((left, right) => left.finalScore - right.finalScore).slice(0, 5),
+      distribution
+    });
+  } catch (err) {
+    console.error('Performance stats error:', err);
+    return res.status(500).json({ success: false, message: 'Server error during performance analytics aggregation.' });
+  }
+};
+
 exports.getScoreDistribution = async (req, res) => {
   try {
     const stats = await HRDecision.aggregate([{

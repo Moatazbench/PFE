@@ -63,4 +63,16 @@ describe('critical request validation', () => {
     });
     expect(result.error).toBeDefined();
   });
+
+  test('rejects objective cycle changes on update', () => {
+    ['cycle', 'cycleId', 'evaluationCycle'].forEach((field) => {
+      const result = schemas.objective.update.validate({
+        title: 'Improve customer retention',
+        [field]: '64b000000000000000000001',
+      });
+
+      expect(result.error).toBeDefined();
+      expect(result.error.message).toContain('Objective cycle cannot be changed after creation.');
+    });
+  });
 });

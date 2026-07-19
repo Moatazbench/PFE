@@ -195,6 +195,32 @@ function sameIdSet(left, right) {
   return leftSet.every((value, index) => value === rightSet[index]);
 }
 
+const OBJECTIVE_UPDATE_FIELDS = [
+  'title',
+  'description',
+  'successIndicator',
+  'weight',
+  'priority',
+  'labels',
+  'visibility',
+  'parentObjective',
+  'targetUser',
+  'correctionReason',
+];
+
+const OBJECTIVE_IMMUTABLE_UPDATE_FIELDS = ['cycle', 'cycleId', 'evaluationCycle'];
+
+function hasOwnField(object, field) {
+  return Object.prototype.hasOwnProperty.call(object || {}, field);
+}
+
+function pickObjectiveUpdateFields(body) {
+  return OBJECTIVE_UPDATE_FIELDS.reduce((acc, field) => {
+    if (hasOwnField(body, field)) acc[field] = body[field];
+    return acc;
+  }, {});
+}
+
 async function resolveTeamForObjective(objective) {
   if (!objective || objective.category !== 'team') return null;
   if (objective.team) {
@@ -699,6 +725,15 @@ exports.updateObjective = async (req, res) => {
     if (!canModifyObjective(objective, req.user)) return res.status(403).json({ success: false, message: 'Not authorized to update.' });
     if (objective.cycle && objective.cycle.status === 'closed') return res.status(400).json({ success: false, message: 'Cannot edit objects in a closed cycle.' });
     const isAdmin = req.user.role === 'ADMIN';
+    const attemptedCycleField = OBJECTIVE_IMMUTABLE_UPDATE_FIELDS.find((field) => hasOwnField(req.body, field));
+    if (attemptedCycleField) {
+      return res.status(400).json({
+        success: false,
+        message: 'Objective cycle cannot be changed after creation.',
+        details: [{ field: attemptedCycleField, message: 'Objective cycle cannot be changed after creation.' }],
+      });
+    }
+    const updateBody = pickObjectiveUpdateFields(req.body);
     
     // === PHASE-AWARE FIELD LOCKING LOGIC ===
     // Determine the current phase
@@ -716,7 +751,7 @@ exports.updateObjective = async (req, res) => {
     
     // PHASE 2 (Mid-Year Execution): Hard lock title/parentObjective/weight, soft lock description/successIndicator
     if ((currentPhase === 'phase2' || isInExecution) && !isAdmin) {
-      const { title, description, successIndicator, weight, parentObjective, correctionReason } = req.body;
+      const { title, description, successIndicator, weight, parentObjective, correctionReason } = updateBody;
       const attemptingHardLockedEdit = title !== undefined || weight !== undefined || parentObjective !== undefined;
       const attemptingSoftLockedEdit = description !== undefined || successIndicator !== undefined;
 
@@ -740,13 +775,13 @@ exports.updateObjective = async (req, res) => {
     // COLLABORATOR role: Only allows edits in draft/rejected/revision_requested states
     if (req.user.role === 'COLLABORATOR' && !['draft', 'revision_requested', 'rejected'].includes(objective.status)) {
       // Exception: allow progress updates during execution
-      if (!isInExecution && !['labels', 'visibility'].includes(Object.keys(req.body)[0])) {
+      if (!isInExecution && !['labels', 'visibility'].includes(Object.keys(updateBody)[0])) {
         return res.status(400).json({ success: false, message: 'Only draft/revision-requested objectives can be fully updated. Use progress updates for active goals.' });
       }
     }
 
     // === FIELD UPDATE LOGIC ===
-    const { title, description, successIndicator, weight, priority, labels, visibility, parentObjective, targetUser, correctionReason } = req.body;
+    const { title, description, successIndicator, weight, priority, labels, visibility, parentObjective, targetUser, correctionReason } = updateBody;
     const originalSnapshot = {
       title: objective.title,
       description: objective.description,
@@ -849,7 +884,7 @@ exports.updateObjective = async (req, res) => {
     await createAuditLog({
       entityType: 'objective', entityId: objective._id, entityName: objective.title,
       action: 'updated', performedBy: req.user.id,
-      oldValue: originalSnapshot, newValue: req.body,
+      oldValue: originalSnapshot, newValue: updateBody,
       description: 'Objective "' + objective.title + '" updated.', ipAddress: req.ip,
     });
 

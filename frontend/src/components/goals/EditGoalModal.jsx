@@ -6,12 +6,13 @@ import { normalizeWeight, sumObjectiveWeights, sumTeamObjectiveWeights, validate
 function EditGoalModal({ goal, onClose, onUpdated, cycles, existingObjectives }) {
     var { user } = useAuth();
     var goalId = goal._id || goal.id || goal.objectiveId;
+    var originalCycleId = goal.cycle?._id || goal.cycle || '';
     var [form, setForm] = useState({
         title: goal.title || '',
         description: goal.description || '',
         successIndicator: goal.successIndicator || '',
         weight: goal.weight || 20,
-        cycle: goal.cycle?._id || goal.cycle || '',
+        cycle: originalCycleId,
         category: goal.category || 'individual',
         priority: goal.priority || 'medium',
         visibility: goal.visibility || 'public',
@@ -69,13 +70,13 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, existingObjectives })
 
         async function fetchTeamCapacity() {
             try {
-                var res = await api.get('/objectives/team-weight-capacity', {
+                var res = await api.getCached('/objectives/team-weight-capacity', {
                     params: {
                         teamId: teamId,
                         cycleId: form.cycle,
                         excludeId: goalId
                     }
-                });
+                }, { ttl: 10000 });
                 var members = Array.isArray(res.data.memberCapacities) ? res.data.memberCapacities : [];
                 var constrainedMember = members.slice().sort(function (a, b) { return Number(b.usedWeight || 0) - Number(a.usedWeight || 0); })[0];
                 var hasBucketUsage = constrainedMember && Number(constrainedMember.usedWeight || 0) > 0;
@@ -131,6 +132,7 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, existingObjectives })
 
     async function handleSubmit(e) {
         e.preventDefault();
+        if (loading) return;
         setError(''); setServerFieldErrors({});
 
         if (!isPhase2Locked) {
@@ -376,22 +378,26 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, existingObjectives })
                         </div>
                     )}
 
-                    {/* Cycle */}
-                    <div className="goal-modal__field">
-                        <label>Cycle *</label>
-                        <select value={form.cycle} onChange={function (e) { handleChange('cycle', e.target.value); }} required disabled={isStructuralLocked}>
-                            <option value="">Select Cycle</option>
-                            {cycles && cycles.map(function (cycle) { return <option key={cycle._id} value={cycle._id}>{cycle.name} ({cycle.year})</option>; })}
-                        </select>
-                        {fieldErrors.cycle && <div className="goal-modal__error" style={{ margin: 0 }}>{fieldErrors.cycle}</div>}
-                    </div>
-
                     {/* ─── WEIGHT — Hard-locked in Phase 2 ─── */}
-                    <div className="goal-modal__field">
+                    <div className="goal-modal__field goal-modal__weight-field">
                         <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            Weight: {normalizeWeight(form.weight)}%
+                            Weight allocation
                             {isPhase2Locked && <span title="Locked during Mid-Year Execution" style={{ display: 'inline-flex', cursor: 'help' }}>{lockIconSvg}</span>}
                         </label>
+                        <div className="goal-modal__weight-summary">
+                            <div>
+                                <span>Current objective</span>
+                                <strong>{normalizeWeight(form.weight)}%</strong>
+                            </div>
+                            <div>
+                                <span>Already used</span>
+                                <strong>{usedWeight}%</strong>
+                            </div>
+                            <div>
+                                <span>Remaining after save</span>
+                                <strong>{Math.max(0, remainingWeight - normalizeWeight(form.weight))}%</strong>
+                            </div>
+                        </div>
                         {isPhase2Locked ? (
                             <div style={lockedFieldStyle}>
                                 <span style={{ fontWeight: 700, fontSize: '1.05rem' }}>{normalizeWeight(form.weight)}%</span>
@@ -458,12 +464,12 @@ function EditGoalModal({ goal, onClose, onUpdated, cycles, existingObjectives })
                     {/* Actions — hide save for phase2 if only hard-locked fields visible and nothing changed */}
                     <div className="goal-modal__actions">
                         {!isPhase2Locked && (
-                            <button type="submit" className="goal-modal__submit" disabled={loading || !validation.isValid || isPhaseThreeLocked}>
+                            <button type="submit" className="goal-modal__submit" disabled={loading || !validation.isValid || isPhaseThreeLocked} aria-busy={loading}>
                                 {loading ? 'Saving...' : 'Save Changes'}
                             </button>
                         )}
                         {showPhase2SaveButton && (
-                            <button type="submit" className="goal-modal__submit" disabled={loading || (needsCorrectionReason && !correctionReasonValid)}>
+                            <button type="submit" className="goal-modal__submit" disabled={loading || (needsCorrectionReason && !correctionReasonValid)} aria-busy={loading}>
                                 {loading ? 'Saving...' : 'Save Changes'}
                             </button>
                         )}

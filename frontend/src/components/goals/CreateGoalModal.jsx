@@ -33,7 +33,7 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, existingOb
         if (user.role === 'TEAM_LEADER' || user.role === 'ADMIN' || user.role === 'HR') {
             const fetchAssignmentData = async () => {
                 try {
-                    const res = await api.get('/teams');
+                    const res = await api.getCached('/teams', undefined, { ttl: 15000, cacheKey: 'teams:goal-modal-assignment' });
                     const teamsData = Array.isArray(res.data) ? res.data : (res.data?.teams || []);
                     setAvailableTeams(teamsData);
                         
@@ -65,7 +65,7 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, existingOb
                         setCapacityInfo({ usedWeight: null, remainingWeight: null, message: '', memberCapacities: [], bucketLabel: 'Team' });
                         return;
                     }
-                    var res = await api.get('/objectives/team-weight-capacity', { params: { teamId: form.targetTeam, cycleId: activeCycle } });
+                    var res = await api.getCached('/objectives/team-weight-capacity', { params: { teamId: form.targetTeam, cycleId: activeCycle } }, { ttl: 10000 });
                     var usedWeight = Number(res.data.usedWeight || 0);
                     var remaining = Number(res.data.remainingWeight || 0);
                     var members = Array.isArray(res.data.memberCapacities) ? res.data.memberCapacities : [];
@@ -85,7 +85,7 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, existingOb
                 }
 
                 if (form.category === 'individual' && form.targetUser && form.targetUser !== user.id) {
-                    var userObjectivesResponse = await api.get('/objectives/user/' + form.targetUser + '/cycle/' + activeCycle);
+                    var userObjectivesResponse = await api.getCached('/objectives/user/' + form.targetUser + '/cycle/' + activeCycle, undefined, { ttl: 10000 });
                     var userObjectives = Array.isArray(userObjectivesResponse.data.individualObjectives) ? userObjectivesResponse.data.individualObjectives : [];
                     var usedWeightForUser = sumObjectiveWeights(userObjectives);
                     var userRemainingWeight = Math.max(0, 100 - usedWeightForUser);
@@ -187,6 +187,7 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, existingOb
 
     async function handleSubmit(e) {
         e.preventDefault();
+        if (loading) return;
         setError('');
         setFieldErrors(validation.errors);
 
@@ -412,8 +413,22 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, existingOb
                             )}
 
 
-                            <div className="goal-modal__field">
-                                <label>Weight: {normalizeWeight(form.weight)}%</label>
+                            <div className="goal-modal__field goal-modal__weight-field">
+                                <label>Weight allocation</label>
+                                <div className="goal-modal__weight-summary">
+                                    <div>
+                                        <span>Current objective</span>
+                                        <strong>{normalizeWeight(form.weight)}%</strong>
+                                    </div>
+                                    <div>
+                                        <span>Already used</span>
+                                        <strong>{usedWeight}%</strong>
+                                    </div>
+                                    <div>
+                                        <span>Remaining after save</span>
+                                        <strong>{Math.max(0, remainingWeight - normalizeWeight(form.weight))}%</strong>
+                                    </div>
+                                </div>
                                 <input type="range" min="1" max={maxWeight || 1} value={Math.min(normalizeWeight(form.weight), maxWeight || 1)} onChange={function (e) { handleChange('weight', e.target.value); }} style={{ width: '100%' }} disabled={isCreateLocked} />
                                 <div className="weight-capacity-bar">
                                     <div className="weight-capacity-bar__track">
@@ -463,7 +478,7 @@ function CreateGoalModal({ onClose, onCreated, cycles, selectedCycle, existingOb
 
                     <div className="goal-modal__actions" style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
                         <button type="button" className="btn btn--outline" onClick={onClose}>Cancel</button>
-                        <button type="submit" className="btn btn--primary" disabled={loading || !validation.isValid || isCreateLocked}>
+                        <button type="submit" className="btn btn--primary" disabled={loading || !validation.isValid || isCreateLocked} aria-busy={loading}>
                             {loading ? 'Creating...' : 'Create Objective'}
                         </button>
                     </div>
