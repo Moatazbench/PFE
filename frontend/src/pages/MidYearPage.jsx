@@ -79,7 +79,11 @@ function MidYearPage() {
 
   const getAttachmentUrl = (attachment) => {
     if (!attachment?.url) return '#';
-    return attachment.url.startsWith('http') ? attachment.url : `${API_BASE_URL}${attachment.url}`;
+    if (attachment.url.startsWith('http')) return attachment.url;
+    if (attachment.url.startsWith('/uploads/checkins/')) {
+      return attachment.url.replace('/uploads/checkins/', '/api/checkins/attachments/');
+    }
+    return attachment.url.startsWith('/uploads/') ? `${API_BASE_URL}${attachment.url}` : attachment.url;
   };
 
   async function handleDownloadAttachment(attachment) {
@@ -90,10 +94,12 @@ function MidYearPage() {
     }
 
     try {
-      const response = await fetch(fileUrl);
-      if (!response.ok) throw new Error('Download failed');
-
-      const blob = await response.blob();
+      const blob = fileUrl.startsWith('http')
+        ? await fetch(fileUrl).then((response) => {
+          if (!response.ok) throw new Error('Download failed');
+          return response.blob();
+        })
+        : (await api.get(fileUrl.startsWith('/api') ? fileUrl.replace('/api', '') : fileUrl, { responseType: 'blob' })).data;
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;

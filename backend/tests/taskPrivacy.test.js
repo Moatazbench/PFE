@@ -36,4 +36,25 @@ describe('task access rules', () => {
     expect(filter.$or).toHaveLength(5);
     expect(filter.$or[0].title.$options).toBe('i');
   });
+
+  test('task update whitelist rejects ownership and audit-field mass assignment', () => {
+    const updates = _private.pickTaskUpdates({
+      title: 'Allowed title',
+      status: 'done',
+      assignee: '64b000000000000000000099',
+      assignedBy: '64b000000000000000000098',
+      team: '64b000000000000000000097',
+      completedAt: new Date(),
+      createdAt: new Date(),
+      totalTrackedTime: 120,
+      timeSessions: [],
+    });
+
+    expect(updates).toEqual({
+      title: 'Allowed title',
+      status: 'done',
+      totalTrackedTime: 120,
+      timeSessions: [],
+    });
+  });
 });

@@ -9,6 +9,8 @@ function BonusPenaltyPage() {
 
   const [records, setRecords] = useState([]);
   const [users, setUsers] = useState([]);
+  const [eligibleEvaluations, setEligibleEvaluations] = useState([]);
+  const [eligibleError, setEligibleError] = useState('');
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [filterType, setFilterType] = useState('all');
@@ -24,7 +26,7 @@ function BonusPenaltyPage() {
   const [saving, setSaving] = useState(false);
 
   const isHROrAdmin = ['HR', 'ADMIN'].includes(user?.role);
-  const canRecommend = user?.role === 'ADMIN' || user?.role === 'TEAM_LEADER';
+  const canRecommend = ['ADMIN', 'HR', 'TEAM_LEADER'].includes(user?.role);
 
   useEffect(() => {
     fetchData();
@@ -48,6 +50,16 @@ function BonusPenaltyPage() {
         setUsers(usersList);
         const results = await Promise.allSettled(usersList.map((member) => api.get(`/bonus-penalty/employee/${member._id || member.id}`)));
         setRecords(results.flatMap((result) => result.status === 'fulfilled' ? result.value.data.records || [] : []));
+      }
+      if (canRecommend) {
+        try {
+          const eligibleRes = await api.get('/bonus-penalty/eligible-evaluations');
+          setEligibleEvaluations(eligibleRes.data.evaluations || []);
+          setEligibleError('');
+        } catch (err) {
+          setEligibleEvaluations([]);
+          setEligibleError(err.response?.data?.message || 'Failed to load eligible evaluations.');
+        }
       }
     } catch {
       toast.error('Failed to load data');
@@ -76,8 +88,8 @@ function BonusPenaltyPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!formData.employee || !formData.value || Number(formData.value) <= 0 || !formData.reason.trim()) {
-      toast.error('Employee, reason, and a value greater than zero are required.');
+    if (!formData.employee || !formData.finalEvaluation || !formData.value || Number(formData.value) <= 0 || !formData.reason.trim()) {
+      toast.error('Employee, linked final evaluation, reason, and a value greater than zero are required.');
       return;
     }
     setSaving(true);
@@ -117,6 +129,10 @@ function BonusPenaltyPage() {
       totalPenaltyValue: penalties.reduce((sum, r) => sum + (r.value || 0), 0)
     };
   }, [records]);
+
+  const selectableEvaluations = useMemo(() => (
+    eligibleEvaluations.filter((evaluation) => !(evaluation.existingTypes || []).includes(formData.type))
+  ), [eligibleEvaluations, formData.type]);
 
   if (loading) {
     return <div className="page-loading"><div className="spinner"></div><p>Loading bonus & penalty data...</p></div>;
@@ -212,12 +228,29 @@ function BonusPenaltyPage() {
             </div>
             <div style={{ marginBottom: '1rem' }}>
               <label className="ent-label">Linked Final Evaluation</label>
-              <input
-                className="ent-input"
+              <select
+                className="ent-select"
                 value={formData.finalEvaluation}
-                onChange={e => setFormData({ ...formData, finalEvaluation: e.target.value })}
-                placeholder="Validated final evaluation ID"
-              />
+                onChange={e => {
+                  const selected = eligibleEvaluations.find((evaluation) => String(evaluation._id) === e.target.value);
+                  setFormData({
+                    ...formData,
+                    finalEvaluation: e.target.value,
+                    employee: selected?.employee?._id || formData.employee
+                  });
+                }}
+                required
+              >
+                <option value="">{eligibleError || 'Select a validated final evaluation...'}</option>
+                {selectableEvaluations.map((evaluation) => (
+                  <option key={evaluation._id} value={evaluation._id}>
+                    {evaluation.employee?.name || 'Employee'} - {evaluation.cycle?.name || evaluation.cycle?.year || 'Cycle'} - {evaluation.status} - {evaluation.final_score ?? 'N/A'}%
+                  </option>
+                ))}
+              </select>
+              {!eligibleError && selectableEvaluations.length === 0 && (
+                <p className="text-muted" style={{ margin: '0.35rem 0 0 0' }}>No eligible validated evaluations for this record type.</p>
+              )}
             </div>
             <div style={{ marginBottom: '1rem' }}>
               <label className="ent-label">Reason</label>

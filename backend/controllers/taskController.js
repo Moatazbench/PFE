@@ -5,6 +5,7 @@ const Objective = require('../models/Objective');
 const Cycle = require('../models/Cycle');
 const mongoose = require('mongoose');
 const { createAuditLog } = require('../utils/auditHelper');
+const accessControl = require('../utils/accessControl');
 
 async function getManagedTeamIds(userId) {
   const roots = await Team.find({ leader: userId }).select('_id');
@@ -163,24 +164,7 @@ async function getCurrentCycle() {
 }
 
 async function canAccessObjective(objective, user) {
-  const actorId = String(user?._id || user?.id || '');
-  if (!objective || !actorId) return false;
-  if (user?.role === 'ADMIN') return true;
-  if (String(objective.owner?._id || objective.owner || '') === actorId) return true;
-
-  if (user?.role === 'TEAM_LEADER') {
-    const managedTeamIds = await getManagedTeamIds(actorId);
-    if (objective.team && managedTeamIds.includes(String(objective.team?._id || objective.team))) {
-      return true;
-    }
-    const member = await Team.findOne({
-      _id: { $in: managedTeamIds },
-      members: objective.owner?._id || objective.owner,
-    }).select('_id');
-    return Boolean(member);
-  }
-
-  return false;
+  return accessControl.canAccessObjective(user, objective);
 }
 
 async function validateLinkableObjective(objectiveId, user) {
@@ -207,6 +191,46 @@ async function validateLinkableObjective(objectiveId, user) {
     return { ok: false, status: 403, message: 'You are not allowed to link tasks to this objective.' };
   }
   return { ok: true, value: objective._id };
+}
+
+async function canUseTaskTeam(actor, assignee, teamId) {
+  if (!teamId) return true;
+  if (!mongoose.isValidObjectId(teamId)) return false;
+  if (String(assignee?.team || '') === String(teamId)) return true;
+  if (!(await accessControl.canAccessTeam(actor, teamId))) return false;
+
+  const team = await Team.findById(teamId).select('leader members');
+  if (!team) return false;
+  const assigneeId = String(assignee?._id || assignee?.id || '');
+  return String(team.leader || '') === assigneeId
+    || (team.members || []).some((memberId) => String(memberId) === assigneeId);
+}
+
+function pickTaskUpdates(body) {
+  const allowed = [
+    'title',
+    'description',
+    'status',
+    'workflowStage',
+    'priority',
+    'progress',
+    'dueDate',
+    'recurring',
+    'linkedGoal',
+    'objective_id',
+    'linkedMeeting',
+    'notes',
+    'timeTracking',
+    'totalTimeSpent',
+    'totalTrackedTime',
+    'timeSessions',
+  ];
+  return allowed.reduce((updates, key) => {
+    if (Object.prototype.hasOwnProperty.call(body, key)) {
+      updates[key] = body[key];
+    }
+    return updates;
+  }, {});
 }
 
 function addTaskSearch(filter, search) {
@@ -250,6 +274,7 @@ exports.createTask = async (req, res) => {
       title,
       description,
       assigneeId,
+      assignee: assigneeBody,
       status,
       workflowStage,
       priority,
@@ -265,7 +290,7 @@ exports.createTask = async (req, res) => {
       totalTrackedTime,
       timeSessions,
     } = req.body;
-    const resolvedAssigneeId = assigneeId || req.user._id;
+    const resolvedAssigneeId = assigneeId || assigneeBody || req.user._id;
 
     if (!title) {
       return res.status(400).json({ success: false, message: 'Title is required' });
@@ -275,10 +300,22 @@ exports.createTask = async (req, res) => {
     if (!assignee) {
       return res.status(404).json({ success: false, message: 'Assignee not found' });
     }
+    if (!(await accessControl.canAssignTaskTo(req.user, resolvedAssigneeId))) {
+      return res.status(403).json({ success: false, message: 'You are not allowed to assign tasks to this user.' });
+    }
 
     const objectiveValidation = await validateLinkableObjective(linkedGoal || req.body.objective_id || null, req.user);
     if (!objectiveValidation.ok) {
       return res.status(objectiveValidation.status).json({ success: false, message: objectiveValidation.message });
+    }
+    if (objectiveValidation.value) {
+      const objective = await Objective.findById(objectiveValidation.value).select('owner team');
+      if (objective && String(objective.owner) !== String(resolvedAssigneeId)) {
+        return res.status(403).json({ success: false, message: 'Linked objective tasks must be assigned to the objective owner.' });
+      }
+    }
+    if (!(await canUseTaskTeam(req.user, assignee, team))) {
+      return res.status(403).json({ success: false, message: 'You are not allowed to assign tasks in this team.' });
     }
 
     const nextTimeTracking = sanitizeTimeTracking({
@@ -303,7 +340,7 @@ exports.createTask = async (req, res) => {
       linkedGoal: objectiveValidation.value || null,
       objective_id: objectiveValidation.value || null,
       linkedMeeting: linkedMeeting || null,
-      team: team || null,
+      team: team || assignee.team || null,
       notes: notes || '',
       timeTracking: nextTimeTracking,
       totalTimeSpent: timerAliases.totalTimeSpent,
@@ -482,7 +519,10 @@ exports.updateTask = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized to update this task' });
     }
 
-    const updates = req.body;
+    const updates = pickTaskUpdates(req.body || {});
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ success: false, message: 'No supported task fields were provided.' });
+    }
     const requestedObjectiveId = updates.linkedGoal !== undefined ? updates.linkedGoal : updates.objective_id;
     const objectiveValidation = await validateLinkableObjective(requestedObjectiveId, req.user);
     if (!objectiveValidation.ok) {
@@ -684,4 +724,5 @@ exports._private = {
   addTaskSearch,
   isTerminalTask,
   validateLinkableObjective,
+  pickTaskUpdates,
 };

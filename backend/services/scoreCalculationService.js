@@ -2,7 +2,7 @@ const Objective = require('../models/Objective');
 const Task = require('../models/Task');
 const CheckIn = require('../models/CheckIn');
 
-const EXCLUDED_OBJECTIVE_STATUSES = ['draft', 'rejected', 'cancelled', 'archived'];
+const FINAL_SCORE_OBJECTIVE_STATUSES = ['approved', 'validated', 'evaluated', 'locked'];
 
 function clampPercentage(value) {
   const numeric = Number(value);
@@ -22,7 +22,7 @@ function getConfirmedAchievement(objective) {
 
 function calculateWeightedScoreFromObjectives(objectives) {
   const eligibleObjectives = (Array.isArray(objectives) ? objectives : []).filter((objective) => {
-    return objective && !EXCLUDED_OBJECTIVE_STATUSES.includes(objective.status);
+    return objective && FINAL_SCORE_OBJECTIVE_STATUSES.includes(String(objective.status || '').toLowerCase());
   });
 
   const breakdown = eligibleObjectives.map((objective) => {
@@ -70,7 +70,7 @@ async function calculateWeightedObjectiveScore(employee_id, cycle_id) {
   const objectives = await Objective.find({
     owner: employee_id,
     cycle: cycle_id,
-    status: { $nin: EXCLUDED_OBJECTIVE_STATUSES },
+    status: { $in: FINAL_SCORE_OBJECTIVE_STATUSES },
   }).lean();
 
   return calculateWeightedScoreFromObjectives(objectives);
@@ -123,4 +123,5 @@ module.exports = {
   getEvaluationEvidence,
   determineRatingLabel,
   getConfirmedAchievement,
+  FINAL_SCORE_OBJECTIVE_STATUSES,
 };

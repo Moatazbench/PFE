@@ -5,7 +5,10 @@ const auth = require('../middleware/auth');
 const role = require('../middleware/role');
 const multer = require('multer');
 const path = require('path');
-const { storeUploadedFile } = require('../utils/fileStorage');
+const fs = require('fs');
+const { storeUploadedFile, UPLOAD_ROOT } = require('../utils/fileStorage');
+const CheckIn = require('../models/CheckIn');
+const { canAccessEmployee } = require('../utils/accessControl');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -39,6 +42,33 @@ router.post('/upload', upload.single('file'), async function (req, res) {
   }
 });
 
+router.get('/attachments/:filename', async function (req, res) {
+  try {
+    const filename = path.basename(req.params.filename || '');
+    if (!filename || filename !== req.params.filename) {
+      return res.status(400).json({ success: false, message: 'Invalid file path.' });
+    }
+
+    const possibleUrls = [
+      '/api/checkins/attachments/' + filename,
+      '/uploads/checkins/' + filename
+    ];
+    const checkIn = await CheckIn.findOne({ 'attachments.url': { $in: possibleUrls } }).select('employee_id');
+    if (!checkIn) return res.status(404).json({ success: false, message: 'Attachment not found.' });
+    if (!(await canAccessEmployee(req.user, checkIn.employee_id, { allowSelf: true, allowHr: true }))) {
+      return res.status(403).json({ success: false, message: 'You are not authorized to download this attachment.' });
+    }
+
+    const filePath = path.join(UPLOAD_ROOT, 'checkins', filename);
+    if (!filePath.startsWith(path.join(UPLOAD_ROOT, 'checkins')) || !fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, message: 'Attachment file not found.' });
+    }
+    res.download(filePath);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // Employee routes
 router.get('/', checkInController.getCheckIns);
 router.post('/', checkInController.submitCheckIn);
@@ -47,6 +77,6 @@ router.get('/objective/:objective_id/tasks', checkInController.getTasksForObject
 // Manager routes
 router.get('/by-objective', role('ADMIN', 'HR', 'TEAM_LEADER'), checkInController.getCheckInsByObjective);
 router.get('/team', role('ADMIN', 'HR', 'TEAM_LEADER'), checkInController.getTeamCheckIns);
-router.put('/:id/review', role('ADMIN', 'HR', 'TEAM_LEADER', 'COLLABORATOR'), checkInController.reviewCheckIn);
+router.put('/:id/review', role('ADMIN', 'HR', 'TEAM_LEADER'), checkInController.reviewCheckIn);
 
 module.exports = router;

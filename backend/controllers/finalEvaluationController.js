@@ -10,7 +10,8 @@ const CareerRecommendation = require('../models/CareerRecommendation');
 const {
   calculateWeightedObjectiveScore,
   getEvaluationEvidence,
-  determineRatingLabel
+  determineRatingLabel,
+  FINAL_SCORE_OBJECTIVE_STATUSES
 } = require('../services/scoreCalculationService');
 const aiService = require('../services/aiService');
 const reviewContextService = require('../services/reviewContextService');
@@ -20,9 +21,9 @@ const {
   buildEvaluationReviewChecklist,
   getBlockingEvaluationReviewIssues
 } = require('../utils/workflowRules');
+const { canAccessEmployee } = require('../utils/accessControl');
 
 const SIGNIFICANT_SCORE_ADJUSTMENT = 10;
-const EXCLUDED_EVALUATION_OBJECTIVE_STATUSES = ['draft', 'rejected', 'cancelled', 'archived'];
 
 function roundScore(value) {
   return Number(Number(value || 0).toFixed(2));
@@ -524,7 +525,7 @@ exports.updateEvaluation = async (req, res) => {
       const objectives = await Objective.find({
         owner: evaluation.employee_id,
         cycle: evaluation.cycle_id,
-        status: { $nin: EXCLUDED_EVALUATION_OBJECTIVE_STATUSES }
+        status: { $in: FINAL_SCORE_OBJECTIVE_STATUSES }
       }).select('title finalSelfSubmittedAt managerAdjustedPercent');
       const missingSelfAssessmentObjectives = objectives.filter((objective) => !objective.finalSelfSubmittedAt);
       const unconfirmedObjectives = objectives.filter((objective) => objective.managerAdjustedPercent == null);
@@ -744,6 +745,9 @@ exports.exportEvaluation = async (req, res) => {
       .populate('cycle_id', 'name year type');
       
     if (!evaluation) return res.status(404).json({ success: false, message: 'Evaluation not found' });
+    if (!(await canAccessEmployee(req.user, evaluation.employee_id?._id || evaluation.employee_id, { allowSelf: true, allowHr: true }))) {
+      return res.status(403).json({ success: false, message: 'You are not authorized to export this evaluation.' });
+    }
 
     const objectives = await Objective.find({ 
       owner: evaluation.employee_id._id, 
@@ -889,21 +893,14 @@ exports.exportEvaluation = async (req, res) => {
 
 exports.getPendingEvaluations = async (req, res) => {
   try {
-    const evaluationDocuments = await FinalEvaluation.find({ status: 'pending_hr' });
-    await Promise.all(evaluationDocuments.map(async (evaluation) => {
-      const warnings = await buildConsistencyWarnings(evaluation);
-      const warningsChanged = JSON.stringify(evaluation.consistency_warnings || []) !== JSON.stringify(warnings);
-      if (warningsChanged) {
-        evaluation.consistency_warnings = warnings;
-        await evaluation.save();
-      }
-    }));
-
     const evaluations = await FinalEvaluation.find({ status: 'pending_hr' })
       .populate('employee_id', 'name email profileImage')
       .populate('cycle_id', 'name')
       .populate('evaluator_id', 'name role')
       .populate('workflow_history.performed_by', 'name role');
+    await Promise.all(evaluations.map(async (evaluation) => {
+      evaluation.consistency_warnings = await buildConsistencyWarnings(evaluation);
+    }));
     res.json({ success: true, evaluations });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

@@ -369,9 +369,16 @@ function FinalEvaluationManager({ cycleId, activeCycle, reportEmployeeId = '' })
 
   async function handleDownloadAttachment(attachment) {
     try {
-      const response = await fetch(attachment.url);
-      if (!response.ok) throw new Error('Download failed');
-      const blob = await response.blob();
+      const rawUrl = attachment.url || '';
+      const fileUrl = rawUrl.startsWith('/uploads/checkins/')
+        ? rawUrl.replace('/uploads/checkins/', '/api/checkins/attachments/')
+        : rawUrl;
+      const blob = fileUrl.startsWith('http')
+        ? await fetch(fileUrl).then((response) => {
+          if (!response.ok) throw new Error('Download failed');
+          return response.blob();
+        })
+        : (await api.get(fileUrl.startsWith('/api') ? fileUrl.replace('/api', '') : fileUrl, { responseType: 'blob' })).data;
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;

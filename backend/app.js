@@ -63,6 +63,10 @@ app.use(rateLimit({
   skip: routeRateLimiter.shouldSkipRateLimit
 }));
 
+app.use(['/uploads/checkins', '/api/uploads/checkins'], function blockSensitiveCheckInUploads(req, res) {
+  res.status(404).json({ success: false, message: 'File not found.' });
+});
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   etag: true,
   maxAge: '7d',

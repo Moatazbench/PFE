@@ -3,6 +3,13 @@ const Objective = require('../models/Objective');
 const Task = require('../models/Task');
 const Cycle = require('../models/Cycle');
 const auditLogger = require('../utils/auditLogger');
+const {
+  actorId,
+  resourceId,
+  getManagedEmployeeIds,
+  canAccessObjective,
+  canManageEmployee,
+} = require('../utils/accessControl');
 
 const PHASE2_ACCESS_ROLES = ['ADMIN', 'HR', 'TEAM_LEADER'];
 
@@ -29,13 +36,10 @@ exports.getCheckIns = async (req, res) => {
 
     const filter = { employee_id: req.user.id };
 
-    // FIX 4: If team leader, also show check-ins for all team members
     if (req.user.role === 'TEAM_LEADER' && req.query.scope !== 'self') {
-      const Team = require('../models/Team');
-      const team = await Team.findOne({ leader: req.user.id });
-      if (team && team.members && team.members.length > 0) {
-        const memberIds = team.members.map(m => m._id || m);
-        filter.employee_id = { $in: [req.user.id, ...memberIds] };
+      const memberIds = await getManagedEmployeeIds(req.user);
+      if (memberIds.length > 0) {
+        filter.employee_id = { $in: [actorId(req.user), ...memberIds] };
       }
     }
 
@@ -96,7 +100,18 @@ exports.submitCheckIn = async (req, res) => {
     const mongoose = require('mongoose');
     if (!mongoose.Types.ObjectId.isValid(objective_id)) return res.status(400).json({ success: false, message: 'Invalid objective_id format.' });
     if (!mongoose.Types.ObjectId.isValid(cycle_id)) return res.status(400).json({ success: false, message: 'Invalid cycle_id format.' });
-    const phaseCheck = await enforceCyclePhaseAccess(cycle_id, ['phase2']);
+    const objective = await Objective.findById(objective_id)
+      .populate('cycle', 'status currentPhase')
+      .select('_id owner cycle team title');
+    if (!objective) return res.status(404).json({ success: false, message: 'Objective not found.' });
+    if (resourceId(objective.owner) !== actorId(req.user)) {
+      return res.status(403).json({ success: false, message: 'You can only submit check-ins for your own objectives.' });
+    }
+    if (resourceId(objective.cycle) !== String(cycle_id)) {
+      return res.status(400).json({ success: false, message: 'Objective does not belong to the selected cycle.' });
+    }
+
+    const phaseCheck = await enforceCyclePhaseAccess(objective.cycle, ['phase2']);
     if (phaseCheck.error) return res.status(phaseCheck.status).json({ success: false, message: phaseCheck.message });
 
     // Sanitize attachments — only keep fields the schema allows
@@ -108,7 +123,7 @@ exports.submitCheckIn = async (req, res) => {
       mimetype: String(a.mimetype || '')
     })) : [];
 
-    let checkIn = await CheckIn.findOne({ objective_id, cycle_id, employee_id: req.user.id });
+    let checkIn = await CheckIn.findOne({ objective_id, cycle_id: objective.cycle._id || objective.cycle, employee_id: actorId(req.user) });
 
     if (checkIn) {
       if (checkIn.status === 'approved') {
@@ -135,8 +150,8 @@ exports.submitCheckIn = async (req, res) => {
     } else {
       checkIn = new CheckIn({
         objective_id,
-        employee_id: req.user.id,
-        cycle_id,
+        employee_id: actorId(req.user),
+        cycle_id: objective.cycle._id || objective.cycle,
         progress_percent: Number(progress_percent),
         notes: notes || '',
         priority: priority || 'medium',
@@ -147,8 +162,6 @@ exports.submitCheckIn = async (req, res) => {
       await checkIn.save();
     }
 
-    await Objective.findByIdAndUpdate(objective_id, { achievementPercent: Number(progress_percent) });
-
     auditLogger.log(req.user.id, 'checkin.submitted', 'CheckIn', checkIn._id, {
       objective_id, progress_percent, status: checkIn.status
     }).catch(() => { });
@@ -156,7 +169,10 @@ exports.submitCheckIn = async (req, res) => {
     res.status(201).json({ success: true, checkIn });
   } catch (err) {
     console.error('submitCheckIn error:', err.message);
-    require('fs').writeFileSync(__dirname + '/../checkin_error.log', new Date().toISOString() + '\n' + err.stack + '\nBody: ' + JSON.stringify(req.body) + '\n', { flag: 'a' });
+    auditLogger.log(req.user?.id || req.user?._id, 'checkin.submit_failed', 'CheckIn', null, {
+      route: 'POST /api/checkins',
+      error: err.message
+    }).catch(() => {});
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -185,18 +201,20 @@ exports.reviewCheckIn = async (req, res) => {
       }
     }
 
-    const checkIn = await CheckIn.findById(id).populate('objective_id');
+    const checkIn = await CheckIn.findById(id).populate({
+      path: 'objective_id',
+      select: '_id owner team cycle title',
+      populate: { path: 'cycle', select: 'status currentPhase' }
+    });
     if (!checkIn) return res.status(404).json({ success: false, message: 'Check-in not found' });
-    const phaseCheck = await enforceCyclePhaseAccess(checkIn.cycle_id, ['phase2']);
+    if (!checkIn.objective_id) return res.status(404).json({ success: false, message: 'Objective not found' });
+    if (resourceId(checkIn.objective_id.owner) !== resourceId(checkIn.employee_id)) {
+      return res.status(409).json({ success: false, message: 'Check-in objective ownership is inconsistent.' });
+    }
+    const phaseCheck = await enforceCyclePhaseAccess(checkIn.objective_id.cycle, ['phase2']);
     if (phaseCheck.error) return res.status(phaseCheck.status).json({ success: false, message: phaseCheck.message });
 
-    // Verify manager has authority over this employee
-    const User = require('../models/User');
-    const employee = await User.findById(checkIn.employee_id);
-    if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
-
-    // Check if user supervises this employee or is the employee themselves
-    if (String(employee.manager) !== String(req.user.id) && String(employee._id) !== String(req.user.id) && req.user.role !== 'ADMIN' && req.user.role !== 'HR' && req.user.role !== 'TEAM_LEADER') {
+    if (!(await canManageEmployee(req.user, checkIn.employee_id))) {
       return res.status(403).json({ success: false, message: 'You do not have permission to review this check-in' });
     }
 
@@ -213,8 +231,8 @@ exports.reviewCheckIn = async (req, res) => {
     if (progress_percent !== undefined && progress_percent !== null) {
       checkIn.progress_percent = Number(progress_percent);
       // Also update objective achievement percent
-      if (checkIn.objective_id) {
-        await require('../models/Objective').findByIdAndUpdate(checkIn.objective_id, { achievementPercent: Number(progress_percent) });
+      if (action === 'approve' && checkIn.objective_id) {
+        await require('../models/Objective').findByIdAndUpdate(checkIn.objective_id._id || checkIn.objective_id, { achievementPercent: Number(progress_percent) });
       }
     }
 
@@ -240,8 +258,11 @@ exports.getCheckInsByObjective = async (req, res) => {
   try {
     const { objective_id } = req.query;
     if (!objective_id) return res.status(400).json({ success: false, message: 'objective_id is required.' });
-    const objective = await Objective.findById(objective_id).select('cycle');
+    const objective = await Objective.findById(objective_id).select('cycle owner team category');
     if (!objective) return res.status(404).json({ success: false, message: 'Objective not found.' });
+    if (!(await canAccessObjective(req.user, objective))) {
+      return res.status(403).json({ success: false, message: 'You are not authorized to view this objective.' });
+    }
     const phaseCheck = await enforceCyclePhaseAccess(objective.cycle, ['phase2', 'phase3']);
     if (phaseCheck.error) return res.status(phaseCheck.status).json({ success: false, message: phaseCheck.message });
 
@@ -258,8 +279,11 @@ exports.getCheckInsByObjective = async (req, res) => {
 exports.getTasksForObjective = async (req, res) => {
   try {
     const { objective_id } = req.params;
-    const objective = await Objective.findById(objective_id).select('cycle');
+    const objective = await Objective.findById(objective_id).select('cycle owner team category');
     if (!objective) return res.status(404).json({ success: false, message: 'Objective not found.' });
+    if (!(await canAccessObjective(req.user, objective))) {
+      return res.status(403).json({ success: false, message: 'You are not authorized to view this objective.' });
+    }
     const phaseCheck = await enforceCyclePhaseAccess(objective.cycle, ['phase2', 'phase3']);
     if (phaseCheck.error) return res.status(phaseCheck.status).json({ success: false, message: phaseCheck.message });
 

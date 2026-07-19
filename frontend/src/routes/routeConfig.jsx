@@ -78,7 +78,7 @@ export const APP_ROUTES = [
   { path: '/users', label: 'User Administration', section: 'Management', icon: 'user', component: Users, showInSidebar: true, roles: ['ADMIN'] },
   { path: '/analytics', label: 'Analytics', section: 'Management', icon: 'pie-chart', component: AnalyticsPage, showInSidebar: true, roles: ['ADMIN', 'HR'] },
   { path: '/audit-logs', label: 'Audit Logs', section: 'Management', icon: 'shield', component: AuditLogsPage, showInSidebar: true, roles: ['ADMIN', 'HR'] },
-  { path: '/bonus-penalty', label: 'Bonus/Penalty Review', section: 'Management', icon: 'award', component: BonusPenaltyPage, showInSidebar: true, roles: ['ADMIN', 'HR'] },
+  { path: '/bonus-penalty', label: 'Bonus/Penalty Review', section: 'Management', icon: 'award', component: BonusPenaltyPage, showInSidebar: true, roles: ['ADMIN', 'HR', 'TEAM_LEADER'] },
   { path: '/settings', label: 'Settings', section: 'Management', icon: 'settings', component: Settings, showInSidebar: true, roles: ['ADMIN', 'HR'] },
 ];
 

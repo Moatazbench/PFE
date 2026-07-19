@@ -72,25 +72,27 @@ function AnalyticsPage() {
   var [feedbackStats, setFeedbackStats] = useState({ received: 0, sent: 0, byType: [] });
   var [objectives, setObjectives] = useState([]);
   var [activeCycle, setActiveCycle] = useState(null);
+  var [error, setError] = useState('');
 
   useEffect(function () { loadData(); }, []);
 
   function loadData() {
     setLoading(true);
+    setError('');
     var scope = 'me';
     if (user && (user.role === 'ADMIN' || user.role === 'HR')) scope = 'org';
     else if (user && user.role === 'TEAM_LEADER') scope = 'team';
 
     var requests = [
-      api.getCached('/stats/dashboard', { params: { scope: scope } }, { ttl: 15000 }).catch(function () { return { data: {} }; }),
-      api.getCached('/tasks/stats', undefined, { ttl: 15000 }).catch(function () { return { data: {} }; }),
-      api.getCached('/feedback/stats', undefined, { ttl: 15000 }).catch(function () { return { data: {} }; }),
-      api.get('/objectives' + (scope === 'me' ? '/my' : '')).catch(function () { return { data: [] }; }),
-      api.getCached('/cycles', undefined, { ttl: 60000, cacheKey: 'cycles:analytics-list' }).catch(function () { return { data: [] }; }),
+      api.getCached('/stats/dashboard', { params: { scope: scope } }, { ttl: 15000 }),
+      api.getCached('/tasks/stats', undefined, { ttl: 15000 }),
+      api.getCached('/feedback/stats', undefined, { ttl: 15000 }),
+      api.get('/objectives' + (scope === 'me' ? '/my' : '')),
+      api.getCached('/cycles', undefined, { ttl: 60000, cacheKey: 'cycles:analytics-list' }),
     ];
 
     if (user && (user.role === 'ADMIN' || user.role === 'HR')) {
-      requests.push(api.get('/stats/performance').catch(function () { return null; }));
+      requests.push(api.get('/stats/performance'));
     }
 
     Promise.all(requests)
@@ -114,7 +116,9 @@ function AnalyticsPage() {
 
         if (responses[5]?.data) setPerformance(responses[5].data);
       })
-      .catch(function () {})
+      .catch(function (err) {
+        setError(err.response?.data?.message || 'Analytics data could not be loaded.');
+      })
       .finally(function () { setLoading(false); });
   }
 
@@ -125,6 +129,24 @@ function AnalyticsPage() {
           <div className="dash-loading__spinner" />
           <p style={{ color: 'var(--shell-text-secondary, #64748b)' }}>Loading analytics...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="ds-main__inner">
+        <div className="ds-page-header">
+          <div className="ds-page-header__left">
+            <h1 className="ds-page-header__title">Analytics</h1>
+            <p className="ds-page-header__subtitle">Performance, task, and feedback insight across the current workspace.</p>
+          </div>
+        </div>
+        <EmptyState
+          title="Analytics could not be loaded"
+          description={error}
+          action={<button className="btn btn--primary" type="button" onClick={loadData}>Retry</button>}
+        />
       </div>
     );
   }

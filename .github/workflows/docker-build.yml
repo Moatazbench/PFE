@@ -191,7 +191,7 @@ jobs:
     if: github.ref_name == 'develop' && github.event_name == 'push'
     steps:
       - name: Wait for deployment
-        run: sleep 30
+        run: sleep 60
       - name: Health check
         run: |
-          curl --fail --retry 5 --retry-delay 10 ${{ secrets.DEV_APP_URL }}/health || echo "Health check failed"
+          curl --fail --retry 12 --retry-delay 10 --retry-all-errors ${{ secrets.DEV_APP_URL }}/api/health

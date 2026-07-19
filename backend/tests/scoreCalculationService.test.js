@@ -58,6 +58,19 @@ describe('weighted final evaluation scoring', () => {
     expect(result.breakdown[0].title).toBe('Approved objective');
   });
 
+  test('excludes non-final objective workflow statuses from the automatic score', () => {
+    const result = calculateWeightedScoreFromObjectives([
+      { title: 'Approved objective', weight: 50, managerAdjustedPercent: 80, status: 'approved' },
+      { title: 'Evaluated objective', weight: 50, managerAdjustedPercent: 100, status: 'evaluated' },
+      { title: 'Pending objective', weight: 100, managerAdjustedPercent: 10, status: 'pending' },
+      { title: 'Assigned objective', weight: 100, managerAdjustedPercent: 10, status: 'assigned' },
+      { title: 'Revision objective', weight: 100, managerAdjustedPercent: 10, status: 'revision_requested' },
+    ]);
+
+    expect(result.score).toBe(90);
+    expect(result.breakdown.map((item) => item.title)).toEqual(['Approved objective', 'Evaluated objective']);
+  });
+
   test('normalizes legacy or incomplete weight totals without penalizing missing administrative weight', () => {
     const result = calculateWeightedScoreFromObjectives([
       { weight: 40, managerAdjustedPercent: 100, status: 'evaluated' },

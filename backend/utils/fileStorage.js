@@ -27,6 +27,9 @@ function sanitizeBaseName(value) {
 }
 
 function buildLocalUrl(folder, filename) {
+  if (folder === 'checkins') {
+    return '/api/checkins/attachments/' + filename;
+  }
   return '/uploads/' + folder + '/' + filename;
 }
 
@@ -135,4 +138,5 @@ async function storeUploadedFile(file, options) {
 module.exports = {
   isCloudinaryConfigured,
   storeUploadedFile,
+  UPLOAD_ROOT,
 };

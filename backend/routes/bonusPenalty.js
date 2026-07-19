@@ -1,15 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const BonusPenalty = require('../models/BonusPenalty');
-const Team = require('../models/Team');
 const auth = require('../middleware/auth');
 const role = require('../middleware/role');
 const FinalEvaluation = require('../models/FinalEvaluation');
 const HRDecision = require('../models/HRDecision');
 const { createNotification } = require('../utils/notificationHelper');
+const { canAccessEmployee, canManageEmployee } = require('../utils/accessControl');
 
 // POST /api/bonus-penalty — Create a new bonus/penalty (HR and Admin only)
-router.post('/', auth, role('ADMIN', 'TEAM_LEADER'), async function (req, res) {
+router.post('/', auth, role('ADMIN', 'HR', 'TEAM_LEADER'), async function (req, res) {
   try {
     const { employee, type, value, reason, finalEvaluation, hrDecision, objective, approvalStatus, paymentDate } = req.body;
 
@@ -28,13 +28,17 @@ router.post('/', auth, role('ADMIN', 'TEAM_LEADER'), async function (req, res) {
     if (!reason || !reason.trim()) {
       return res.status(400).json({ success: false, message: 'Reason is required.' });
     }
-    if (req.user.role === 'TEAM_LEADER' && !await Team.exists({ leader: req.user.id || req.user._id, members: employee })) {
+    if (!(await canManageEmployee(req.user, employee))) {
       return res.status(403).json({ success: false, message: 'You can only recommend records for employees you manage.' });
     }
 
     const linkedEvaluation = await FinalEvaluation.findOne({ _id: finalEvaluation, employee_id: employee, status: { $in: ['validated', 'closed'] } });
     if (!linkedEvaluation) {
       return res.status(400).json({ success: false, message: 'A validated final evaluation is required.' });
+    }
+    const duplicate = await BonusPenalty.exists({ finalEvaluation: linkedEvaluation._id, type });
+    if (duplicate) {
+      return res.status(409).json({ success: false, message: `A ${type} record already exists for this final evaluation.` });
     }
     const linkedDecision = hrDecision
       ? await HRDecision.findOne({ _id: hrDecision, user: employee, finalEvaluation: linkedEvaluation._id })
@@ -109,6 +113,43 @@ router.put('/:id/approval', auth, role('HR', 'ADMIN'), async function (req, res)
   }
 });
 
+router.get('/eligible-evaluations', auth, role('ADMIN', 'HR', 'TEAM_LEADER'), async function (req, res) {
+  try {
+    const evaluations = await FinalEvaluation.find({ status: { $in: ['validated', 'closed'] } })
+      .populate('employee_id', 'name email role team')
+      .populate('cycle_id', 'name year')
+      .sort({ updatedAt: -1 })
+      .limit(250);
+    const used = await BonusPenalty.find({ finalEvaluation: { $in: evaluations.map((item) => item._id) } }).select('finalEvaluation type');
+    const usedByEvaluation = used.reduce((map, item) => {
+      const key = String(item.finalEvaluation);
+      map[key] = map[key] || [];
+      map[key].push(item.type);
+      return map;
+    }, {});
+
+    const eligible = [];
+    for (const evaluation of evaluations) {
+      const employeeId = evaluation.employee_id?._id || evaluation.employee_id;
+      if (await canAccessEmployee(req.user, employeeId, { allowSelf: false, allowHr: true })) {
+        eligible.push({
+          _id: evaluation._id,
+          employee: evaluation.employee_id,
+          cycle: evaluation.cycle_id,
+          status: evaluation.status,
+          final_score: evaluation.final_score,
+          rating_label: evaluation.rating_label,
+          existingTypes: usedByEvaluation[String(evaluation._id)] || []
+        });
+      }
+    }
+
+    res.json({ success: true, evaluations: eligible });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.get('/', auth, role('HR', 'ADMIN'), async function (req, res) {
   try {
     const records = await BonusPenalty.find({})
@@ -130,13 +171,10 @@ router.get('/', auth, role('HR', 'ADMIN'), async function (req, res) {
 router.get('/employee/:employeeId', auth, async function (req, res) {
   try {
     const { employeeId } = req.params;
-    const currentUserId = String(req.user.id || req.user._id);
 
     // HR and Admin can always access
     if (req.user.role !== 'HR' && req.user.role !== 'ADMIN' && currentUserId !== String(employeeId)) {
-      // Check if the current user is the employee's direct manager (team leader)
-      const team = await Team.findOne({ leader: currentUserId, members: employeeId });
-      if (!team) {
+      if (!(await canAccessEmployee(req.user, employeeId, { allowSelf: true, allowHr: true }))) {
         return res.status(403).json({ success: false, message: 'Forbidden: You are not authorized to view this data.' });
       }
     }
