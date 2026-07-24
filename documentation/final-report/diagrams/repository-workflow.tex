@@ -1,0 +1,31 @@
+\begin{figure}[H]\centering
+\resizebox{0.94\textwidth}{!}{%
+\begin{tikzpicture}[every node/.style={font=\scriptsize}, box/.style={draw, rounded corners, fill=PerTrackLight, minimum width=2.9cm, minimum height=0.8cm, align=center}, lane/.style={draw, rounded corners, minimum width=3.25cm, minimum height=4.1cm, align=center}, arr/.style={-Latex, thick}]
+\node[lane, fill=white] (devlane) at (0,0) {};
+\node[box] (code) at (0,1.2) {Local code\\frontend/backend/AI};
+\node[box] (tests) at (0,0) {Local tests\\Jest and build};
+\node[box] (docs) at (0,-1.2) {Report evidence\\documentation};
+\node[lane, fill=white] (cilane) at (4.0,0) {};
+\node[box] (scan) at (4,1.2) {Secret scan\\Gitleaks};
+\node[box] (ci) at (4,0) {CI verification\\backend + frontend};
+\node[box] (image) at (4,-1.2) {Docker images\\backend + frontend};
+\node[lane, fill=white] (opslane) at (8.0,0) {};
+\node[box] (kust) at (8,1.2) {Kustomize tag\\dev overlay};
+\node[box] (trivy) at (8,0) {Trivy scan\\images};
+\node[box] (argo) at (8,-1.2) {Argo CD\\cluster sync};
+\node[font=\bfseries] at (0,2.25) {Development};
+\node[font=\bfseries] at (4,2.25) {Continuous Integration};
+\node[font=\bfseries] at (8,2.25) {Deployment Evidence};
+\draw[arr] (code) -- (tests);
+\draw[arr] (tests) -- (scan);
+\draw[arr] (scan) -- (ci);
+\draw[arr] (ci) -- (image);
+\draw[arr] (image) -- (trivy);
+\draw[arr] (image) -- (kust);
+\draw[arr] (kust) -- (argo);
+\draw[arr, dashed] (docs) -- (ci);
+\end{tikzpicture}}
+\caption{Repository workflow from local implementation to CI/CD evidence. Source: author's own work based on repository folders and GitHub Actions.}
+\label{fig:repository-workflow}
+\end{figure}
+

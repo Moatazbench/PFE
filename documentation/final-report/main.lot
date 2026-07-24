@@ -1,0 +1,48 @@
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {1.1}{\ignorespaces Stakeholders identified from implemented roles and workflows.}}{5}{table.caption.12}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {2.1}{\ignorespaces Comparative analysis by feature category.}}{10}{table.caption.16}%
+\contentsline {table}{\numberline {2.2}{\ignorespaces Project risk matrix.}}{11}{table.2.2}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {3.1}{\ignorespaces Functional requirements verified from source code.}}{13}{table.3.1}%
+\contentsline {table}{\numberline {3.2}{\ignorespaces Non-functional requirements and implementation evidence.}}{14}{table.caption.18}%
+\contentsline {table}{\numberline {3.3}{\ignorespaces Technology-choice table based on package manifests.}}{17}{table.caption.25}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {4.1}{\ignorespaces Role-permission matrix. Source: author's own work based on backend role middleware and route configuration.}}{20}{table.caption.27}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {6.1}{\ignorespaces Final score rating bands implemented in \texttt {scoreCalculationService.js}.}}{30}{table.caption.36}%
+\contentsline {table}{\numberline {6.2}{\ignorespaces Examples of HR review controls implemented in workflow rules.}}{31}{table.caption.38}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {7.1}{\ignorespaces Model evaluation on the saved artifacts using the repository training split.}}{36}{table.caption.41}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {8.1}{\ignorespaces Local verification results from July 21, 2026.}}{40}{table.caption.44}%
+\contentsline {table}{\numberline {8.2}{\ignorespaces CI/CD stages verified from the GitHub Actions workflow.}}{43}{table.caption.48}%
+\contentsline {table}{\numberline {8.3}{\ignorespaces Delivered scope and remaining limitations.}}{46}{table.caption.50}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {A.1}{\ignorespaces Grouped API inventory.}}{47}{table.A.1}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {B.1}{\ignorespaces Main MongoDB/Mongoose entities.}}{49}{table.B.1}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {C.1}{\ignorespaces Frontend route inventory.}}{51}{table.C.1}%
+\contentsline {table}{\numberline {C.2}{\ignorespaces Frontend service and utility modules.}}{53}{table.caption.51}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {D.1}{\ignorespaces Role and identity rules.}}{55}{table.D.1}%
+\contentsline {table}{\numberline {D.2}{\ignorespaces Team and access-scope rules.}}{56}{table.D.2}%
+\contentsline {table}{\numberline {D.3}{\ignorespaces Cycle and phase rules.}}{56}{table.D.3}%
+\contentsline {table}{\numberline {D.4}{\ignorespaces Objective workflow and visibility rules.}}{57}{table.D.4}%
+\contentsline {table}{\numberline {D.5}{\ignorespaces Scoring rules.}}{57}{table.D.5}%
+\contentsline {table}{\numberline {D.6}{\ignorespaces HR review and follow-up rules.}}{58}{table.D.6}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {E.1}{\ignorespaces Implemented security controls.}}{60}{table.E.1}%
+\contentsline {table}{\numberline {E.2}{\ignorespaces Residual security risks and recommendations.}}{62}{table.caption.52}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {F.1}{\ignorespaces AI dataset and prediction fields.}}{63}{table.F.1}%
+\contentsline {table}{\numberline {F.2}{\ignorespaces Dataset checks computed locally.}}{64}{table.caption.53}%
+\contentsline {table}{\numberline {F.3}{\ignorespaces Rating class distribution in the synthetic dataset.}}{64}{table.caption.54}%
+\contentsline {table}{\numberline {F.4}{\ignorespaces Promotion-readiness rate by rating in the synthetic data.}}{64}{table.caption.55}%
+\contentsline {table}{\numberline {F.5}{\ignorespaces XGBoost rating model confusion matrix on the repository split.}}{65}{table.caption.56}%
+\contentsline {table}{\numberline {F.6}{\ignorespaces XGBoost promotion model confusion matrix on the repository split.}}{65}{table.caption.57}%
+\contentsline {table}{\numberline {F.7}{\ignorespaces XGBoost rating feature importance from saved artifact.}}{65}{table.caption.58}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }

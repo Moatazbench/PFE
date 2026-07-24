@@ -1,0 +1,312 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.3 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{none/global//global/global/global}
+    \entry{mongodbDocs}{online}{}{}
+      \list{organization}{1}{%
+        {MongoDB}%
+      }
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labeltitlesource}{title}
+      \field{title}{Databases and Collections in MongoDB}
+      \field{urlday}{21}
+      \field{urlmonth}{7}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://www.mongodb.com/docs/manual/core/databases-and-collections/
+      \endverb
+      \verb{url}
+      \verb https://www.mongodb.com/docs/manual/core/databases-and-collections/
+      \endverb
+    \endentry
+    \entry{mongooseSchemas}{online}{}{}
+      \list{organization}{1}{%
+        {Mongoose}%
+      }
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labeltitlesource}{title}
+      \field{title}{Mongoose Schemas Guide}
+      \field{urlday}{21}
+      \field{urlmonth}{7}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://mongoosejs.com/docs/guide.html
+      \endverb
+      \verb{url}
+      \verb https://mongoosejs.com/docs/guide.html
+      \endverb
+    \endentry
+    \entry{reactDocs}{online}{}{}
+      \list{organization}{1}{%
+        {Meta Open Source}%
+      }
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labeltitlesource}{title}
+      \field{title}{React Documentation}
+      \field{urlday}{21}
+      \field{urlmonth}{7}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://react.dev/
+      \endverb
+      \verb{url}
+      \verb https://react.dev/
+      \endverb
+    \endentry
+    \entry{viteDocs}{online}{}{}
+      \list{organization}{1}{%
+        {Vite}%
+      }
+      \field{sortinit}{3}
+      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{labeltitlesource}{title}
+      \field{title}{Vite Guide}
+      \field{urlday}{21}
+      \field{urlmonth}{7}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://vite.dev/guide/
+      \endverb
+      \verb{url}
+      \verb https://vite.dev/guide/
+      \endverb
+    \endentry
+    \entry{expressDocs}{online}{}{}
+      \list{organization}{1}{%
+        {OpenJS Foundation}%
+      }
+      \field{sortinit}{4}
+      \field{sortinithash}{9381316451d1b9788675a07e972a12a7}
+      \field{labeltitlesource}{title}
+      \field{title}{Express.js Routing Guide}
+      \field{urlday}{21}
+      \field{urlmonth}{7}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://expressjs.com/en/5x/guide/routing/
+      \endverb
+      \verb{url}
+      \verb https://expressjs.com/en/5x/guide/routing/
+      \endverb
+    \endentry
+    \entry{flaskDocs}{online}{}{}
+      \list{organization}{1}{%
+        {Pallets}%
+      }
+      \field{sortinit}{6}
+      \field{sortinithash}{b33bc299efb3c36abec520a4c896a66d}
+      \field{labeltitlesource}{title}
+      \field{title}{Flask Quickstart}
+      \field{urlday}{21}
+      \field{urlmonth}{7}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://flask.palletsprojects.com/en/stable/quickstart/
+      \endverb
+      \verb{url}
+      \verb https://flask.palletsprojects.com/en/stable/quickstart/
+      \endverb
+    \endentry
+    \entry{xgboostDocs}{online}{}{}
+      \list{organization}{1}{%
+        {XGBoost}%
+      }
+      \field{sortinit}{7}
+      \field{sortinithash}{108d0be1b1bee9773a1173443802c0a3}
+      \field{labeltitlesource}{title}
+      \field{title}{XGBoost Documentation}
+      \field{urlday}{21}
+      \field{urlmonth}{7}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://xgboost.readthedocs.io/
+      \endverb
+      \verb{url}
+      \verb https://xgboost.readthedocs.io/
+      \endverb
+    \endentry
+    \entry{sklearnRF}{online}{}{}
+      \list{organization}{1}{%
+        {scikit-learn}%
+      }
+      \field{sortinit}{7}
+      \field{sortinithash}{108d0be1b1bee9773a1173443802c0a3}
+      \field{labeltitlesource}{title}
+      \field{title}{RandomForestClassifier}
+      \field{urlday}{21}
+      \field{urlmonth}{7}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
+      \endverb
+      \verb{url}
+      \verb https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
+      \endverb
+    \endentry
+    \entry{rfc7519}{misc}{}{}
+      \name{author}{3}{}{%
+        {{hash=5a25bc91f524ca6dfc2ecf9f4a13903c}{%
+           family={Jones},
+           familyi={J\bibinitperiod},
+           given={Michael},
+           giveni={M\bibinitperiod}}}%
+        {{hash=81e40ae87af997090fa9a9696e364c65}{%
+           family={Bradley},
+           familyi={B\bibinitperiod},
+           given={John},
+           giveni={J\bibinitperiod}}}%
+        {{hash=34e6848475fd66697bfcb80787f2aef0}{%
+           family={Sakimura},
+           familyi={S\bibinitperiod},
+           given={Nat},
+           giveni={N\bibinitperiod}}}%
+      }
+      \strng{namehash}{8c74f36d6695ec51f419b547a3316502}
+      \strng{fullhash}{48d544cafb60a3ced64569d686a33135}
+      \strng{fullhashraw}{48d544cafb60a3ced64569d686a33135}
+      \strng{bibnamehash}{48d544cafb60a3ced64569d686a33135}
+      \strng{authorbibnamehash}{48d544cafb60a3ced64569d686a33135}
+      \strng{authornamehash}{8c74f36d6695ec51f419b547a3316502}
+      \strng{authorfullhash}{48d544cafb60a3ced64569d686a33135}
+      \strng{authorfullhashraw}{48d544cafb60a3ced64569d686a33135}
+      \field{sortinit}{8}
+      \field{sortinithash}{a231b008ebf0ecbe0b4d96dcc159445f}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{IETF}
+      \field{title}{RFC 7519: JSON Web Token (JWT)}
+      \field{year}{2015}
+      \verb{urlraw}
+      \verb https://datatracker.ietf.org/doc/html/rfc7519
+      \endverb
+      \verb{url}
+      \verb https://datatracker.ietf.org/doc/html/rfc7519
+      \endverb
+    \endentry
+    \entry{owaspApi}{online}{}{}
+      \list{organization}{1}{%
+        {OWASP}%
+      }
+      \field{sortinit}{9}
+      \field{sortinithash}{0a5ebc79d83c96b6579069544c73c7d4}
+      \field{labeltitlesource}{title}
+      \field{title}{OWASP API Security Top 10 2023}
+      \field{urlday}{21}
+      \field{urlmonth}{7}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://owasp.org/API-Security/editions/2023/en/0x11-t10/
+      \endverb
+      \verb{url}
+      \verb https://owasp.org/API-Security/editions/2023/en/0x11-t10/
+      \endverb
+    \endentry
+    \entry{dockerDocs}{online}{}{}
+      \list{organization}{1}{%
+        {Docker}%
+      }
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labeltitlesource}{title}
+      \field{title}{Dockerfile Reference}
+      \field{urlday}{21}
+      \field{urlmonth}{7}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://docs.docker.com/reference/dockerfile/
+      \endverb
+      \verb{url}
+      \verb https://docs.docker.com/reference/dockerfile/
+      \endverb
+    \endentry
+    \entry{kustomizeDocs}{online}{}{}
+      \list{organization}{1}{%
+        {Kubernetes}%
+      }
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labeltitlesource}{title}
+      \field{title}{Declarative Management of Kubernetes Objects Using Kustomize}
+      \field{urlday}{21}
+      \field{urlmonth}{7}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/
+      \endverb
+      \verb{url}
+      \verb https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/
+      \endverb
+    \endentry
+    \entry{argoDocs}{online}{}{}
+      \list{organization}{1}{%
+        {Argo CD}%
+      }
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labeltitlesource}{title}
+      \field{title}{Argo CD Automated Sync Policy}
+      \field{urlday}{21}
+      \field{urlmonth}{7}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://argo-cd.readthedocs.io/en/stable/user-guide/auto_sync/
+      \endverb
+      \verb{url}
+      \verb https://argo-cd.readthedocs.io/en/stable/user-guide/auto_sync/
+      \endverb
+    \endentry
+    \entry{githubActionsDocs}{online}{}{}
+      \list{organization}{1}{%
+        {GitHub}%
+      }
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labeltitlesource}{title}
+      \field{title}{Workflow Syntax for GitHub Actions}
+      \field{urlday}{21}
+      \field{urlmonth}{7}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://docs.github.com/actions/using-workflows/workflow-syntax-for-github-actions
+      \endverb
+      \verb{url}
+      \verb https://docs.github.com/actions/using-workflows/workflow-syntax-for-github-actions
+      \endverb
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+

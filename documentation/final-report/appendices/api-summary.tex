@@ -1,0 +1,35 @@
+\chapter{API Summary}
+\begin{longtable}{p{0.2\textwidth}p{0.23\textwidth}p{0.47\textwidth}}
+\caption{Grouped API inventory.}\label{tab:api-summary}\\
+\toprule
+Base route & Main methods & Purpose\\
+\midrule
+\endfirsthead
+\toprule
+Base route & Main methods & Purpose\\
+\midrule
+\endhead
+\texttt{/api/auth} & POST, GET & Login, token refresh, logout, current-user lookup\\
+\texttt{/api/users} & GET, PUT, DELETE & User lists, managers, collaborators, admin user access, profile/avatar update\\
+\texttt{/api/teams} & GET, POST, PUT, DELETE & Team and subteam CRUD, team summaries, managed team access\\
+\texttt{/api/team-members} & GET & Team member lookup and fallback active users\\
+\texttt{/api/cycles} & GET, POST, PUT, PATCH, DELETE & Cycle CRUD, phase advancement, phase check, rollback\\
+\texttt{/api/objectives} & GET, POST, PUT, PATCH, DELETE & Objective CRUD, submit, validate, acknowledge, complete, evaluate, lock, KPIs, comments, progress, change requests\\
+\texttt{/api/checkins} & GET, POST, PUT & Check-in submission, attachments, team review, objective task lookup\\
+\texttt{/api/tasks} & GET, POST, PUT, DELETE & Task creation, assignment, stats, team tasks, time entries\\
+\texttt{/api/evaluations} & GET, POST, PUT & General evaluation creation, scoring, submission, HR approval/rejection, acknowledgment\\
+\texttt{/api/final-evaluations} & GET, POST, PUT & Final evaluation generation, team views, HR queues, HR validation, employee feedback, export\\
+\texttt{/api/hr-decisions} & GET, POST, PUT, DELETE & HR decision CRUD and scoped visibility\\
+\texttt{/api/improvement-plans} & GET, POST, PUT, DELETE & Improvement plans linked to final evaluations\\
+\texttt{/api/bonus-penalty} & GET, POST, PUT & Bonus and penalty creation, approval, eligible evaluations\\
+\texttt{/api/career} & GET, POST, PUT, DELETE & Competencies, career paths, development actions, recommendations\\
+\texttt{/api/ai} & GET, POST & Goal/KPI suggestions, review drafts, development plans, prediction endpoints\\
+\texttt{/api/stats} & GET & Dashboard statistics, performance stats, objective status, users by role, score distribution\\
+\texttt{/api/reports} & GET & Cycle and team reports\\
+\texttt{/api/audit-logs} & GET & Audit log queries and entity history\\
+\texttt{/api/notifications} & GET, POST, DELETE & Notifications, unread count, read flags\\
+\texttt{/api/calendar} & GET, POST, DELETE & Calendar providers, connection, callback, events\\
+\texttt{/api/meetings} & GET, POST, PUT, DELETE & Meetings, duplication, action items\\
+\texttt{/api/pdf} & GET & Team and user PDF generation\\
+\bottomrule
+\end{longtable}

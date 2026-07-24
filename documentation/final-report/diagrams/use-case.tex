@@ -1,0 +1,24 @@
+\begin{figure}[H]\centering
+\begin{tikzpicture}[node distance=0.75cm, every node/.style={font=\scriptsize}, use/.style={draw, ellipse, fill=PerTrackLight, minimum width=2.5cm, align=center}, actor/.style={draw, rectangle, rounded corners, fill=white, minimum width=1.8cm, align=center}]
+\node[actor] (admin) {Admin};
+\node[actor, below=of admin] (hr) {HR};
+\node[actor, below=of hr] (tl) {Team Leader};
+\node[actor, below=of tl] (col) {Collaborator};
+\node[use, right=2cm of admin] (users) {Manage users\\and cycles};
+\node[use, right=2cm of hr] (validate) {Validate final\\evaluations};
+\node[use, right=2cm of tl] (review) {Approve goals\\and reviews};
+\node[use, right=2cm of col] (goals) {Create goals\\and check-ins};
+\node[use, right=1.4cm of review] (ai) {AI drafts\\and predictions};
+\node[use, above=of ai] (analytics) {Analytics and\\audit reports};
+\draw[-Latex] (admin) -- (users);
+\draw[-Latex] (admin) -- (analytics);
+\draw[-Latex] (hr) -- (validate);
+\draw[-Latex] (hr) -- (analytics);
+\draw[-Latex] (tl) -- (review);
+\draw[-Latex] (tl) -- (ai);
+\draw[-Latex] (col) -- (goals);
+\draw[-Latex] (col) -- (ai);
+\end{tikzpicture}
+\caption{Global use-case diagram. Source: author's own work based on routes and frontend route configuration.}
+\label{fig:use-case}
+\end{figure}

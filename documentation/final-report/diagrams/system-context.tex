@@ -1,0 +1,19 @@
+\begin{figure}[H]\centering
+\resizebox{0.95\textwidth}{!}{%
+\begin{tikzpicture}[node distance=1.3cm, every node/.style={font=\small}, box/.style={draw, rounded corners, fill=PerTrackLight, minimum width=3.2cm, minimum height=0.9cm, align=center}, arr/.style={-Latex, thick}]
+\node[box] (user) {Admin, HR, Team Leader, Collaborator};
+\node[box, right=2.3cm of user] (front) {React/Vite SPA};
+\node[box, right=2.3cm of front] (api) {Express API};
+\node[box, below=1.2cm of api] (db) {MongoDB};
+\node[box, above=1.2cm of api] (ai) {AI providers and Flask predictor};
+\node[box, below=1.2cm of front] (mail) {Email, calendar, uploads};
+\draw[arr] (user) -- (front);
+\draw[arr] (front) -- node[above]{REST JSON} (api);
+\draw[arr] (api) -- (db);
+\draw[arr] (api) -- (ai);
+\draw[arr] (api) -- (mail);
+\end{tikzpicture}
+}
+\caption{System-context diagram. Source: author's own work based on repository architecture.}
+\label{fig:system-context}
+\end{figure}

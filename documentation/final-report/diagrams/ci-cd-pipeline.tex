@@ -1,0 +1,21 @@
+\begin{figure}[H]\centering
+\begin{tikzpicture}[node distance=0.75cm, every node/.style={font=\scriptsize}, proc/.style={draw, rounded corners, fill=PerTrackLight, minimum width=2.1cm, minimum height=0.7cm, align=center}]
+\node[proc] (push) {push / PR};
+\node[proc, right=of push] (secrets) {Gitleaks};
+\node[proc, right=of secrets] (bt) {Backend tests};
+\node[proc, right=of bt] (fb) {Frontend build\\and tests};
+\node[proc, below=of fb] (docker) {Docker build\\and push};
+\node[proc, left=of docker] (trivy) {Trivy scans};
+\node[proc, left=of trivy] (gitops) {Update dev\\Kustomize tag};
+\node[proc, left=of gitops] (smoke) {Dev smoke\\health check};
+\draw[-Latex] (push) -- (secrets);
+\draw[-Latex] (secrets) -- (bt);
+\draw[-Latex] (bt) -- (fb);
+\draw[-Latex] (fb) -- (docker);
+\draw[-Latex] (docker) -- (trivy);
+\draw[-Latex] (trivy) -- (gitops);
+\draw[-Latex] (gitops) -- (smoke);
+\end{tikzpicture}
+\caption{CI/CD pipeline diagram. Source: author's own work based on GitHub Actions workflow.}
+\label{fig:ci-cd-pipeline}
+\end{figure}

@@ -1,0 +1,29 @@
+\chapter{Database Dictionary}
+\begin{longtable}{p{0.22\textwidth}p{0.28\textwidth}p{0.4\textwidth}}
+\caption{Main MongoDB/Mongoose entities.}\label{tab:database-dictionary}\\
+\toprule
+Entity & Key fields & Notes\\
+\midrule
+\endfirsthead
+\toprule
+Entity & Key fields & Notes\\
+\midrule
+\endhead
+User & name, email, password, role, team, manager, isActive, refreshToken & Email validator requires \texttt{@biat.com}; password hashed before save\\
+Team & name, leader, members, parentTeam, createdBy & Parent-team reference supports subteams\\
+Cycle & name, year, status, phase dates, currentPhase & Year is unique; phase dates sequential\\
+Objective & title, owner, cycle, category, team, assignedUsers, weight, status, KPIs & Embedded KPIs, comments, activity logs, change requests\\
+Task & assignee, assignedBy, status, workflowStage, progress, linkedGoal, timeTracking & Kanban and time tracking support\\
+CheckIn & objective, employee, cycle, progress, status, attachments, history & Manager review and attachment workflow\\
+Evaluation & employeeId, evaluatorId, cycleId, status, suggestedScore, finalScore & General evaluation workflow with approval history\\
+FinalEvaluation & employee, cycle, auto score, manager score, final score, rating, HR status & Main annual final review and HR validation model\\
+HRDecision & user, cycle, finalEvaluation, finalScore, action & One decision per user and cycle\\
+ImprovementPlan & evaluation, employee, cycle, objective goal, deadline, expected outcome & Follow-up plans after evaluation\\
+BonusPenalty & employee, type, value, reason, finalEvaluation, approvalStatus & Bonus or penalty records\\
+Feedback & sender/recipient fields, type, message, rating & Feedback exchange and stats\\
+Meeting & organizer, attendees, date/time, action items & Meeting management and follow-up\\
+AuditLog & user, action, entityType, entityId, description, metadata, timestamp & Traceability and compliance support\\
+Notification & recipient, type, title, message, read state & In-app notification flow\\
+CareerPath/Recommendation/Competency & user, competencies, actions, suggested path, skills & Career development module\\
+\bottomrule
+\end{longtable}

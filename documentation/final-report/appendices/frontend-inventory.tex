@@ -1,0 +1,81 @@
+\chapter{Frontend Module Inventory}
+This appendix maps the main frontend modules to the user workflows described in the report. The inventory is based on \texttt{frontend/src/routes/routeConfig.jsx}, page files, shared components, API clients, and utility modules.
+
+\section{Route-Level Pages}
+\begin{longtable}{p{0.25\textwidth}p{0.22\textwidth}p{0.43\textwidth}}
+\caption{Frontend route inventory.}\label{tab:frontend-routes}\\
+\toprule
+Route or page & Role evidence & Purpose\\
+\midrule
+\endfirsthead
+\toprule
+Route or page & Role evidence & Purpose\\
+\midrule
+\endhead
+\texttt{/login} & Public & Authenticates users and creates the initial frontend session state.\\
+\texttt{/dashboard} & Protected & Main role-aware landing page with summaries, charts, alerts, and activity.\\
+\texttt{/goals} & Protected & Objective management, filters, table view, creation and detail modals.\\
+\texttt{/tasks} & Protected & Work-management page with task states, kanban behavior, progress and time tracking.\\
+\texttt{/calendar} & Protected & Calendar page connected to backend provider and event endpoints.\\
+\texttt{/meetings} & Protected & Meeting scheduling, duplication, updates, and follow-up actions.\\
+\texttt{/feed} & Protected & Team/activity feed based on backend feed route.\\
+\texttt{/cycles} & \texttt{ADMIN} & Annual cycle administration and phase control.\\
+\texttt{/midyear-assessments} & Phase 2 & Mid-year workspace guarded by active cycle phase.\\
+\texttt{/final-evaluations} & Phase 3 & End-year review workspace for final evaluations.\\
+\texttt{/performance} & \texttt{ADMIN}, \texttt{HR}, \texttt{TEAM\_LEADER} & Performance summaries and employee/team score views.\\
+\texttt{/performance/predictor/:employeeId} & \texttt{ADMIN}, \texttt{HR}, \texttt{TEAM\_LEADER} & Prediction UI for performance rating and promotion readiness.\\
+\texttt{/my-team} & Protected & Team and subteam visibility for the current user.\\
+\texttt{/feedback} & Protected & Feedback received, sent, and available recipients.\\
+\texttt{/career} & Protected & Career paths, competencies, actions, and recommendations.\\
+\texttt{/evaluations} & \texttt{ADMIN}, \texttt{HR}, \texttt{COLLABORATOR} & Evaluation readiness and general evaluation access.\\
+\texttt{/validation} & \texttt{TEAM\_LEADER} & Objective review queue for manager approval.\\
+\texttt{/hr-validation} & \texttt{ADMIN}, \texttt{HR} & HR queue for final evaluation validation and returns.\\
+\texttt{/hr-decisions} & \texttt{ADMIN}, \texttt{HR} & HR follow-up decisions and development actions.\\
+\texttt{/teams} & \texttt{ADMIN} & Team administration.\\
+\texttt{/users} & \texttt{ADMIN} & User administration.\\
+\texttt{/analytics} & \texttt{ADMIN}, \texttt{HR} & Organizational analytics.\\
+\texttt{/audit-logs} & \texttt{ADMIN}, \texttt{HR} & Audit trail consultation.\\
+\texttt{/bonus-penalty} & \texttt{ADMIN}, \texttt{HR}, \texttt{TEAM\_LEADER} & Bonus or penalty workflow.\\
+\texttt{/settings} & \texttt{ADMIN}, \texttt{HR} & Settings page.\\
+\bottomrule
+\end{longtable}
+
+\section{Shared Application Shell}
+The frontend shell is implemented with \texttt{DashboardLayout.jsx}, \texttt{EnterpriseSidebar.jsx}, and \texttt{TopHeader.jsx}. This creates a stable protected layout for role-aware navigation, page title display, active cycle state, search, notifications, and profile menu. The route file groups sidebar items by sections: Main, Annual Cycle, People, Development, and Management.
+
+\section{Authentication and API Clients}
+\texttt{AuthContext.jsx} owns session behavior. It reads and writes access tokens, refresh tokens, and a compact current-user object from browser storage. It pings \texttt{/auth/me}, refreshes access tokens through \texttt{/auth/refresh}, and clears the session on logout or invalid refresh. \texttt{frontend/src/services/api.js} creates the main Axios instance, adds authorization headers, retries eligible \texttt{401} responses once after refreshing the token, caches selected GET requests, and clears cached GET responses after mutations.
+
+\begin{table}[H]\centering\small
+\caption{Frontend service and utility modules.}
+\label{tab:frontend-services}
+\begin{tabularx}{\textwidth}{p{0.3\textwidth}Y}
+\toprule
+Module & Responsibility\\
+\midrule
+\texttt{services/api.js} & Main Axios client, bearer token injection, refresh retry, GET request caching and prefetching.\\
+\texttt{api/apiClient.js} & Secondary Axios wrapper used by small domain API helper files.\\
+\texttt{api/cycles.js} & Convenience functions for cycle API calls.\\
+\texttt{api/teams.js} & Convenience functions for team API calls.\\
+\texttt{api/users.js} & User filtering helpers.\\
+\texttt{api/hrDecisions.js} & HR decision API helper functions.\\
+\texttt{api/ai.js} & AI and prediction-related API calls.\\
+\texttt{hooks/useActiveCycle.js} & Active cycle lookup for phase-aware screens.\\
+\texttt{hooks/usePersistentTimer.js} & Persistent task timer behavior.\\
+\texttt{utils/objectiveRules.js} & Frontend helper for objective availability/visibility state.\\
+\texttt{utils/workManagement.js} & Normalizes task, calendar, check-in, objective, and productivity structures.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Goal and Objective UI}
+The objective UI is distributed across \texttt{GoalsPage.jsx} and components under \texttt{components/goals}. The creation modal includes weight selection and capacity awareness. The detail panel supports tabs for details, KPIs, updates, comments, and activity. The table exposes status, category, weight, progress, KPI count, and expanded details. Manager review and evaluate modals separate approval/review actions from ordinary editing.
+
+\section{Work Management UI}
+The task page and task components implement a compact operational workspace. The model and UI support task status, workflow stage, progress percentage, priority, due date, linked objective, team, recurrence, and time tracking. This module matters for the final evaluation because task completion and check-in evidence are used by scoring/evidence services.
+
+\section{Evaluation UI}
+Final evaluation views are separated between employee and manager perspectives. The manager view supports generation, update, recalculation, score adjustment, HR submission, and AI-assisted draft use. HR validation has its own page so HR can review pending and returned items without mixing manager-owned editing responsibilities.
+
+\section{UI States}
+The repository contains shared \texttt{EmptyState}, \texttt{LoadingSkeleton}, \texttt{ErrorBoundary}, \texttt{Toast}, \texttt{Badge}, and \texttt{ConfirmDialog} components. This indicates that loading, empty, error, confirmation, and feedback states were considered as reusable product behaviors rather than repeated inline messages.

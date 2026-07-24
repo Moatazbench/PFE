@@ -1,0 +1,22 @@
+\begin{figure}[H]\centering
+\resizebox{0.88\textwidth}{!}{%
+\begin{tikzpicture}[x=10cm,y=0.58cm,every node/.style={font=\scriptsize}]
+\foreach \y/\name/\val in {
+8/KPI score/0.239,
+7/Goal completion/0.188,
+6/Avg check-in progress/0.153,
+5/Task completion/0.147,
+4/Tasks on time/0.095,
+3/Positive feedback/0.076,
+2/Check-in count/0.055,
+1/Feedback count/0.047} {
+  \node[left, align=right] at (0,\y) {\name};
+  \fill[PerTrackBlue] (0,\y-0.22) rectangle (\val,\y+0.22);
+  \node[right] at (\val,\y) {\val};
+}
+\draw[->] (0,0.35) -- (0.27,0.35) node[right]{Relative importance};
+\end{tikzpicture}}
+\caption{Illustrative feature-importance ranking from the saved XGBoost rating model evaluation. Source: project AI artifacts evaluated locally.}
+\label{fig:ai-feature-importance}
+\end{figure}
+

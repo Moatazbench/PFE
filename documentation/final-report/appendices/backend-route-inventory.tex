@@ -1,0 +1,225 @@
+\chapter{Detailed Backend Route Inventory}
+This appendix lists the backend route surface extracted from the Express route files. It is intentionally placed in the appendix because a raw route dump would interrupt the main academic argument, while still being useful for technical review.
+
+\begin{landscape}
+\tiny
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.12}
+\begin{longtable}{p{0.14\textwidth}p{0.07\textwidth}p{0.30\textwidth}p{0.31\textwidth}p{0.10\textwidth}}
+\caption{Detailed backend route inventory extracted from source files.}\label{tab:detailed-routes}\\
+\toprule
+Base & Method & Path & Role evidence & Source\\
+\midrule
+\endfirsthead
+\toprule
+Base & Method & Path & Role evidence & Source\\
+\midrule
+\endhead
+\texttt{/api/ai} & POST & \texttt{/goal-suggestions} & Authenticated & \texttt{ai.js:7}\\
+\texttt{/api/ai} & POST & \texttt{/generate-objective} & Authenticated & \texttt{ai.js:8}\\
+\texttt{/api/ai} & POST & \texttt{/suggest-kpis} & Authenticated & \texttt{ai.js:9}\\
+\texttt{/api/ai} & POST & \texttt{/summarize-performance} & Authenticated & \texttt{ai.js:10}\\
+\texttt{/api/ai} & POST & \texttt{/detect-risks} & Authenticated & \texttt{ai.js:11}\\
+\texttt{/api/ai} & POST & \texttt{/prioritize-notifications} & Authenticated & \texttt{ai.js:12}\\
+\texttt{/api/ai} & POST & \texttt{/assist} & Authenticated & \texttt{ai.js:13}\\
+\texttt{/api/ai} & POST & \texttt{/draft-checkin} & Authenticated & \texttt{ai.js:14}\\
+\texttt{/api/ai} & POST & \texttt{/analyze-objective-quality} & Authenticated & \texttt{ai.js:15}\\
+\texttt{/api/ai} & POST & \texttt{/refine-objective} & Authenticated & \texttt{ai.js:16}\\
+\texttt{/api/ai} & POST & \texttt{/review/midyear} & Authenticated & \texttt{ai.js:18}\\
+\texttt{/api/ai} & POST & \texttt{/review/final-self} & Authenticated & \texttt{ai.js:19}\\
+\texttt{/api/ai} & POST & \texttt{/review/manager} & Authenticated & \texttt{ai.js:20}\\
+\texttt{/api/ai} & POST & \texttt{/development-plan} & Authenticated & \texttt{ai.js:21}\\
+\texttt{/api/ai} & POST & \texttt{/generate-evaluation} & ADMIN,  TEAM\_LEADER & \texttt{ai.js:22}\\
+\texttt{/api/ai} & GET & \texttt{/performance-users} & Authenticated & \texttt{ai.js:23}\\
+\texttt{/api/ai} & GET & \texttt{/performance-predictions/:employeeId} & Authenticated & \texttt{ai.js:24}\\
+\texttt{/api/ai} & POST & \texttt{/predict-performance} & Authenticated & \texttt{ai.js:25}\\
+\texttt{/api/audit-logs} & GET & \texttt{/} & ADMIN,  HR & \texttt{auditLog.js:7}\\
+\texttt{/api/audit-logs} & GET & \texttt{/entity/:entityType/:entityId} & ADMIN,  HR,  TEAM\_LEADER & \texttt{auditLog.js:63}\\
+\texttt{/api/auth} & POST & \texttt{/login} & Authenticated & \texttt{auth.js:30}\\
+\texttt{/api/auth} & POST & \texttt{/refresh} & Authenticated & \texttt{auth.js:76}\\
+\texttt{/api/auth} & POST & \texttt{/logout} & Authenticated & \texttt{auth.js:117}\\
+\texttt{/api/auth} & GET & \texttt{/me} & Authenticated & \texttt{auth.js:136}\\
+\texttt{/api/bonus-penalty} & POST & \texttt{/} & ADMIN,  HR,  TEAM\_LEADER & \texttt{bonusPenalty.js:12}\\
+\texttt{/api/bonus-penalty} & PUT & \texttt{/:id/approval} & HR,  ADMIN & \texttt{bonusPenalty.js:76}\\
+\texttt{/api/bonus-penalty} & GET & \texttt{/eligible-evaluations} & ADMIN,  HR,  TEAM\_LEADER & \texttt{bonusPenalty.js:116}\\
+\texttt{/api/bonus-penalty} & GET & \texttt{/} & HR,  ADMIN & \texttt{bonusPenalty.js:153}\\
+\texttt{/api/bonus-penalty} & GET & \texttt{/employee/:employeeId} & Authenticated & \texttt{bonusPenalty.js:171}\\
+\texttt{/api/calendar} & GET & \texttt{/providers} & Authenticated & \texttt{calendar.js:287}\\
+\texttt{/api/calendar} & GET & \texttt{/connect/:provider} & Authenticated & \texttt{calendar.js:315}\\
+\texttt{/api/calendar} & GET & \texttt{/callback/:provider} & Inherited/verified in app route & \texttt{calendar.js:349}\\
+\texttt{/api/calendar} & DELETE & \texttt{/connect/:provider} & Authenticated & \texttt{calendar.js:398}\\
+\texttt{/api/calendar} & GET & \texttt{/events} & Authenticated & \texttt{calendar.js:407}\\
+\texttt{/api/calendar} & POST & \texttt{/events} & Authenticated & \texttt{calendar.js:447}\\
+\texttt{/api/career} & POST & \texttt{/competencies} & ADMIN,  HR & \texttt{career.js:9}\\
+\texttt{/api/career} & GET & \texttt{/competencies} & Inherited/verified in app route & \texttt{career.js:10}\\
+\texttt{/api/career} & PUT & \texttt{/competencies/:id} & ADMIN,  HR & \texttt{career.js:11}\\
+\texttt{/api/career} & DELETE & \texttt{/competencies/:id} & ADMIN,  HR & \texttt{career.js:12}\\
+\texttt{/api/career} & POST & \texttt{/paths} & Inherited/verified in app route & \texttt{career.js:15}\\
+\texttt{/api/career} & GET & \texttt{/paths/my} & Inherited/verified in app route & \texttt{career.js:16}\\
+\texttt{/api/career} & GET & \texttt{/paths/all} & ADMIN,  HR,  TEAM\_LEADER & \texttt{career.js:17}\\
+\texttt{/api/career} & GET & \texttt{/paths/user/:userId} & ADMIN,  HR,  TEAM\_LEADER & \texttt{career.js:18}\\
+\texttt{/api/career} & PUT & \texttt{/paths/:id} & Inherited/verified in app route & \texttt{career.js:19}\\
+\texttt{/api/career} & DELETE & \texttt{/paths/:id} & Inherited/verified in app route & \texttt{career.js:20}\\
+\texttt{/api/career} & POST & \texttt{/paths/:pathId/actions} & Inherited/verified in app route & \texttt{career.js:23}\\
+\texttt{/api/career} & PUT & \texttt{/paths/:pathId/actions/:actionId} & Inherited/verified in app route & \texttt{career.js:24}\\
+\texttt{/api/career} & GET & \texttt{/recommendations/my} & Inherited/verified in app route & \texttt{career.js:27}\\
+\texttt{/api/career} & GET & \texttt{/recommendations/all} & ADMIN,  HR,  TEAM\_LEADER & \texttt{career.js:28}\\
+\texttt{/api/career} & POST & \texttt{/recommendations/generate} & ADMIN,  HR,  TEAM\_LEADER & \texttt{career.js:29}\\
+\texttt{/api/career} & POST & \texttt{/recommendations} & ADMIN,  HR,  TEAM\_LEADER & \texttt{career.js:30}\\
+\texttt{/api/checkins} & POST & \texttt{/upload} & Inherited/verified in app route & \texttt{checkins.js:28}\\
+\texttt{/api/checkins} & GET & \texttt{/attachments/:filename} & Inherited/verified in app route & \texttt{checkins.js:45}\\
+\texttt{/api/checkins} & GET & \texttt{/} & Inherited/verified in app route & \texttt{checkins.js:73}\\
+\texttt{/api/checkins} & POST & \texttt{/} & Inherited/verified in app route & \texttt{checkins.js:74}\\
+\texttt{/api/checkins} & GET & \texttt{/objective/:objective\_id/tasks} & Inherited/verified in app route & \texttt{checkins.js:75}\\
+\texttt{/api/checkins} & GET & \texttt{/by-objective} & ADMIN,  HR,  TEAM\_LEADER & \texttt{checkins.js:78}\\
+\texttt{/api/checkins} & GET & \texttt{/team} & ADMIN,  HR,  TEAM\_LEADER & \texttt{checkins.js:79}\\
+\texttt{/api/checkins} & PUT & \texttt{/:id/review} & ADMIN,  HR,  TEAM\_LEADER & \texttt{checkins.js:80}\\
+\texttt{/api/cycles} & GET & \texttt{/} & Authenticated & \texttt{cycles.js:21}\\
+\texttt{/api/cycles} & GET & \texttt{/:id} & Authenticated & \texttt{cycles.js:57}\\
+\texttt{/api/cycles} & POST & \texttt{/} & ADMIN & \texttt{cycles.js:72}\\
+\texttt{/api/cycles} & PUT & \texttt{/:id} & ADMIN & \texttt{cycles.js:115}\\
+\texttt{/api/cycles} & PATCH & \texttt{/:id} & ADMIN & \texttt{cycles.js:205}\\
+\texttt{/api/cycles} & PATCH & \texttt{/:id/phase} & ADMIN & \texttt{cycles.js:254}\\
+\texttt{/api/cycles} & GET & \texttt{/:id/phase-check} & ADMIN,  HR,  TEAM\_LEADER & \texttt{cycles.js:347}\\
+\texttt{/api/cycles} & POST & \texttt{/:id/rollback} & ADMIN & \texttt{cycles.js:393}\\
+\texttt{/api/cycles} & DELETE & \texttt{/:id} & ADMIN & \texttt{cycles.js:439}\\
+\texttt{/api/evaluations} & GET & \texttt{/rubric} & Authenticated & \texttt{evaluations.js:8}\\
+\texttt{/api/evaluations} & GET & \texttt{/} & Authenticated & \texttt{evaluations.js:11}\\
+\texttt{/api/evaluations} & GET & \texttt{/employee/:employeeId} & Authenticated & \texttt{evaluations.js:14}\\
+\texttt{/api/evaluations} & GET & \texttt{/evaluator/:evaluatorId} & Authenticated & \texttt{evaluations.js:17}\\
+\texttt{/api/evaluations} & GET & \texttt{/:id} & Authenticated & \texttt{evaluations.js:20}\\
+\texttt{/api/evaluations} & POST & \texttt{/} & Authenticated & \texttt{evaluations.js:23}\\
+\texttt{/api/evaluations} & PUT & \texttt{/:id} & Authenticated & \texttt{evaluations.js:26}\\
+\texttt{/api/evaluations} & POST & \texttt{/:id/submit} & Authenticated & \texttt{evaluations.js:29}\\
+\texttt{/api/evaluations} & POST & \texttt{/:id/approve} & HR,  ADMIN & \texttt{evaluations.js:30}\\
+\texttt{/api/evaluations} & POST & \texttt{/:id/reject} & HR,  ADMIN & \texttt{evaluations.js:31}\\
+\texttt{/api/evaluations} & POST & \texttt{/:id/complete} & Authenticated & \texttt{evaluations.js:32}\\
+\texttt{/api/evaluations} & POST & \texttt{/:id/acknowledge} & Authenticated & \texttt{evaluations.js:33}\\
+\texttt{/api/feed} & GET & \texttt{/} & Authenticated & \texttt{feed.js:270}\\
+\texttt{/api/feedback} & POST & \texttt{/} & Inherited/verified in app route & \texttt{feedback.js:10}\\
+\texttt{/api/feedback} & GET & \texttt{/received} & Inherited/verified in app route & \texttt{feedback.js:14}\\
+\texttt{/api/feedback} & GET & \texttt{/sent} & Inherited/verified in app route & \texttt{feedback.js:17}\\
+\texttt{/api/feedback} & GET & \texttt{/recipients} & Inherited/verified in app route & \texttt{feedback.js:20}\\
+\texttt{/api/feedback} & GET & \texttt{/all} & ADMIN & \texttt{feedback.js:23}\\
+\texttt{/api/feedback} & GET & \texttt{/stats} & Inherited/verified in app route & \texttt{feedback.js:26}\\
+\texttt{/api/feedback} & GET & \texttt{/stats/:userId} & ADMIN,  TEAM\_LEADER & \texttt{feedback.js:27}\\
+\texttt{/api/feedback} & GET & \texttt{/user/:userId} & ADMIN,  TEAM\_LEADER & \texttt{feedback.js:30}\\
+\texttt{/api/feedback} & DELETE & \texttt{/:id} & Inherited/verified in app route & \texttt{feedback.js:33}\\
+\texttt{/api/final-evaluations} & GET & \texttt{/team/:cycle\_id} & ADMIN,  HR,  TEAM\_LEADER & \texttt{finalEvaluations.js:10}\\
+\texttt{/api/final-evaluations} & GET & \texttt{/export/:id} & Inherited/verified in app route & \texttt{finalEvaluations.js:13}\\
+\texttt{/api/final-evaluations} & GET & \texttt{/hr/pending} & ADMIN,  HR & \texttt{finalEvaluations.js:16}\\
+\texttt{/api/final-evaluations} & GET & \texttt{/hr/reviewed} & ADMIN,  HR & \texttt{finalEvaluations.js:17}\\
+\texttt{/api/final-evaluations} & GET & \texttt{/user/:employee\_id/history} & Inherited/verified in app route & \texttt{finalEvaluations.js:20}\\
+\texttt{/api/final-evaluations} & POST & \texttt{/generate/:cycle\_id/:employee\_id} & ADMIN,  TEAM\_LEADER & \texttt{finalEvaluations.js:23}\\
+\texttt{/api/final-evaluations} & PUT & \texttt{/:id} & ADMIN,  TEAM\_LEADER & \texttt{finalEvaluations.js:26}\\
+\texttt{/api/final-evaluations} & POST & \texttt{/:id/recalculate} & ADMIN,  TEAM\_LEADER & \texttt{finalEvaluations.js:27}\\
+\texttt{/api/final-evaluations} & PUT & \texttt{/:id/hr-validate} & ADMIN,  HR & \texttt{finalEvaluations.js:30}\\
+\texttt{/api/final-evaluations} & PUT & \texttt{/:id/employee-feedback} & COLLABORATOR & \texttt{finalEvaluations.js:31}\\
+\texttt{/api/final-evaluations} & GET & \texttt{/:cycle\_id/:employee\_id} & Inherited/verified in app route & \texttt{finalEvaluations.js:34}\\
+\texttt{/api/hr-decisions} & GET & \texttt{/} & Authenticated & \texttt{hrDecisions.js:26}\\
+\texttt{/api/hr-decisions} & GET & \texttt{/:id} & Authenticated & \texttt{hrDecisions.js:58}\\
+\texttt{/api/hr-decisions} & POST & \texttt{/} & ADMIN,  HR & \texttt{hrDecisions.js:89}\\
+\texttt{/api/hr-decisions} & PUT & \texttt{/:id} & ADMIN,  HR & \texttt{hrDecisions.js:133}\\
+\texttt{/api/hr-decisions} & DELETE & \texttt{/:id} & ADMIN & \texttt{hrDecisions.js:164}\\
+\texttt{/api/improvement-plans} & GET & \texttt{/evaluation/:evaluationId} & Inherited/verified in app route & \texttt{improvementPlans.js:7}\\
+\texttt{/api/improvement-plans} & POST & \texttt{/evaluation/:evaluationId} & Inherited/verified in app route & \texttt{improvementPlans.js:8}\\
+\texttt{/api/improvement-plans} & PUT & \texttt{/:id} & Inherited/verified in app route & \texttt{improvementPlans.js:9}\\
+\texttt{/api/improvement-plans} & DELETE & \texttt{/:id} & Inherited/verified in app route & \texttt{improvementPlans.js:10}\\
+\texttt{/api/me} & GET & \texttt{/me} & Authenticated & \texttt{me.js:6}\\
+\texttt{/api/meetings} & GET & \texttt{/} & Authenticated & \texttt{meetings.js:95}\\
+\texttt{/api/meetings} & GET & \texttt{/:id} & Authenticated & \texttt{meetings.js:166}\\
+\texttt{/api/meetings} & POST & \texttt{/} & Authenticated & \texttt{meetings.js:190}\\
+\texttt{/api/meetings} & PUT & \texttt{/:id} & Authenticated & \texttt{meetings.js:257}\\
+\texttt{/api/meetings} & DELETE & \texttt{/:id} & Authenticated & \texttt{meetings.js:337}\\
+\texttt{/api/meetings} & POST & \texttt{/:id/duplicate} & Authenticated & \texttt{meetings.js:356}\\
+\texttt{/api/meetings} & POST & \texttt{/:id/actions} & Authenticated & \texttt{meetings.js:401}\\
+\texttt{/api/notifications} & GET & \texttt{/} & Authenticated & \texttt{notifications.js:9}\\
+\texttt{/api/notifications} & GET & \texttt{/unread-count} & Authenticated & \texttt{notifications.js:26}\\
+\texttt{/api/notifications} & POST & \texttt{/} & Authenticated & \texttt{notifications.js:39}\\
+\texttt{/api/notifications} & POST & \texttt{/:id/read} & Authenticated & \texttt{notifications.js:81}\\
+\texttt{/api/notifications} & POST & \texttt{/read-all} & Authenticated & \texttt{notifications.js:104}\\
+\texttt{/api/notifications} & DELETE & \texttt{/:id} & Authenticated & \texttt{notifications.js:118}\\
+\texttt{/api/objectives} & GET & \texttt{/} & Authenticated & \texttt{objectives.js:11}\\
+\texttt{/api/objectives} & GET & \texttt{/my} & Authenticated & \texttt{objectives.js:12}\\
+\texttt{/api/objectives} & GET & \texttt{/user/:userId/cycle/:cycleId} & Authenticated & \texttt{objectives.js:13}\\
+\texttt{/api/objectives} & GET & \texttt{/pending-validation} & TEAM\_LEADER & \texttt{objectives.js:19}\\
+\texttt{/api/objectives} & GET & \texttt{/stale} & TEAM\_LEADER,  ADMIN & \texttt{objectives.js:20}\\
+\texttt{/api/objectives} & GET & \texttt{/pending-change-requests} & TEAM\_LEADER,  ADMIN & \texttt{objectives.js:21}\\
+\texttt{/api/objectives} & GET & \texttt{/completed-awaiting-evaluation} & TEAM\_LEADER,  ADMIN & \texttt{objectives.js:22}\\
+\texttt{/api/objectives} & GET & \texttt{/team-weight-capacity} & ADMIN,  TEAM\_LEADER,  HR & \texttt{objectives.js:23}\\
+\texttt{/api/objectives} & GET & \texttt{/:id} & Authenticated & \texttt{objectives.js:27}\\
+\texttt{/api/objectives} & POST & \texttt{/} & ADMIN,  TEAM\_LEADER,  COLLABORATOR & \texttt{objectives.js:30}\\
+\texttt{/api/objectives} & PUT & \texttt{/:id} & ADMIN,  TEAM\_LEADER,  COLLABORATOR & \texttt{objectives.js:31}\\
+\texttt{/api/objectives} & DELETE & \texttt{/:id} & ADMIN,  TEAM\_LEADER,  COLLABORATOR & \texttt{objectives.js:32}\\
+\texttt{/api/objectives} & POST & \texttt{/submit-all} & ADMIN,  TEAM\_LEADER,  COLLABORATOR & \texttt{objectives.js:35}\\
+\texttt{/api/objectives} & POST & \texttt{/validate-all} & ADMIN,  TEAM\_LEADER & \texttt{objectives.js:36}\\
+\texttt{/api/objectives} & POST & \texttt{/submit} & Authenticated & \texttt{objectives.js:37}\\
+\texttt{/api/objectives} & POST & \texttt{/submit/:id} & Authenticated & \texttt{objectives.js:38}\\
+\texttt{/api/objectives} & POST & \texttt{/:id/submit} & ADMIN,  TEAM\_LEADER,  COLLABORATOR & \texttt{objectives.js:39}\\
+\texttt{/api/objectives} & POST & \texttt{/:id/submit-for-approval} & Authenticated & \texttt{objectives.js:40}\\
+\texttt{/api/objectives} & POST & \texttt{/:id/validate} & ADMIN,  TEAM\_LEADER & \texttt{objectives.js:41}\\
+\texttt{/api/objectives} & POST & \texttt{/:id/acknowledge} & Authenticated & \texttt{objectives.js:42}\\
+\texttt{/api/objectives} & POST & \texttt{/:id/mark-completed} & Authenticated & \texttt{objectives.js:43}\\
+\texttt{/api/objectives} & POST & \texttt{/:id/midyear-review} & ADMIN,  TEAM\_LEADER & \texttt{objectives.js:44}\\
+\texttt{/api/objectives} & POST & \texttt{/:id/final-self-assessment} & Authenticated & \texttt{objectives.js:45}\\
+\texttt{/api/objectives} & POST & \texttt{/:id/evaluate} & ADMIN,  HR,  TEAM\_LEADER & \texttt{objectives.js:46}\\
+\texttt{/api/objectives} & POST & \texttt{/:id/lock} & ADMIN,  HR,  TEAM\_LEADER & \texttt{objectives.js:47}\\
+\texttt{/api/objectives} & POST & \texttt{/:id/change-requests} & Authenticated & \texttt{objectives.js:50}\\
+\texttt{/api/objectives} & PUT & \texttt{/:id/change-requests/:crId} & ADMIN,  TEAM\_LEADER & \texttt{objectives.js:51}\\
+\texttt{/api/objectives} & PATCH & \texttt{/:id/correction} & COLLABORATOR,  TEAM\_LEADER,  ADMIN & \texttt{objectives.js:52}\\
+\texttt{/api/objectives} & PATCH & \texttt{/:id/correction/:crId} & ADMIN,  TEAM\_LEADER & \texttt{objectives.js:53}\\
+\texttt{/api/objectives} & POST & \texttt{/:id/kpis} & Authenticated & \texttt{objectives.js:60}\\
+\texttt{/api/objectives} & PUT & \texttt{/:id/kpis/:kpiId} & Authenticated & \texttt{objectives.js:61}\\
+\texttt{/api/objectives} & DELETE & \texttt{/:id/kpis/:kpiId} & Authenticated & \texttt{objectives.js:62}\\
+\texttt{/api/objectives} & POST & \texttt{/:id/progress} & Authenticated & \texttt{objectives.js:65}\\
+\texttt{/api/objectives} & POST & \texttt{/:id/comments} & Authenticated & \texttt{objectives.js:68}\\
+\texttt{/api/objectives} & DELETE & \texttt{/:id/comments/:commentId} & Authenticated & \texttt{objectives.js:69}\\
+\texttt{/api/objectives} & GET & \texttt{/:id/children} & Authenticated & \texttt{objectives.js:72}\\
+\texttt{/api/objectives} & POST & \texttt{/:id/duplicate} & Authenticated & \texttt{objectives.js:75}\\
+\texttt{/api/pdf} & GET & \texttt{/team/:id} & Authenticated & \texttt{pdf.js:9}\\
+\texttt{/api/pdf} & GET & \texttt{/user/:id} & Authenticated & \texttt{pdf.js:49}\\
+\texttt{/api/performance} & GET & \texttt{/summary/:employeeId/:cycleId} & Authenticated & \texttt{performance.js:114}\\
+\texttt{/api/performance} & GET & \texttt{/team-summary/:managerId/:cycleId} & Authenticated & \texttt{performance.js:124}\\
+\texttt{/api/progress} & GET & \texttt{/:userId} & Authenticated & \texttt{progress.js:7}\\
+\texttt{/api/reminders} & GET & \texttt{/upcoming} & Authenticated & \texttt{reminders.js:9}\\
+\texttt{/api/reminders} & GET & \texttt{/overdue} & Authenticated & \texttt{reminders.js:43}\\
+\texttt{/api/reminders} & POST & \texttt{/check} & Authenticated & \texttt{reminders.js:75}\\
+\texttt{/api/reports} & GET & \texttt{/cycle/:cycleId} & ADMIN,  HR & \texttt{reports.js:51}\\
+\texttt{/api/reports} & GET & \texttt{/team/:managerId/:cycleId} & Authenticated & \texttt{reports.js:72}\\
+\texttt{/api/stats} & GET & \texttt{/dashboard} & Authenticated & \texttt{stats.js:7}\\
+\texttt{/api/stats} & GET & \texttt{/performance} & Authenticated & \texttt{stats.js:8}\\
+\texttt{/api/stats} & GET & \texttt{/objectives-by-status} & Authenticated & \texttt{stats.js:11}\\
+\texttt{/api/stats} & GET & \texttt{/users-by-role} & Authenticated & \texttt{stats.js:12}\\
+\texttt{/api/stats} & GET & \texttt{/score-distribution} & Authenticated & \texttt{stats.js:15}\\
+\texttt{/api/tasks} & POST & \texttt{/} & Inherited/verified in app route & \texttt{tasks.js:10}\\
+\texttt{/api/tasks} & GET & \texttt{/my} & Inherited/verified in app route & \texttt{tasks.js:13}\\
+\texttt{/api/tasks} & GET & \texttt{/assigned} & Inherited/verified in app route & \texttt{tasks.js:16}\\
+\texttt{/api/tasks} & GET & \texttt{/stats} & Inherited/verified in app route & \texttt{tasks.js:19}\\
+\texttt{/api/tasks} & GET & \texttt{/all} & ADMIN,  HR & \texttt{tasks.js:22}\\
+\texttt{/api/tasks} & GET & \texttt{/teams} & Inherited/verified in app route & \texttt{tasks.js:25}\\
+\texttt{/api/tasks} & GET & \texttt{/team/:teamId} & Inherited/verified in app route & \texttt{tasks.js:28}\\
+\texttt{/api/tasks} & POST & \texttt{/:id/time-entries} & Inherited/verified in app route & \texttt{tasks.js:31}\\
+\texttt{/api/tasks} & PUT & \texttt{/:id} & Inherited/verified in app route & \texttt{tasks.js:34}\\
+\texttt{/api/tasks} & DELETE & \texttt{/:id} & Inherited/verified in app route & \texttt{tasks.js:37}\\
+\texttt{/api/team-members} & GET & \texttt{/} & Authenticated & \texttt{teamMembers.js:14}\\
+\texttt{/api/teams} & GET & \texttt{/} & ADMIN,  HR,  TEAM\_LEADER & \texttt{teams.js:200}\\
+\texttt{/api/teams} & GET & \texttt{/my-team} & Authenticated & \texttt{teams.js:219}\\
+\texttt{/api/teams} & GET & \texttt{/:id/summary} & Authenticated & \texttt{teams.js:244}\\
+\texttt{/api/teams} & GET & \texttt{/:id/subteams} & Authenticated & \texttt{teams.js:318}\\
+\texttt{/api/teams} & GET & \texttt{/:id} & ADMIN,  HR,  TEAM\_LEADER & \texttt{teams.js:342}\\
+\texttt{/api/teams} & POST & \texttt{/} & ADMIN,  HR & \texttt{teams.js:362}\\
+\texttt{/api/teams} & POST & \texttt{/:id/subteams} & ADMIN,  HR,  TEAM\_LEADER & \texttt{teams.js:396}\\
+\texttt{/api/teams} & PUT & \texttt{/:id} & ADMIN,  HR,  TEAM\_LEADER & \texttt{teams.js:433}\\
+\texttt{/api/teams} & DELETE & \texttt{/:id} & ADMIN,  HR,  TEAM\_LEADER & \texttt{teams.js:533}\\
+\texttt{/api/users} & GET & \texttt{/filter/list} & Authenticated & \texttt{users.js:20}\\
+\texttt{/api/users} & GET & \texttt{/managers} & Authenticated & \texttt{users.js:23}\\
+\texttt{/api/users} & GET & \texttt{/collaborators} & Authenticated & \texttt{users.js:24}\\
+\texttt{/api/users} & GET & \texttt{/} & ADMIN & \texttt{users.js:27}\\
+\texttt{/api/users} & GET & \texttt{/:id} & ADMIN & \texttt{users.js:28}\\
+\texttt{/api/users} & DELETE & \texttt{/:id} & ADMIN & \texttt{users.js:29}\\
+\texttt{/api/users} & PUT & \texttt{/:id} & Authenticated & \texttt{users.js:30}\\
+\texttt{/api/users} & PUT & \texttt{/:id/avatar} & Authenticated & \texttt{users.js:31}\\
+\bottomrule
+\end{longtable}
+\normalsize
+\end{landscape}

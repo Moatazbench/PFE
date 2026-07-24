@@ -1,0 +1,15 @@
+\begin{figure}[H]\centering
+\begin{tikzpicture}[x=2.1cm,y=0.75cm, every node/.style={font=\scriptsize}]
+\foreach \x/\n in {0/HR,1/API,2/Workflow rules,3/FinalEvaluation,4/Follow-up records}
+  \node at (\x,0) {\n};
+\foreach \x in {0,...,4} \draw[dashed] (\x,-0.2) -- (\x,-5.8);
+\draw[-Latex] (0,-1) -- node[above]{open pending queue} (1,-1);
+\draw[-Latex] (1,-1.8) -- node[above]{check blocking issues} (2,-1.8);
+\draw[-Latex] (2,-2.6) -- node[above]{validate or return} (3,-2.6);
+\draw[-Latex] (0,-3.4) -- node[above]{decision / plan / bonus} (1,-3.4);
+\draw[-Latex] (1,-4.2) -- node[above]{create linked record} (4,-4.2);
+\draw[-Latex] (1,-5.0) -- node[above]{audit and notify} (3,-5.0);
+\end{tikzpicture}
+\caption{HR-review sequence diagram. Source: author's own work based on HR validation, decision, and improvement-plan modules.}
+\label{fig:hr-review-sequence}
+\end{figure}

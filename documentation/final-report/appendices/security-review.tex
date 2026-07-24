@@ -1,0 +1,62 @@
+\chapter{Security Review}
+This appendix summarizes implemented security controls and residual risks. It is not a penetration-test report; it is a code-based review.
+
+\section{Implemented Controls}
+\begin{longtable}{p{0.25\textwidth}p{0.35\textwidth}p{0.3\textwidth}}
+\caption{Implemented security controls.}\label{tab:security-controls}\\
+\toprule
+Control area & Implementation & Evidence\\
+\midrule
+\endfirsthead
+\toprule
+Control area & Implementation & Evidence\\
+\midrule
+\endhead
+Password storage & Bcrypt hash with salt rounds in pre-save hook & \texttt{backend/models/User.js}\\
+Access tokens & Bearer JWT verified with \texttt{JWT\_SECRET} & \texttt{backend/middleware/auth.js}\\
+Refresh tokens & Login and refresh endpoints issue and rotate refresh tokens & \texttt{backend/routes/auth.js}\\
+Role enforcement & Route middleware rejects users outside allowed roles & \texttt{backend/middleware/role.js}\\
+Object access & Helper functions check employee, team, and objective access & \texttt{backend/utils/accessControl.js}\\
+HTTP headers & Helmet enabled with adjusted cross-origin resource policy & \texttt{backend/app.js}\\
+CORS & Allowed origins list for local app URLs and credentials & \texttt{backend/app.js}\\
+Rate limiting & Global rate limit and route rate-limiter integration & \texttt{backend/app.js}, \texttt{middleware/rateLimiter.js}\\
+XSS sanitization & \texttt{xss-clean} middleware & \texttt{backend/app.js}\\
+NoSQL injection mitigation & \texttt{express-mongo-sanitize} middleware & \texttt{backend/app.js}\\
+Input validation & Joi schemas on selected routes & \texttt{backend/validators/schemas.js}\\
+Upload handling & Multer and static upload restrictions; check-in uploads blocked from direct static access & \texttt{backend/app.js}, \texttt{backend/routes/checkins.js}\\
+Secrets in CI & Gitleaks secret scan before tests and builds & \texttt{.github/workflows/docker-build.yml}\\
+\bottomrule
+\end{longtable}
+
+\section{Authentication Risks}
+Tokens are stored in browser \texttt{localStorage}. This is simple and common in student projects, but it increases exposure if a cross-site scripting bug reaches the page. The backend applies XSS cleaning and Helmet, yet the safer long-term design would be secure, HTTP-only cookies or a carefully reviewed token storage strategy. The current implementation also depends on secret strength and correct production environment management.
+
+\section{Authorization Risks}
+Role-based access is visible in routes, but role checks alone do not solve object-level authorization. The project partly addresses this with access helpers and tests for objective visibility and task privacy. The remaining risk is uneven enforcement across a large route surface. A future security pass should review every endpoint with the question: can a user change the identifier in the URL or body to access another employee's data?
+
+\section{Data Privacy Risks}
+The platform handles sensitive HR data: evaluations, comments, scores, improvement plans, bonus/penalty records, and employee feedback. The report does not include personal data, secrets, or real employee content. For production, the system would need retention policies, access logging review, encryption-at-rest verification, backup protection, and formal HR data-processing rules.
+
+\section{AI Privacy Risks}
+Generative AI requests send compacted performance context to an external provider depending on \texttt{AI\_PROVIDER}. The code limits input size and asks the provider to use supplied data only, but it does not by itself guarantee provider-side privacy. A production deployment should document which provider is used, what data is sent, whether logs are retained, and how employees are informed.
+
+\section{Deployment Risks}
+Kubernetes manifests reference \texttt{backend-secret}, but the repository does not include secret templates. That is appropriate because secrets should not be committed. However, deployment repeatability would improve with a sanitized environment-variable template and secret-management instructions. The CI workflow includes Trivy scans, but monitoring, alerting, and backup automation are not present.
+
+\section{Residual Risk Summary}
+\begin{table}[H]\centering\small
+\caption{Residual security risks and recommendations.}
+\label{tab:security-risks}
+\begin{tabularx}{\textwidth}{p{0.3\textwidth}p{0.25\textwidth}Y}
+\toprule
+Risk & Severity & Recommendation\\
+\midrule
+Token theft through frontend XSS & High & Review token storage and consider HTTP-only secure cookies.\\
+Uneven object-level authorization & High & Add endpoint-level authorization tests for every employee-scoped route.\\
+Unreviewed AI data transfer & High & Add AI data-processing policy, opt-in controls, and provider-specific privacy review.\\
+Missing observability & Medium & Add structured logs, metrics, health dashboards, and alerting.\\
+No formal backup plan & Medium & Define MongoDB backup, restore, and retention policy.\\
+No accessibility audit & Medium & Add keyboard, screen-reader, contrast, and responsive QA checks.\\
+\bottomrule
+\end{tabularx}
+\end{table}

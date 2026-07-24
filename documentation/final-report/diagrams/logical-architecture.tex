@@ -1,0 +1,17 @@
+\begin{figure}[H]\centering
+\begin{tikzpicture}[node distance=0.9cm, every node/.style={font=\small}, layer/.style={draw, rounded corners, fill=PerTrackLight, minimum width=11cm, minimum height=0.75cm, align=center}]
+\node[layer] (ui) {Presentation layer: React pages, route guards, dashboard shell, shared components};
+\node[layer, below=of ui] (client) {Client integration: Axios clients, token refresh, cached GET requests, API wrappers};
+\node[layer, below=of client] (api) {API layer: Express routes, validation middleware, RBAC middleware, controllers};
+\node[layer, below=of api] (domain) {Domain layer: workflow rules, objective visibility, score calculation, review context, notifications};
+\node[layer, below=of domain] (data) {Data layer: Mongoose models, MongoDB collections, local uploads};
+\node[layer, below=of data] (ops) {Operations layer: Docker images, Kubernetes manifests, GitHub Actions, Argo CD};
+\draw[-Latex, thick] (ui) -- (client);
+\draw[-Latex, thick] (client) -- (api);
+\draw[-Latex, thick] (api) -- (domain);
+\draw[-Latex, thick] (domain) -- (data);
+\draw[-Latex, thick] (data) -- (ops);
+\end{tikzpicture}
+\caption{Logical architecture. Source: author's own work based on application source code.}
+\label{fig:logical-architecture}
+\end{figure}

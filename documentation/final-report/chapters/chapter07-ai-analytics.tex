@@ -1,0 +1,84 @@
+\chapter{Sprint 4: AI Assistance, Prediction, Analytics, and Auditability}
+\section{Sprint Objective}
+The fourth sprint adds decision-support features: AI-assisted writing, performance prediction, dashboard analytics, reports, and audit logs. These modules are useful only if the report is careful about what is implemented and what remains a limitation.
+
+\section{Generative AI Service}
+The Node service \texttt{backend/services/aiService.js} is provider-agnostic. It supports Gemini through \texttt{@google/generative-ai}, and OpenAI-compatible chat completions for xAI/Grok and OpenAI through the \texttt{openai} package. Provider, model, timeout, and maximum input size are controlled by environment variables.
+
+The service builds compact context strings, truncates overly large context, asks for JSON-only outputs, parses JSON, performs light cleanup if necessary, validates the returned fields, and falls back to empty structured output with a warning when generation fails. Review modes include mid-year summary, final self-assessment, manager review, and development plan. This is a practical pattern because AI outputs are treated as drafts, not as authoritative HR decisions.
+
+\section{AI Controller Capabilities}
+The backend exposes endpoints for goal suggestions, KPI suggestions, performance summaries, risk detection, notification prioritization, assistant responses, check-in drafts, objective-quality analysis, objective refinement, mid-year review, final self-review, manager review, development plan, evaluation draft generation, prediction user lists, employee performance predictions, and prediction requests. Permission checks are stronger for manager-review and evaluation-draft paths than for general assistance paths.
+
+\input{diagrams/ai-service-architecture}
+\input{diagrams/ai-inference-sequence}
+
+\cref{fig:ai-service-architecture} separates two AI responsibilities that should not be confused. Generative drafting depends on a provider abstraction and review context gathered from the main application. Predictive scoring depends on the Python Flask service and saved model artifacts. Both are useful, but neither replaces HR validation.
+
+\section{Python Prediction Service}
+The \texttt{ai-service} folder contains a Flask API, a synthetic CSV dataset with 10,000 rows, training code, saved model artifacts, and a shared text generator. The prediction API exposes \texttt{GET /health}, \texttt{POST /predict}, and \texttt{POST /predict/batch}. The API requires eight numeric features:
+\begin{itemize}
+\item KPI score
+\item Goal completion percentage
+\item Check-in count
+\item Average check-in progress
+\item Feedback count
+\item Positive feedback ratio
+\item Task completion percentage
+\item Tasks-on-time percentage
+\end{itemize}
+
+The API validates bounds for every feature, loads \texttt{rating\_xgb.joblib}, \texttt{promotion\_xgb.joblib}, and \texttt{rating\_label\_encoder.joblib}, then returns rating, rating confidence, promotion readiness, promotion probability, deterministic overall score, strengths, weaknesses, summary, and suggestions.
+
+\section{Prediction Formula}
+The service computes an overall score independently of the model:
+\[
+\begin{aligned}
+S_{\mathrm{overall}}={}&0.30\,KPI
++0.25\,Goal
++0.15\,CheckInProgress\\
+&+0.20\,TaskCompletion
++0.10(PositiveFeedbackRatio \times 100)
+\end{aligned}
+\]
+The training script deliberately excludes this \texttt{overall\_score} column from the model inputs because it is deterministic from the raw features. This avoids allowing the classifier to learn a trivial threshold from a precomputed score.
+
+\section{Dataset and Model Evidence}
+The included dataset has 10,000 rows, 0 missing values, and 0 duplicate rows. Rating distribution is: 2,238 exceptional, 2,722 exceeds expectations, 2,440 meets expectations, and 2,600 needs improvement. Promotion readiness is intentionally probabilistic by rating: about 79.62 percent for exceptional, 51.03 percent for exceeds expectations, 21.02 percent for meets expectations, and 2.46 percent for needs improvement.
+
+\begin{table}[H]\centering\small
+\caption{Model evaluation on the saved artifacts using the repository training split.}
+\label{tab:model-results}
+\begin{tabularx}{\textwidth}{p{0.26\textwidth}p{0.24\textwidth}p{0.2\textwidth}Y}
+\toprule
+Task & Model & Metric & Result\\
+\midrule
+Rating classification & Random Forest & Accuracy & 0.9715\\
+Rating classification & XGBoost & Accuracy & 0.9780\\
+Promotion readiness & Random Forest & Accuracy / ROC-AUC & 0.7505 / 0.8346\\
+Promotion readiness & XGBoost & Accuracy / ROC-AUC & 0.7480 / 0.8218\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\input{diagrams/ai-model-comparison}
+\input{diagrams/ai-feature-importance}
+
+The selected API models are XGBoost for both tasks. This is defensible for the rating task because XGBoost has the strongest measured accuracy in the repository evaluation. For promotion readiness, Random Forest has slightly higher ROC-AUC in the local evaluation, while the API still uses XGBoost. This should be documented as an implementation choice rather than overstated as universally superior.
+
+\section{Analytics}
+Analytics endpoints exist under \texttt{/api/stats}, \texttt{/api/performance}, and \texttt{/api/reports}. The frontend includes dashboards, performance pages, analytics pages, prediction pages, and chart libraries. Dashboard utilities compute status summaries, completion rates, check-in summaries, task summaries, timeline buckets, and performance trend data.
+
+\section{Auditability}
+Auditability appears at two levels. First, \texttt{AuditLog} stores user, action, entity type, entity id, entity name, role, description, changes, metadata, IP address, and timestamp. Second, objectives and final evaluations keep embedded activity or workflow history. This combination is useful because system-wide audit logs answer compliance questions, while embedded history gives contextual traceability inside a business object.
+
+\section{AI Limitations and Ethics}
+The AI prediction dataset is synthetic. Therefore, prediction metrics cannot be presented as real organizational performance validity. A real deployment would need historical data governance, consent and privacy review, bias analysis, explainability review, retraining controls, and monitoring for drift. The generative AI system can draft text, but the project already recognizes the need for human review through warnings such as \texttt{AI-assisted draft has not been confirmed as reviewed by the manager}. That is the correct posture for HR use.
+
+Prediction and analytics UI screenshots are deferred in this revision by request. The AI evidence therefore relies on repository artifacts, API behavior, saved model metrics, and the charts generated from those artifacts.
+
+\section{Sprint Result}
+The AI and analytics sprint adds value by helping users write better reviews and interpret performance evidence. Its most important engineering quality is that the code contains validation and fallback paths. Its most important limitation is also clear: predictive AI is trained on synthetic data and should not be treated as a production HR decision engine without real validation.
+
+\section{Design Decisions and Trade-offs}
+The project makes a sensible split between deterministic scoring and predictive assistance. The deterministic score is explainable and can be reviewed objective by objective. The ML prediction is exploratory and should support discussion, not decide outcomes. Keeping both paths separate avoids a dangerous shortcut where a model prediction silently becomes the official evaluation score.

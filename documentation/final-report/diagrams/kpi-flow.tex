@@ -1,0 +1,17 @@
+\begin{figure}[H]\centering
+\begin{tikzpicture}[node distance=1cm, every node/.style={font=\small}, box/.style={draw, rounded corners, fill=PerTrackLight, minimum width=3cm, minimum height=0.75cm, align=center}]
+\node[box] (kpi) {KPI current/target values};
+\node[box, right=of kpi] (check) {Check-in progress};
+\node[box, right=of check] (obj) {Objective achievement};
+\node[box, below=of obj] (manager) {Manager adjustment};
+\node[box, left=of manager] (weighted) {Weighted points};
+\node[box, left=of weighted] (final) {Final score and rating};
+\draw[-Latex] (kpi) -- (check);
+\draw[-Latex] (check) -- (obj);
+\draw[-Latex] (obj) -- (manager);
+\draw[-Latex] (manager) -- (weighted);
+\draw[-Latex] (weighted) -- (final);
+\end{tikzpicture}
+\caption{KPI and scoring flow. Source: author's own work based on objective, check-in, and scoring modules.}
+\label{fig:kpi-flow}
+\end{figure}

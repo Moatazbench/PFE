@@ -1,0 +1,41 @@
+\chapter{Sprint 1: Organization, Access Control, and Cycle Foundation}
+\section{Sprint Objective}
+The first implementation sprint establishes the foundation required by all later performance workflows: authentication, users, roles, teams, subteams, current-user context, protected frontend routes, and performance cycles.
+
+\section{Authentication}
+Login is implemented in \texttt{backend/routes/auth.js}. The backend verifies email and password, compares the submitted password with the bcrypt hash stored in MongoDB, and returns an access token plus a refresh token. The frontend stores both tokens in \texttt{localStorage}. \texttt{AuthContext.jsx} keeps the current user in React context, persists a lightweight user object, and refreshes the access token through \texttt{/api/auth/refresh} when necessary.
+
+JWT is a compact claims format standardized in RFC 7519 \cite{rfc7519}. In this application, the token is used for stateless API authentication, while the refresh token is also stored against the user record. The implementation validates that a token maps to an active, non-deleted user before setting \texttt{req.user}. This extra lookup prevents deleted or disabled users from continuing to access the API only because they still hold an unexpired token.
+
+\input{diagrams/auth-sequence}
+
+\cref{fig:auth-sequence} highlights a small but important engineering decision: the backend does not trust the token alone. It loads the user profile and checks that the account is still active. That adds a database lookup, but it prevents a common administrative problem where a disabled user keeps access until token expiry.
+
+\section{Role-Based Access Control}
+The role list is defined in \texttt{backend/models/User.js}: \texttt{ADMIN}, \texttt{HR}, \texttt{TEAM\_LEADER}, and \texttt{COLLABORATOR}. The \texttt{role.js} middleware rejects requests where the current role is not in the allowed set, while automatically allowing the administrator to pass role checks. Frontend route metadata repeats role restrictions so the navigation shell does not advertise pages the current user should not access.
+
+\input{diagrams/role-permission}
+\input{diagrams/route-guard-flow}
+
+\cref{fig:route-guard-flow} shows the frontend side of the same control. The interface can hide or block pages based on role and cycle phase, but this is not treated as the only security layer. Backend route middleware remains responsible for enforcing the API boundary.
+
+\section{Team and Subteam Management}
+The \texttt{Team} schema stores a name, description, leader, members, parent team, and creator. This supports both main teams and subteams through the \texttt{parentTeam} reference. Route code checks whether a team leader manages a root team or one of its descendants. That recursive managed-team logic appears in \texttt{backend/utils/accessControl.js} and is reused by employee access decisions.
+
+Team creation validates role coherence: leaders must be \texttt{TEAM\_LEADER}, \texttt{ADMIN}, or \texttt{HR}; members must be collaborators; and a manager cannot be assigned to multiple root teams in the same way. This reduces administrative ambiguity and avoids a common problem in HR tools: a person appears under two managers with conflicting evaluation authority.
+
+\section{Cycle Management}
+Performance cycles are stored in \texttt{Cycle.js}. Each cycle has a unique year, status, and six dates for phase starts and ends. The phase structure is explicit: \texttt{phase1}, \texttt{phase2}, \texttt{phase3}, and \texttt{closed}. The schema validates sequential phase dates when they are modified. The routes add business checks before phase advancement, including checks for unapproved objectives and incomplete readiness conditions.
+
+\input{diagrams/cycle-state}
+
+\section{Security Controls Introduced in This Sprint}
+The Express app applies Helmet, CORS, compression, JSON parsing, XSS cleaning, MongoDB sanitization, cache-control headers, rate limiting, and protected static-upload rules. Passwords are hashed with bcrypt using 12 salt rounds. The implementation also hides check-in upload files behind a blocked static route and serves other uploads with caching.
+
+These controls reduce common web risks but do not make the system fully secure by themselves. OWASP API guidance emphasizes that authorization mistakes at object level and property level remain common API risks \cite{owaspApi}. PerTrack addresses some of this through helper functions such as \texttt{canAccessEmployee}, \texttt{canAccessTeam}, and \texttt{canAccessObjective}, but a complete security assessment would still require endpoint-by-endpoint review and dynamic testing.
+
+\section{Sprint Result}
+At the end of this sprint, the application can identify users, enforce broad role permissions, represent teams and subteams, create annual cycles, and expose protected frontend pages. These foundations make later workflows possible because every objective, task, check-in, and evaluation needs a user, role, team scope, and active cycle.
+
+\section{Design Decisions and Trade-offs}
+The main trade-off in this sprint is between convenience and control. Storing tokens in browser storage simplifies the React session model, but it increases the importance of XSS prevention and short-lived access tokens. The backend partly compensates by checking the user record on authenticated requests and by applying request-hardening middleware. Another trade-off appears in role duplication: route roles exist in both frontend metadata and backend middleware. This duplication is acceptable here because the frontend improves navigation clarity while the backend remains the authority.

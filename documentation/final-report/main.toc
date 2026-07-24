@@ -1,0 +1,129 @@
+\contentsline {chapter}{Report Validation Page}{i}{chapter*.1}%
+\contentsline {chapter}{Dedication}{ii}{chapter*.2}%
+\contentsline {chapter}{Acknowledgements}{iii}{chapter*.3}%
+\contentsline {chapter}{Abstract}{iv}{chapter*.4}%
+\contentsline {chapter}{Resume}{v}{chapter*.5}%
+\contentsline {chapter}{List of Abbreviations and Acronyms}{vi}{chapter*.6}%
+\contentsline {chapter}{General Introduction}{1}{chapter*.10}%
+\contentsline {chapter}{\numberline {1}General Context and Project Environment}{4}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Introduction}{4}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Business Domain}{4}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Stakeholders and Target Users}{5}{section.1.3}%
+\contentsline {section}{\numberline {1.4}Project Identity and Repository Evidence}{5}{section.1.4}%
+\contentsline {section}{\numberline {1.5}Development Approach}{6}{section.1.5}%
+\contentsline {section}{\numberline {1.6}Version Control and Quality Culture}{7}{section.1.6}%
+\contentsline {section}{\numberline {1.7}Chapter Conclusion}{7}{section.1.7}%
+\contentsline {chapter}{\numberline {2}Project Analysis, Existing Solutions, and Planning}{8}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Problem Statement}{8}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Project Objectives}{8}{section.2.2}%
+\contentsline {section}{\numberline {2.3}Scope}{9}{section.2.3}%
+\contentsline {section}{\numberline {2.4}Comparable Solutions}{9}{section.2.4}%
+\contentsline {section}{\numberline {2.5}Risk Analysis}{10}{section.2.5}%
+\contentsline {section}{\numberline {2.6}Planning by Sprints}{12}{section.2.6}%
+\contentsline {section}{\numberline {2.7}Chapter Conclusion}{12}{section.2.7}%
+\contentsline {chapter}{\numberline {3}Requirements and System Architecture}{13}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Functional Requirements}{13}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Non-Functional Requirements}{14}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Architecture}{15}{section.3.3}%
+\contentsline {section}{\numberline {3.4}Technology Choices}{16}{section.3.4}%
+\contentsline {section}{\numberline {3.5}API Architecture}{18}{section.3.5}%
+\contentsline {section}{\numberline {3.6}Chapter Conclusion}{18}{section.3.6}%
+\contentsline {chapter}{\numberline {4}Sprint 1: Organization, Access Control, and Cycle Foundation}{19}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Sprint Objective}{19}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Authentication}{19}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Role-Based Access Control}{20}{section.4.3}%
+\contentsline {section}{\numberline {4.4}Team and Subteam Management}{21}{section.4.4}%
+\contentsline {section}{\numberline {4.5}Cycle Management}{22}{section.4.5}%
+\contentsline {section}{\numberline {4.6}Security Controls Introduced in This Sprint}{22}{section.4.6}%
+\contentsline {section}{\numberline {4.7}Sprint Result}{22}{section.4.7}%
+\contentsline {section}{\numberline {4.8}Design Decisions and Trade-offs}{22}{section.4.8}%
+\contentsline {chapter}{\numberline {5}Sprint 2: Objectives, KPIs, Tasks, and Check-Ins}{24}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Sprint Objective}{24}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Objective Model}{24}{section.5.2}%
+\contentsline {section}{\numberline {5.3}Objective Lifecycle}{24}{section.5.3}%
+\contentsline {section}{\numberline {5.4}Weight Rules}{26}{section.5.4}%
+\contentsline {section}{\numberline {5.5}Team Objective Weighting}{27}{section.5.5}%
+\contentsline {section}{\numberline {5.6}KPI Management}{27}{section.5.6}%
+\contentsline {section}{\numberline {5.7}Tasks}{27}{section.5.7}%
+\contentsline {section}{\numberline {5.8}Check-Ins}{27}{section.5.8}%
+\contentsline {section}{\numberline {5.9}Sprint Result}{28}{section.5.9}%
+\contentsline {section}{\numberline {5.10}Implementation Challenges}{28}{section.5.10}%
+\contentsline {chapter}{\numberline {6}Sprint 3: Evaluation, HR Review, and Follow-Up Decisions}{29}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Sprint Objective}{29}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Two Evaluation Layers}{29}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Automatic Score and Manager Adjustment}{30}{section.6.3}%
+\contentsline {section}{\numberline {6.4}HR Validation}{30}{section.6.4}%
+\contentsline {section}{\numberline {6.5}Improvement Plans}{31}{section.6.5}%
+\contentsline {section}{\numberline {6.6}HR Decisions and Bonus/Penalty Records}{31}{section.6.6}%
+\contentsline {section}{\numberline {6.7}Career Development}{32}{section.6.7}%
+\contentsline {section}{\numberline {6.8}PDF and Report Exports}{32}{section.6.8}%
+\contentsline {section}{\numberline {6.9}Sprint Result}{32}{section.6.9}%
+\contentsline {section}{\numberline {6.10}Design Decisions and Trade-offs}{32}{section.6.10}%
+\contentsline {chapter}{\numberline {7}Sprint 4: AI Assistance, Prediction, Analytics, and Auditability}{34}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Sprint Objective}{34}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Generative AI Service}{34}{section.7.2}%
+\contentsline {section}{\numberline {7.3}AI Controller Capabilities}{34}{section.7.3}%
+\contentsline {section}{\numberline {7.4}Python Prediction Service}{35}{section.7.4}%
+\contentsline {section}{\numberline {7.5}Prediction Formula}{36}{section.7.5}%
+\contentsline {section}{\numberline {7.6}Dataset and Model Evidence}{36}{section.7.6}%
+\contentsline {section}{\numberline {7.7}Analytics}{38}{section.7.7}%
+\contentsline {section}{\numberline {7.8}Auditability}{38}{section.7.8}%
+\contentsline {section}{\numberline {7.9}AI Limitations and Ethics}{38}{section.7.9}%
+\contentsline {section}{\numberline {7.10}Sprint Result}{38}{section.7.10}%
+\contentsline {section}{\numberline {7.11}Design Decisions and Trade-offs}{39}{section.7.11}%
+\contentsline {chapter}{\numberline {8}Sprint 5: Testing, Continuous Integration, and Deployment}{40}{chapter.8}%
+\contentsline {section}{\numberline {8.1}Sprint Objective}{40}{section.8.1}%
+\contentsline {section}{\numberline {8.2}Testing Strategy}{40}{section.8.2}%
+\contentsline {section}{\numberline {8.3}Backend Test Coverage by Behavior}{41}{section.8.3}%
+\contentsline {section}{\numberline {8.4}Frontend Test Coverage by Behavior}{41}{section.8.4}%
+\contentsline {section}{\numberline {8.5}Dockerization}{41}{section.8.5}%
+\contentsline {section}{\numberline {8.6}Kubernetes and GitOps}{42}{section.8.6}%
+\contentsline {section}{\numberline {8.7}CI/CD Pipeline}{42}{section.8.7}%
+\contentsline {section}{\numberline {8.8}Deployment Limitations}{43}{section.8.8}%
+\contentsline {section}{\numberline {8.9}Chapter Conclusion}{44}{section.8.9}%
+\contentsline {chapter}{General Conclusion and Perspectives}{45}{chapter*.49}%
+\contentsline {chapter}{\numberline {A}API Summary}{47}{chapter.A}%
+\contentsline {chapter}{\numberline {B}Database Dictionary}{49}{chapter.B}%
+\contentsline {chapter}{\numberline {C}Frontend Module Inventory}{51}{chapter.C}%
+\contentsline {section}{\numberline {C.1}Route-Level Pages}{51}{section.C.1}%
+\contentsline {section}{\numberline {C.2}Shared Application Shell}{52}{section.C.2}%
+\contentsline {section}{\numberline {C.3}Authentication and API Clients}{53}{section.C.3}%
+\contentsline {section}{\numberline {C.4}Goal and Objective UI}{53}{section.C.4}%
+\contentsline {section}{\numberline {C.5}Work Management UI}{53}{section.C.5}%
+\contentsline {section}{\numberline {C.6}Evaluation UI}{54}{section.C.6}%
+\contentsline {section}{\numberline {C.7}UI States}{54}{section.C.7}%
+\contentsline {chapter}{\numberline {D}Business Rule Catalog}{55}{chapter.D}%
+\contentsline {section}{\numberline {D.1}Role and Identity Rules}{55}{section.D.1}%
+\contentsline {section}{\numberline {D.2}Team and Scope Rules}{55}{section.D.2}%
+\contentsline {section}{\numberline {D.3}Cycle Rules}{56}{section.D.3}%
+\contentsline {section}{\numberline {D.4}Objective Workflow Rules}{57}{section.D.4}%
+\contentsline {section}{\numberline {D.5}Scoring Rules}{57}{section.D.5}%
+\contentsline {section}{\numberline {D.6}HR Review Rules}{58}{section.D.6}%
+\contentsline {chapter}{\numberline {E}Security Review}{60}{chapter.E}%
+\contentsline {section}{\numberline {E.1}Implemented Controls}{60}{section.E.1}%
+\contentsline {section}{\numberline {E.2}Authentication Risks}{61}{section.E.2}%
+\contentsline {section}{\numberline {E.3}Authorization Risks}{61}{section.E.3}%
+\contentsline {section}{\numberline {E.4}Data Privacy Risks}{61}{section.E.4}%
+\contentsline {section}{\numberline {E.5}AI Privacy Risks}{62}{section.E.5}%
+\contentsline {section}{\numberline {E.6}Deployment Risks}{62}{section.E.6}%
+\contentsline {section}{\numberline {E.7}Residual Risk Summary}{62}{section.E.7}%
+\contentsline {chapter}{\numberline {F}AI Model Evidence}{63}{chapter.F}%
+\contentsline {section}{\numberline {F.1}Dataset Fields}{63}{section.F.1}%
+\contentsline {section}{\numberline {F.2}Dataset Quality Checks}{64}{section.F.2}%
+\contentsline {section}{\numberline {F.3}Class Distribution}{64}{section.F.3}%
+\contentsline {section}{\numberline {F.4}Promotion Readiness by Rating}{64}{section.F.4}%
+\contentsline {section}{\numberline {F.5}Rating Confusion Matrix}{65}{section.F.5}%
+\contentsline {section}{\numberline {F.6}Promotion Confusion Matrix}{65}{section.F.6}%
+\contentsline {section}{\numberline {F.7}Feature Importance}{65}{section.F.7}%
+\contentsline {section}{\numberline {F.8}Interpretation}{65}{section.F.8}%
+\contentsline {chapter}{\numberline {G}Installation Guide}{67}{chapter.G}%
+\contentsline {section}{\numberline {G.1}Prerequisites}{67}{section.G.1}%
+\contentsline {section}{\numberline {G.2}Backend}{67}{section.G.2}%
+\contentsline {section}{\numberline {G.3}Frontend}{67}{section.G.3}%
+\contentsline {section}{\numberline {G.4}AI Service}{67}{section.G.4}%
+\contentsline {section}{\numberline {G.5}Docker Compose}{68}{section.G.5}%
+\contentsline {chapter}{\numberline {H}Test Evidence}{69}{chapter.H}%
+\contentsline {section}{\numberline {H.1}Backend Tests}{69}{section.H.1}%
+\contentsline {section}{\numberline {H.2}Frontend Tests}{69}{section.H.2}%
+\contentsline {section}{\numberline {H.3}Frontend Build}{69}{section.H.3}%
+\contentsline {section}{\numberline {H.4}AI Artifact Evaluation}{69}{section.H.4}%

@@ -1,0 +1,20 @@
+\begin{figure}[H]\centering
+\resizebox{0.92\textwidth}{!}{%
+\begin{tikzpicture}[every node/.style={font=\scriptsize}, box/.style={draw, rounded corners, fill=PerTrackLight, minimum width=3.1cm, minimum height=0.9cm, align=center}, arr/.style={-Latex, thick}]
+\node[box] (unit) {Business-rule tests\\objective, scoring, workflow};
+\node[box, right=0.7cm of unit] (api) {API tests\\health, app, access};
+\node[box, right=0.7cm of api] (ui) {Frontend tests\\login, routing, UI};
+\node[box, below=0.7cm of api] (build) {Build verification\\Vite production build};
+\node[box, below=0.7cm of unit] (gap) {Missing evidence\\E2E and coverage};
+\node[box, below=0.7cm of ui] (ci) {CI pipeline\\tests and scans};
+\draw[arr] (unit) -- (api);
+\draw[arr] (api) -- (ui);
+\draw[arr] (unit) -- (build);
+\draw[arr] (ui) -- (build);
+\draw[arr] (build) -- (ci);
+\draw[arr, dashed] (gap) -- (ci);
+\end{tikzpicture}}
+\caption{Testing strategy map distinguishing verified tests from missing evidence. Source: repository tests and local verification.}
+\label{fig:test-strategy-map}
+\end{figure}
+

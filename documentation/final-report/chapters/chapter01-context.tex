@@ -1,0 +1,45 @@
+\chapter{General Context and Project Environment}
+\section{Introduction}
+The repository does not contain the name of the university, the student, the host organization, or the supervisors. Those fields are therefore kept as placeholders. What can be verified is the nature of the software project: an HR-oriented performance management platform developed as a final-year engineering project and stored in a repository named \texttt{application\_gestion\_competences}. Several files also use names such as \texttt{pfe}, \texttt{PerTrack}, and \texttt{HR Evaluation System}. The most precise product name used in this report is PerTrack, because the repository contains PerTrack diagram files and the AI service README describes integration with the PerTrack MERN app.
+
+\section{Business Domain}
+The business domain is employee performance management. In practice, this domain joins administrative processes and management practice: an organization defines a cycle, employees and managers agree on objectives, progress is monitored through tasks and check-ins, managers evaluate results, and HR validates the process before decisions such as improvement plans, bonuses, penalties, promotion recommendations, or career actions are recorded.
+
+The project implements this domain with explicit data entities rather than informal notes. \texttt{Cycle} stores the annual review period and three phases. \texttt{Objective} stores goals, weights, KPIs, approval status, self-assessment, manager adjustment, comments, change requests, and activity logs. \texttt{FinalEvaluation} stores the automatic score, manager score, final score, rating label, objective breakdown, evidence summary, HR status, workflow history, and employee feedback. This model shows that the project is built around governance and traceability, not only dashboards.
+
+\section{Stakeholders and Target Users}
+\begin{table}[H]\centering\small
+\caption{Stakeholders identified from implemented roles and workflows.}
+\label{tab:stakeholders}
+\begin{tabularx}{\textwidth}{p{0.22\textwidth}p{0.28\textwidth}Y}
+\toprule
+Stakeholder & Verified role or evidence & Main expectation\\
+\midrule
+Administrator & \texttt{ADMIN} role in \texttt{User.js} and route guards & Configure users, cycles, teams, global access, analytics, audit logs, and deployment-level administration.\\
+HR officer & \texttt{HR} role in routes and final evaluation workflow & Review manager-submitted evaluations, validate or return them, create HR decisions, follow up development actions, and consult analytics.\\
+Team leader & \texttt{TEAM\_LEADER} role and access-control helpers & Manage team/subteam scope, approve objectives, review check-ins, generate evaluations, and supervise tasks.\\
+Collaborator & \texttt{COLLABORATOR} role and collaborator routes & Draft objectives, submit check-ins, perform self-assessment, view feedback, and acknowledge evaluation outputs.\\
+Academic jury & Report requirement and project documentation & Understand the engineering choices, implemented scope, limitations, tests, and deployment approach.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Project Identity and Repository Evidence}
+The source tree is divided into \texttt{frontend}, \texttt{backend}, \texttt{ai-service}, \texttt{k8s}, \texttt{.github}, and several project-analysis documents. The backend package is named \texttt{backend}, and its entry point is \texttt{server.js}. The frontend package is a private Vite application. The AI service README calls the Python service an ``AI Performance Analyzer'' and mentions the PerTrack MERN app. The Kubernetes and Docker image names use \texttt{pfe}, which is consistent with a graduation-project context.
+
+\input{diagrams/system-context}
+
+\cref{fig:system-context} separates the human actors from the software boundaries. The React application is the only direct interface for the four roles. The Express API centralizes authentication, authorization, validation, and business rules before touching MongoDB or external services. This separation matters because performance data should not be interpreted directly by the interface without backend checks.
+
+\section{Development Approach}
+The repository does not contain Jira, Trello, or GitHub Projects exports. It does contain a GitHub Actions workflow, test playbooks, audit documents, and several design diagrams. From code evidence, the development approach was iterative: modules were added around progressively deeper workflows such as objectives, team weight capacity, mid-year reviews, final evaluations, HR validation, AI support, and deployment automation. The presence of test files for bugs such as objective visibility, task privacy, and scoring rules also shows that the project went through corrective cycles rather than one single static implementation.
+
+\input{diagrams/repository-workflow}
+
+\cref{fig:repository-workflow} summarizes the engineering workflow that can actually be verified. There is no evidence of an external project-management board, so the report does not invent one. The repository itself provides the stronger evidence: tests, CI stages, Docker images, Kustomize updates, and documentation artifacts.
+
+\section{Version Control and Quality Culture}
+Git is present in the repository, and CI is defined under \texttt{.github/workflows/docker-build.yml}. The workflow runs on pushes to \texttt{main}, \texttt{develop}, \texttt{qa}, and \texttt{staging}, as well as pull requests. It starts with secret scanning, then backend tests, frontend build and tests, Docker image build and push, image vulnerability scanning, Kustomize tag updates, and a smoke test for the development environment. This is a serious quality signal for a university project because it connects code changes to automated verification and deployment artifacts.
+
+\section{Chapter Conclusion}
+The verified project context is an HR performance management system implemented as a full-stack engineering project. Missing academic metadata is separated from technical evidence. The next chapter analyzes the business problem, expected solution, risks, and planning.

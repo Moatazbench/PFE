@@ -1,0 +1,44 @@
+\contentsline {figure}{\numberline {1}{\ignorespaces Performance-management lifecycle implemented by the application. Source: author's own work based on cycle phases and business modules.}}{1}{figure.caption.11}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {1.1}{\ignorespaces System-context diagram. Source: author's own work based on repository architecture.}}{6}{figure.caption.13}%
+\contentsline {figure}{\numberline {1.2}{\ignorespaces Repository workflow from local implementation to CI/CD evidence. Source: author's own work based on repository folders and GitHub Actions.}}{6}{figure.caption.14}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {2.1}{\ignorespaces Project scope boundary and verified limitations. Source: author's own work based on repository evidence.}}{9}{figure.caption.15}%
+\contentsline {figure}{\numberline {2.2}{\ignorespaces Indicative project planning reconstructed from repository history and module maturity. Source: author's own work; exact internship dates are not present in the repository.}}{12}{figure.caption.17}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {3.1}{\ignorespaces Global use-case diagram. Source: author's own work based on routes and frontend route configuration.}}{15}{figure.caption.19}%
+\contentsline {figure}{\numberline {3.2}{\ignorespaces Logical architecture. Source: author's own work based on application source code.}}{15}{figure.caption.20}%
+\contentsline {figure}{\numberline {3.3}{\ignorespaces Backend component diagram. Source: author's own work based on Express route and controller structure.}}{16}{figure.caption.21}%
+\contentsline {figure}{\numberline {3.4}{\ignorespaces Frontend, backend, database, and AI communication flow. Source: author's own work based on API client, routes, services, and AI files.}}{16}{figure.caption.22}%
+\contentsline {figure}{\numberline {3.5}{\ignorespaces Database model overview. Source: author's own work based on Mongoose schemas.}}{16}{figure.caption.23}%
+\contentsline {figure}{\numberline {3.6}{\ignorespaces Verified technology stack grouped by project responsibility. Source: author's own work based on manifests and deployment files.}}{17}{figure.caption.24}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {4.1}{\ignorespaces Authentication and token-refresh sequence. Source: author's own work based on `AuthContext.jsx`, `api.js`, and backend auth middleware.}}{19}{figure.caption.26}%
+\contentsline {figure}{\numberline {4.2}{\ignorespaces Frontend route-guard decision flow. Source: author's own work based on `RouteGuard.jsx` and route metadata.}}{21}{figure.caption.28}%
+\contentsline {figure}{\numberline {4.3}{\ignorespaces Performance-cycle state diagram. Source: author's own work based on \texttt {backend/routes/cycles.js}.}}{22}{figure.caption.29}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {5.1}{\ignorespaces Objective-submission sequence diagram. Source: author's own work based on objective routes and controller workflow.}}{25}{figure.caption.30}%
+\contentsline {figure}{\numberline {5.2}{\ignorespaces Global workflow activity diagram. Source: author's own work based on implemented modules.}}{25}{figure.caption.31}%
+\contentsline {figure}{\numberline {5.3}{\ignorespaces Objective scoring and weight-normalization logic. Source: author's own work based on scoring and objective-rule utilities.}}{26}{figure.caption.32}%
+\contentsline {figure}{\numberline {5.4}{\ignorespaces KPI and scoring flow. Source: author's own work based on objective, check-in, and scoring modules.}}{27}{figure.caption.33}%
+\contentsline {figure}{\numberline {5.5}{\ignorespaces Check-in review workflow. Source: author's own work based on `CheckIn.js` and check-in routes.}}{28}{figure.caption.34}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {6.1}{\ignorespaces Final evaluation sequence diagram. Source: author's own work based on final evaluation controller and scoring service.}}{30}{figure.caption.35}%
+\contentsline {figure}{\numberline {6.2}{\ignorespaces HR-review sequence diagram. Source: author's own work based on HR validation, decision, and improvement-plan modules.}}{31}{figure.caption.37}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {7.1}{\ignorespaces AI architecture separating generative drafting from predictive scoring. Source: author's own work based on backend AI services and the Flask AI service.}}{35}{figure.caption.39}%
+\contentsline {figure}{\numberline {7.2}{\ignorespaces AI inference sequence diagram. Source: author's own work based on Node AI service and Flask API.}}{35}{figure.caption.40}%
+\contentsline {figure}{\numberline {7.3}{\ignorespaces Model comparison from saved artifact evaluation. Source: project AI artifacts evaluated locally.}}{37}{figure.caption.42}%
+\contentsline {figure}{\numberline {7.4}{\ignorespaces Illustrative feature-importance ranking from the saved XGBoost rating model evaluation. Source: project AI artifacts evaluated locally.}}{37}{figure.caption.43}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {8.1}{\ignorespaces Testing strategy map distinguishing verified tests from missing evidence. Source: repository tests and local verification.}}{41}{figure.caption.45}%
+\contentsline {figure}{\numberline {8.2}{\ignorespaces Deployment architecture. Source: author's own work based on Docker, Nginx, and Kubernetes manifests.}}{42}{figure.caption.46}%
+\contentsline {figure}{\numberline {8.3}{\ignorespaces CI/CD pipeline diagram. Source: author's own work based on GitHub Actions workflow.}}{42}{figure.caption.47}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }

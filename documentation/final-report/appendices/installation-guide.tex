@@ -1,0 +1,31 @@
+\chapter{Installation Guide}
+\section{Prerequisites}
+The project requires Node.js, npm, MongoDB access, Python with the AI dependencies when the prediction service is used, Docker for container builds, and Kubernetes tooling for cluster deployment.
+
+\section{Backend}
+\begin{lstlisting}[language=bash]
+cd backend
+npm ci
+# create .env with MONGO_URI, JWT_SECRET, JWT_REFRESH_SECRET
+npm run dev
+\end{lstlisting}
+
+\section{Frontend}
+\begin{lstlisting}[language=bash]
+cd frontend
+npm ci
+npm run dev
+\end{lstlisting}
+
+\section{AI Service}
+\begin{lstlisting}[language=bash]
+cd ai-service
+pip install -r requirements.txt
+python app.py
+\end{lstlisting}
+
+\section{Docker Compose}
+\begin{lstlisting}[language=bash]
+docker compose up --build
+\end{lstlisting}
+The Compose file builds the backend and frontend only. The AI service must be run separately unless deployment files are extended.

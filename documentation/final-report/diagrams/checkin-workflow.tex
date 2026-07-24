@@ -1,0 +1,16 @@
+\begin{figure}[H]\centering
+\resizebox{0.88\textwidth}{!}{%
+\begin{tikzpicture}[node distance=0.7cm, every node/.style={font=\scriptsize}, state/.style={draw, rounded corners, fill=PerTrackLight, minimum width=3.0cm, minimum height=0.72cm, align=center}, arr/.style={-Latex, thick}]
+\node[state] (draft) {Draft check-in};
+\node[state, right=0.9cm of draft] (pending) {Pending review};
+\node[state, right=0.9cm of pending] (approved) {Approved};
+\node[state, below=0.8cm of pending] (rev) {Revision requested};
+\draw[arr] (draft) -- node[above]{submit} (pending);
+\draw[arr] (pending) -- node[above]{manager approves} (approved);
+\draw[arr] (pending) -- node[right]{needs correction} (rev);
+\draw[arr] (rev) -- node[left]{resubmit} (pending);
+\end{tikzpicture}}
+\caption{Check-in review workflow. Source: author's own work based on `CheckIn.js` and check-in routes.}
+\label{fig:checkin-workflow}
+\end{figure}
+

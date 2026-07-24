@@ -1,0 +1,20 @@
+\begin{figure}[H]\centering
+\resizebox{0.92\textwidth}{!}{%
+\begin{tikzpicture}[every node/.style={font=\small}, stage/.style={draw, rounded corners, fill=PerTrackLight, minimum width=3.0cm, minimum height=0.95cm, align=center}, arr/.style={-Latex, thick}]
+\node[stage] (setup) {Organization setup\\users, roles, teams};
+\node[stage, right=1.0cm of setup] (phase1) {Phase 1\\objectives and KPIs};
+\node[stage, right=1.0cm of phase1] (phase2) {Phase 2\\tasks and check-ins};
+\node[stage, below=1.0cm of phase2] (phase3) {Phase 3\\evaluation};
+\node[stage, left=1.0cm of phase3] (hr) {HR review\\validation or return};
+\node[stage, left=1.0cm of hr] (follow) {Follow-up\\career, PIP, bonus};
+\draw[arr] (setup) -- (phase1);
+\draw[arr] (phase1) -- (phase2);
+\draw[arr] (phase2) -- (phase3);
+\draw[arr] (phase3) -- (hr);
+\draw[arr] (hr) -- (follow);
+\draw[arr, dashed] (hr.north) to[bend left=18] node[above, font=\scriptsize]{return for correction} (phase3.south west);
+\end{tikzpicture}}
+\caption{Performance-management lifecycle implemented by the application. Source: author's own work based on cycle phases and business modules.}
+\label{fig:performance-lifecycle}
+\end{figure}
+

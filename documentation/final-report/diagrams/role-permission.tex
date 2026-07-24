@@ -1,0 +1,18 @@
+\begin{table}[H]\centering\small
+\caption{Role-permission matrix. Source: author's own work based on backend role middleware and route configuration.}
+\label{tab:role-permission-diagram}
+\begin{tabularx}{\textwidth}{lYYYY}
+\toprule
+Capability & Admin & HR & Team leader & Collaborator\\
+\midrule
+User administration & Full & Limited lists & Managers/collaborators list & Own profile\\
+Cycle phase control & Full & View & View & View\\
+Team creation & Full & Create/update & Subteam management & View own team\\
+Objective drafting & Yes & Limited & Yes & Yes\\
+Objective approval & Yes & No direct route & Managed team & No\\
+Final evaluation & Yes & Validate/review & Generate/update & Feedback/own history\\
+Audit logs & Yes & Yes & Entity history only & No\\
+Bonus/penalty & Yes & Review & Propose/create route access & View scoped\\
+\bottomrule
+\end{tabularx}
+\end{table}

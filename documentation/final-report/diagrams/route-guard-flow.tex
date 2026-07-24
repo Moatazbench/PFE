@@ -1,0 +1,23 @@
+\begin{figure}[H]\centering
+\resizebox{0.85\textwidth}{!}{%
+\begin{tikzpicture}[node distance=0.75cm, every node/.style={font=\scriptsize}, proc/.style={draw, rounded corners, fill=PerTrackLight, minimum width=3.6cm, minimum height=0.7cm, align=center}, decision/.style={draw, diamond, aspect=2.4, fill=white, align=center}, arr/.style={-Latex, thick}]
+\node[proc] (route) {User opens protected route};
+\node[decision, below=of route] (auth) {User loaded?};
+\node[decision, below=of auth] (role) {Role allowed?};
+\node[decision, below=of role] (phase) {Phase allowed?};
+\node[proc, below=of phase] (render) {Render requested page};
+\node[proc, right=1.8cm of auth] (login) {Redirect to login};
+\node[proc, right=1.8cm of role] (denied) {Show role guard state};
+\node[proc, right=1.8cm of phase] (blocked) {Show phase guard state};
+\draw[arr] (route) -- (auth);
+\draw[arr] (auth) -- node[left]{yes} (role);
+\draw[arr] (role) -- node[left]{yes} (phase);
+\draw[arr] (phase) -- node[left]{yes} (render);
+\draw[arr] (auth) -- node[above]{no} (login);
+\draw[arr] (role) -- node[above]{no} (denied);
+\draw[arr] (phase) -- node[above]{no} (blocked);
+\end{tikzpicture}}
+\caption{Frontend route-guard decision flow. Source: author's own work based on `RouteGuard.jsx` and route metadata.}
+\label{fig:route-guard-flow}
+\end{figure}
+

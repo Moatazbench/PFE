@@ -1,0 +1,27 @@
+\chapter*{General Conclusion and Perspectives}
+\addcontentsline{toc}{chapter}{General Conclusion and Perspectives}
+PerTrack addresses a concrete HR engineering problem: performance management needs structured objectives, measurable progress, role-based governance, auditable evaluation, and HR validation. The implemented application goes beyond simple record keeping. It models annual cycles, team hierarchy, objective states, KPI tracking, tasks, check-ins, manager evaluation, final HR review, follow-up decisions, analytics, audit logs, and AI support.
+
+The main technical contribution is the combination of workflow logic and score calculation. Objective weights are treated as business rules, not as display metadata. Manager-adjusted achievement can override employee self-reported progress, but the objective breakdown preserves the source values. HR review contains process checks before validation. This design is suitable for sensitive evaluation workflows because it makes decisions traceable.
+
+The project also demonstrates modern implementation practices: React and Vite for the frontend, Express and Mongoose for the backend, Flask and XGBoost for the AI prediction service, JWT authentication, security middleware, structured tests, Docker images, Kubernetes manifests, Kustomize overlays, Argo CD GitOps configuration, and GitHub Actions CI/CD.
+
+The project remains honest about its limitations. Academic and organization metadata is missing from the repository. The AI dataset is synthetic and cannot prove real-world predictive validity. The AI microservice is not fully represented in the container orchestration manifests. Security controls exist, but no penetration test or accessibility audit is present. Some evaluation functionality exists in overlapping modules and should be simplified during future maintenance.
+
+Realistic future work includes single sign-on, stronger object-level authorization audits, accessibility testing, end-to-end tests with seeded data, complete AI service deployment, real organizational training data under strict privacy governance, bias monitoring, explainable prediction outputs, stronger observability, backup policies, richer HRIS integration, and optional mobile support.
+
+\begin{table}[H]\centering\small
+\caption{Delivered scope and remaining limitations.}
+\label{tab:delivered-limitations}
+\begin{tabularx}{\textwidth}{p{0.28\textwidth}p{0.34\textwidth}Y}
+\toprule
+Area & Delivered evidence & Remaining limitation\\
+\midrule
+Core application & Roles, teams, cycles, objectives, tasks, check-ins, evaluations, HR review & Screenshots deferred; no seeded E2E run included\\
+Scoring & Weighted objective score, normalization, rating labels, tests & Requires continued validation with production review cases\\
+AI & LLM draft service, Flask predictor, saved XGBoost artifacts, synthetic dataset metrics & Synthetic data only; no production bias/drift monitoring\\
+DevOps & Docker, Kubernetes, Kustomize, Argo CD, GitHub Actions, Trivy & AI service absent from Compose/K8s base; no monitoring stack\\
+Quality & Backend tests, frontend tests, frontend build, evidence appendices & No coverage report, penetration test, or accessibility audit\\
+\bottomrule
+\end{tabularx}
+\end{table}

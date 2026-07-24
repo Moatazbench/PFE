@@ -1,0 +1,64 @@
+\chapter{Sprint 2: Objectives, KPIs, Tasks, and Check-Ins}
+\section{Sprint Objective}
+The second sprint implements the work-management core of the system. Objectives define expected performance, KPIs make success measurable, tasks create day-to-day execution evidence, and check-ins provide periodic progress records.
+
+\section{Objective Model}
+\texttt{Objective.js} is one of the richest schemas in the repository. It stores title, due date, description, success indicator, owner, cycle, category, team, assigned users, weight, priority, achievement percent, self-assessment fields, final self-assessment fields, manager adjustment, weighted score, workflow status, source, assignment metadata, rejection and revision reasons, evaluation fields, labels, visibility, parent objective, embedded KPIs, progress updates, comments, attachments, change requests, activity logs, and manager notes.
+
+\section{Objective Lifecycle}
+The implemented status list includes \texttt{draft}, \texttt{pending}, \texttt{submitted}, \texttt{pending\_approval}, \texttt{revision\_requested}, \texttt{rejected}, \texttt{assigned}, \texttt{acknowledged}, \texttt{approved}, \texttt{validated}, \texttt{locked}, \texttt{cancelled}, \texttt{evaluated}, and \texttt{archived}. The list preserves legacy states while supporting newer states such as manager-assigned objectives and correction requests.
+
+\input{diagrams/objective-sequence}
+\input{diagrams/global-workflow}
+
+\section{Weight Rules}
+Objective weights are central business rules. The code validates individual objective weights between 1 and 100, calculates totals, excludes cancelled and archived objectives from allocation, deduplicates team objective copies, and computes employee allocation in separate buckets for individual, team, and subteam objectives.
+
+For one objective, the weighted contribution is:
+\[
+P_o = \frac{w_o \times a_o}{100}
+\]
+where \(w_o\) is the objective weight and \(a_o\) is the achievement percentage used for scoring.
+
+For final evaluation scoring, eligible objective statuses are \texttt{approved}, \texttt{validated}, \texttt{evaluated}, and \texttt{locked}. If the total eligible weight is exactly 100, the score is the sum of weighted points. If the eligible total is not 100, the score is normalized:
+\[
+S =
+\begin{cases}
+\sum P_o, & \text{if } \sum w_o = 100\\
+\frac{\sum P_o}{\sum w_o} \times 100, & \text{if } 0 < \sum w_o \neq 100\\
+0, & \text{if } \sum w_o = 0
+\end{cases}
+\]
+This normalization exists to avoid unfairly penalizing legacy or incomplete cycles where the administrative total does not reach 100 percent.
+
+\input{diagrams/weight-calculation}
+
+\cref{fig:weight-calculation} captures the rule that required the most care in this sprint. A scoring function must not blindly average progress values, because a 10 percent objective and a 40 percent objective should not influence the final score equally. It must also avoid double-counting distributed team objectives.
+
+\begin{lstlisting}[caption={Core weighted-points rule from the scoring service.}]
+const weightedPoints = Number(((weight * achievement) / 100).toFixed(2));
+\end{lstlisting}
+
+\section{Team Objective Weighting}
+The tests make a subtle rule explicit: a team objective weight is not divided among members. If a 40 percent team objective is assigned to four members, it consumes 40 percent of each assigned member's team-objective budget. This is important because it preserves the importance of shared work instead of making it vanish as team size grows.
+
+\input{diagrams/kpi-flow}
+
+\section{KPI Management}
+KPIs are embedded inside objectives. Each KPI has title, metric type, initial value, target value, current value, unit, and status. Supported metric types are percent, number, currency, boolean, and milestone. The frontend detail panel lets users add KPIs, update current values, search KPIs, and visualize progress. The backend exposes routes to add, update, and delete KPIs under \texttt{/api/objectives/:id/kpis}.
+
+\section{Tasks}
+The \texttt{Task} model supports title, description, assignee, assignedBy, status, priority, workflow stage, progress, labels, due date, completion date, recurrence, linked goal, phase, KPI id, linked meeting, team, notes, and time tracking sessions. The frontend \texttt{TasksPage.jsx} implements kanban-like behavior using statuses such as \texttt{todo}, \texttt{in\_progress}, \texttt{done}, and \texttt{cancelled}. Time tracking is stored both in a nested \texttt{timeTracking} structure and legacy-style \texttt{timeSessions}, showing compatibility with evolving frontend features.
+
+\section{Check-Ins}
+Check-ins connect an employee, objective, and cycle. They include progress percentage, notes, priority, attachments, status, history, manager feedback, and review metadata. A manager or authorized HR/admin actor can approve a check-in or request revision. When a reviewed check-in includes progress, the controller may update the related objective's achievement percentage. This creates a data path from periodic evidence to objective progress.
+
+\input{diagrams/checkin-workflow}
+
+UI screenshots for the objectives and task workspaces are deferred in this revision by request. The implemented views remain documented through route evidence, frontend module inventory, and the workflow diagrams above.
+
+\section{Sprint Result}
+This sprint turns performance planning into concrete work data. Objectives hold the contract, KPIs hold the measurement structure, tasks hold execution evidence, and check-ins hold periodic progress. The largest engineering challenge is consistency: the same objective must behave correctly across role visibility, status changes, team distribution, weight budgets, and final scoring.
+
+\section{Implementation Challenges}
+The first challenge is objective visibility. Employee-created draft individual objectives should stay private until submission, while assigned or approved objectives must become visible to the responsible manager. This is why the repository contains a dedicated visibility helper instead of scattering the rule across controllers. The second challenge is weight capacity. Team objectives cannot be divided by the number of members without weakening shared goals, but counting the full weight for every member means the backend has to protect capacity carefully. The tests around objective rules and score calculation show that these edge cases were treated as business rules, not presentation details.

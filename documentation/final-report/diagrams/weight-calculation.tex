@@ -1,0 +1,17 @@
+\begin{figure}[H]\centering
+\resizebox{0.92\textwidth}{!}{%
+\begin{tikzpicture}[every node/.style={font=\scriptsize}, box/.style={draw, rounded corners, fill=PerTrackLight, minimum width=3cm, minimum height=0.85cm, align=center}, arr/.style={-Latex, thick}]
+\node[box] (eligible) {Eligible objectives\\final-score statuses only};
+\node[box, right=0.8cm of eligible] (weighted) {Weighted points\\weight x achievement / 100};
+\node[box, right=0.8cm of weighted] (normalize) {Normalize if total\\weight is not 100};
+\node[box, below=0.75cm of weighted] (team) {Team objectives\\count once per group};
+\node[box, right=0.8cm of normalize] (rating) {Final score\\and rating label};
+\draw[arr] (eligible) -- (weighted);
+\draw[arr] (weighted) -- (normalize);
+\draw[arr] (normalize) -- (rating);
+\draw[arr, dashed] (team) -- (weighted);
+\end{tikzpicture}}
+\caption{Objective scoring and weight-normalization logic. Source: author's own work based on scoring and objective-rule utilities.}
+\label{fig:weight-calculation}
+\end{figure}
+

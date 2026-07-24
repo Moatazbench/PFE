@@ -1,0 +1,120 @@
+\chapter{Business Rule Catalog}
+This appendix records the main business rules verified in the code. It is intentionally explicit because performance-management applications are judged less by screen count than by rule correctness.
+
+\section{Role and Identity Rules}
+\begin{longtable}{p{0.24\textwidth}p{0.34\textwidth}p{0.32\textwidth}}
+\caption{Role and identity rules.}\label{tab:role-rules}\\
+\toprule
+Rule & Implementation & Evidence\\
+\midrule
+\endfirsthead
+\toprule
+Rule & Implementation & Evidence\\
+\midrule
+\endhead
+Only four roles are accepted & \texttt{ADMIN}, \texttt{HR}, \texttt{TEAM\_LEADER}, \texttt{COLLABORATOR} & \texttt{backend/models/User.js}\\
+User emails must match the organization domain & Email validator requires \texttt{@biat.com} & \texttt{backend/models/User.js}\\
+Passwords are not stored in clear text & Pre-save hook hashes modified password fields with bcrypt salt rounds & \texttt{backend/models/User.js}\\
+Admin passes route role checks & \texttt{role.js} returns \texttt{next()} for \texttt{ADMIN} & \texttt{backend/middleware/role.js}\\
+Inactive or deleted users lose API access & Auth middleware loads current user and checks \texttt{isActive} and \texttt{isDeleted} & \texttt{backend/middleware/auth.js}\\
+\bottomrule
+\end{longtable}
+
+\section{Team and Scope Rules}
+\begin{longtable}{p{0.24\textwidth}p{0.34\textwidth}p{0.32\textwidth}}
+\caption{Team and access-scope rules.}\label{tab:team-rules}\\
+\toprule
+Rule & Implementation & Evidence\\
+\midrule
+\endfirsthead
+\toprule
+Rule & Implementation & Evidence\\
+\midrule
+\endhead
+Teams can contain subteams & \texttt{parentTeam} points from one team to another & \texttt{backend/models/Team.js}\\
+Managed team scope is recursive & Helper gathers root teams and child teams into a managed set & \texttt{backend/utils/accessControl.js}\\
+Team leaders can access managed employees & Managed employee ids combine team members and direct reports & \texttt{backend/utils/accessControl.js}\\
+Root team leaders are constrained & Route validation prevents conflicting manager assignment & \texttt{backend/routes/teams.js}\\
+Team objective copies are deduplicated by team, cycle, and title & Group key avoids counting distributed copies multiple times & \texttt{backend/utils/objectiveRules.js}\\
+\bottomrule
+\end{longtable}
+
+\section{Cycle Rules}
+\begin{longtable}{p{0.24\textwidth}p{0.34\textwidth}p{0.32\textwidth}}
+\caption{Cycle and phase rules.}\label{tab:cycle-rules}\\
+\toprule
+Rule & Implementation & Evidence\\
+\midrule
+\endfirsthead
+\toprule
+Rule & Implementation & Evidence\\
+\midrule
+\endhead
+Cycle year is unique & Unique index on \texttt{year} & \texttt{backend/models/Cycle.js}\\
+Phase dates must be sequential & Pre-save validation compares provided phase dates & \texttt{backend/models/Cycle.js}\\
+Closed cycles cannot be edited normally & Update route rejects edits to closed cycles & \texttt{backend/routes/cycles.js}\\
+Phase advancement is sequential & Route prevents jumping forward or moving backward except rollback rule & \texttt{backend/routes/cycles.js}\\
+Rollback is limited & Rollback from phase2 to phase1 is admin-only and blocked after submitted assessments & \texttt{backend/routes/cycles.js}\\
+Closing a cycle changes status to closed & Phase patch route maps \texttt{closed} phase to closed status & \texttt{backend/routes/cycles.js}\\
+\bottomrule
+\end{longtable}
+
+\section{Objective Workflow Rules}
+\begin{longtable}{p{0.24\textwidth}p{0.34\textwidth}p{0.32\textwidth}}
+\caption{Objective workflow and visibility rules.}\label{tab:objective-rules}\\
+\toprule
+Rule & Implementation & Evidence\\
+\midrule
+\endfirsthead
+\toprule
+Rule & Implementation & Evidence\\
+\midrule
+\endhead
+Objective weight must be between 1 and 100 & Joi and Mongoose validation enforce numeric bounds & \texttt{backend/validators/schemas.js}, \texttt{Objective.js}\\
+Cancelled and archived objectives do not consume allocation & Weight helper excludes these statuses & \texttt{backend/utils/objectiveRules.js}\\
+Rejected objectives still count in planning weight & Tests verify rejected is weight-bearing & \texttt{backend/tests/objectiveRules.test.js}\\
+Private draft individual objectives are owner-only & Visibility helper hides employee-created draft individual goals from non-owners & \texttt{backend/utils/objectiveVisibility.js}\\
+Manager-assigned objectives require acknowledgment & Objective schema includes \texttt{assigned} and \texttt{acknowledged} states & \texttt{backend/models/Objective.js}\\
+Final-score objective statuses are limited & Only approved, validated, evaluated, and locked objectives are scored & \texttt{backend/services/scoreCalculationService.js}\\
+\bottomrule
+\end{longtable}
+
+\section{Scoring Rules}
+\begin{longtable}{p{0.24\textwidth}p{0.34\textwidth}p{0.32\textwidth}}
+\caption{Scoring rules.}\label{tab:scoring-rules}\\
+\toprule
+Rule & Implementation & Evidence\\
+\midrule
+\endfirsthead
+\toprule
+Rule & Implementation & Evidence\\
+\midrule
+\endhead
+Objective weighted points equal weight times achievement divided by 100 & Service and objective pre-save hook use the same formula & \texttt{Objective.js}, \texttt{scoreCalculationService.js}\\
+Manager confirmation has priority & Achievement uses manager-adjusted percent before final self percent and ordinary progress & \texttt{scoreCalculationService.js}\\
+Team objective weight is not divided by member count & Tests assert full team weight is applied to each assigned member & \texttt{scoreCalculationService.test.js}\\
+Incomplete historical totals are normalized & If total eligible weight is not 100, raw points are divided by total weight & \texttt{scoreCalculationService.js}\\
+Scores are clamped to 0--100 & \texttt{clampPercentage} normalizes input values & \texttt{scoreCalculationService.js}\\
+Rating bands are deterministic & Five label thresholds are implemented & \texttt{scoreCalculationService.js}\\
+\bottomrule
+\end{longtable}
+
+\section{HR Review Rules}
+\begin{longtable}{p{0.24\textwidth}p{0.34\textwidth}p{0.32\textwidth}}
+\caption{HR review and follow-up rules.}\label{tab:hr-rules}\\
+\toprule
+Rule & Implementation & Evidence\\
+\midrule
+\endfirsthead
+\toprule
+Rule & Implementation & Evidence\\
+\midrule
+\endhead
+Only submitted final evaluations enter HR validation & Blocking rule checks \texttt{pending\_hr} status & \texttt{backend/utils/workflowRules.js}\\
+Manager-owned report fields are mandatory before HR validation & Blocking issues require score, rating, comments, strengths, weaknesses, and breakdown & \texttt{workflowRules.js}\\
+Large manual score differences need justification & Warning checks score difference of at least 10 points without manager justification & \texttt{workflowRules.js}\\
+Low scores should have an improvement plan & Warning checks final score below 50 with no plan context & \texttt{workflowRules.js}\\
+AI-assisted drafts require manager review confirmation & Blocking issue rejects unreviewed AI-assisted drafts & \texttt{workflowRules.js}\\
+Bonus/penalty values must be positive and justified & Input validation requires valid type, positive value, and reason & \texttt{workflowRules.js}\\
+\bottomrule
+\end{longtable}

@@ -1,0 +1,87 @@
+\chapter{Requirements and System Architecture}
+\section{Functional Requirements}
+\begin{longtable}{p{0.12\textwidth}p{0.35\textwidth}p{0.43\textwidth}}
+\caption{Functional requirements verified from source code.}\label{tab:functional-requirements}\\
+\toprule
+ID & Requirement & Evidence\\
+\midrule
+\endfirsthead
+\toprule
+ID & Requirement & Evidence\\
+\midrule
+\endhead
+FR-01 & Authenticate users with access and refresh tokens & \texttt{backend/routes/auth.js}, \texttt{frontend/src/components/AuthContext.jsx}\\
+FR-02 & Restrict actions by role & \texttt{backend/middleware/role.js}, \texttt{frontend/src/routes/routeConfig.jsx}\\
+FR-03 & Manage users and profile avatars & \texttt{backend/routes/users.js}, \texttt{User.js}\\
+FR-04 & Manage teams and subteams & \texttt{backend/routes/teams.js}, \texttt{Team.js}\\
+FR-05 & Create and advance performance cycles & \texttt{backend/routes/cycles.js}, \texttt{Cycle.js}\\
+FR-06 & Create, submit, approve, revise, evaluate, and lock objectives & \texttt{backend/routes/objectives.js}, \texttt{objectiveController.js}\\
+FR-07 & Track KPIs embedded inside objectives & \texttt{Objective.js}, objective KPI routes\\
+FR-08 & Submit and review check-ins with attachments & \texttt{CheckIn.js}, \texttt{checkInController.js}\\
+FR-09 & Manage kanban-like tasks and time tracking & \texttt{Task.js}, \texttt{frontend/src/pages/TasksPage.jsx}\\
+FR-10 & Generate final evaluations and HR validations & \texttt{FinalEvaluation.js}, \texttt{finalEvaluationController.js}\\
+FR-11 & Record HR decisions, improvement plans, and bonus/penalty decisions & \texttt{HRDecision.js}, \texttt{ImprovementPlan.js}, \texttt{BonusPenalty.js}\\
+FR-12 & Provide AI drafts and predictions & \texttt{backend/routes/ai.js}, \texttt{ai-service/app.py}\\
+FR-13 & Provide analytics, reports, audit logs, and notifications & \texttt{stats.js}, \texttt{reports.js}, \texttt{auditLog.js}, \texttt{notifications.js}\\
+\bottomrule
+\end{longtable}
+
+\section{Non-Functional Requirements}
+\begin{table}[H]\centering\small
+\caption{Non-functional requirements and implementation evidence.}
+\label{tab:nonfunctional-requirements}
+\begin{tabularx}{\textwidth}{p{0.25\textwidth}YY}
+\toprule
+Requirement & Implementation & Limitation\\
+\midrule
+Security & Helmet, CORS allowlist, rate limiting, XSS cleaning, Mongo sanitization, JWT, bcrypt, RBAC & No formal penetration test or CSRF protection evidence\\
+Traceability & Audit log model, audit helpers, objective activity logs, final evaluation workflow history & Audit coverage may not include every route\\
+Maintainability & Route-controller-model organization, services for scoring and AI, shared frontend utilities & Some legacy duplicated evaluation modules remain\\
+Usability & Role-specific routes, dashboard shell, empty/loading components, charts, modals & No accessibility audit found\\
+Portability & Dockerfiles, Docker Compose, Kubernetes base and overlays & AI service is not included in Compose/Kubernetes base manifests\\
+Testability & Jest, Supertest, React Testing Library, validation and scoring tests & No coverage percentage stored in repository\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Architecture}
+The frontend and backend communicate through REST-style JSON endpoints. React Router defines the protected pages, while Axios clients attach access tokens and refresh them when a request returns \texttt{401}. The backend authenticates JWT bearer tokens, loads the current user profile, checks role permissions, validates request payloads with Joi in selected routes, and stores data through Mongoose.
+
+\input{diagrams/use-case}
+\input{diagrams/logical-architecture}
+\input{diagrams/component-diagram}
+\input{diagrams/api-communication}
+\input{diagrams/database-model}
+
+Together, \cref{fig:use-case,fig:api-communication} show the two sides of the architecture. The use-case view explains what each actor can do, while the communication view shows how a protected frontend action becomes an authenticated backend request and, when needed, a database or AI-service interaction.
+
+\section{Technology Choices}
+React is used for component-driven UI construction \cite{reactDocs}. Vite provides the development and production build workflow \cite{viteDocs}. Express provides routing and middleware composition \cite{expressDocs}. Mongoose defines MongoDB schemas, validation, hooks, indexes, and references \cite{mongooseSchemas}. Flask is used for the Python prediction API through route decorators and JSON request handling \cite{flaskDocs}. XGBoost and scikit-learn provide the implemented model APIs \cite{xgboostDocs,sklearnRF}.
+
+\input{diagrams/technology-stack}
+
+\cref{fig:technology-stack} groups technologies by responsibility rather than listing them as isolated definitions. The trade-off is visible: the application gains separation of concerns, but it also requires careful coordination between browser state, backend authorization, MongoDB schema evolution, and a separate AI runtime.
+
+\begin{table}[H]\centering\small
+\caption{Technology-choice table based on package manifests.}
+\label{tab:technology-choice}
+\begin{tabularx}{\textwidth}{p{0.22\textwidth}p{0.25\textwidth}Y}
+\toprule
+Layer & Verified technology & Role in project\\
+\midrule
+Frontend & React 18, Vite, React Router, Axios & SPA, routing, API communication, role-aware pages\\
+UI analytics & Chart.js, Recharts, react-chartjs-2 & Dashboards and performance visualizations\\
+Backend & Node.js, Express 4, Mongoose 7 & REST API, middleware, persistence, domain rules\\
+Security & JWT, bcryptjs, Helmet, CORS, rate limit, xss-clean, mongo-sanitize & Authentication and request hardening\\
+AI generation & OpenAI SDK, Google Generative AI package & LLM provider abstraction for review drafts and suggestions\\
+AI prediction & Flask, pandas, scikit-learn, XGBoost, joblib & Prediction API and saved model artifacts\\
+DevOps & Docker, Nginx, Kubernetes, Kustomize, Argo CD, GitHub Actions & Build, deploy, GitOps and CI/CD\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{API Architecture}
+The backend mounts 26 route modules under \texttt{/api}. The main API groups are authentication, users, team members, teams, cycles, objectives, HR decisions, notifications, feed, statistics, audit logs, meetings, AI, feedback, tasks, calendar, career, performance, reports, evaluations, PDF export, check-ins, final evaluations, improvement plans, and bonus/penalty.
+
+\section{Chapter Conclusion}
+The architecture is a practical MERN-style application with a separate Python AI service. The strongest architectural feature is the separation of domain rules into services and utilities; the main architectural limitation is that the AI prediction microservice is not fully integrated into the Docker/Kubernetes deployment files.

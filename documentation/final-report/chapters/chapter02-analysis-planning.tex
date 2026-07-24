@@ -1,0 +1,80 @@
+\chapter{Project Analysis, Existing Solutions, and Planning}
+\section{Problem Statement}
+Manual performance management usually fails in three places. First, the objective agreement is often weakly documented, so employees and managers later debate what was expected. Second, progress evidence is fragmented, making mid-year and end-year reviews heavily dependent on memory. Third, HR validation can become a late administrative signature rather than a real process check. PerTrack targets these weaknesses by storing objectives, KPI targets, check-ins, tasks, review drafts, manager decisions, HR validation status, and audit logs in one system.
+
+\section{Project Objectives}
+The repository supports the following objectives:
+\begin{itemize}
+\item Provide authenticated access for four roles with route-level and UI-level restrictions.
+\item Model annual cycles with three phases: objective planning, mid-year review, and final evaluation.
+\item Support objective creation, approval, revision, acknowledgment, KPI management, comments, attachments, and progress updates.
+\item Track tasks, meetings, feedback, notifications, audit events, career actions, improvement plans, and HR decisions.
+\item Calculate objective-based performance scores with manager override and HR validation.
+\item Offer AI-assisted drafts and predictive analysis while keeping fallback paths.
+\item Package and deploy the system through Docker, Kubernetes, Kustomize, Argo CD, and GitHub Actions.
+\end{itemize}
+
+\section{Scope}
+The implemented scope is an internal web platform rather than a public SaaS product. The \texttt{User} model enforces email addresses ending in \texttt{@biat.com}, which suggests an organization-specific deployment. Multi-tenancy appears only as a default \texttt{tenantId} field and is not implemented as a full isolation model. Calendar integration is present, but the repository does not prove a production OAuth configuration. AI generation depends on external API keys and uses fallback behavior when unavailable.
+
+\input{diagrams/scope-boundary}
+
+\cref{fig:scope-boundary} is intentionally explicit about the boundary between delivered work and missing operational evidence. This avoids the common final-report problem of describing a prototype as if it were already a fully operated enterprise platform.
+
+\section{Comparable Solutions}
+Mature HR platforms generally include goal tracking, performance review forms, continuous feedback, reporting, and workflow approvals. PerTrack is narrower than a commercial HRIS, but it is deeper than a simple goal tracker because it includes phase governance, manager and HR validation, score calculation, audit logs, task evidence, and AI support. The comparison below is conceptual and based on categories, not a claim about exact commercial product internals.
+
+\begin{table}[H]\centering\small
+\caption{Comparative analysis by feature category.}
+\label{tab:comparative-analysis}
+\begin{tabularx}{\textwidth}{p{0.25\textwidth}YYY}
+\toprule
+Category & Generic spreadsheet process & Generic HR platform & PerTrack implementation\\
+\midrule
+Objective governance & Manual and hard to audit & Usually workflow-based & Explicit objective statuses, manager approval, revision, activity logs\\
+KPI tracking & Often inconsistent & Often configurable & Embedded KPIs with metric type, current/target values, and status\\
+Role permissions & Informal sharing & Product-specific RBAC & Backend role middleware plus frontend route restrictions\\
+HR validation & Email or manual sign-off & Common in enterprise tools & Final evaluation status \texttt{pending\_hr}, validation, return reason, workflow history\\
+AI assistance & Not available & Increasingly available & LLM drafts plus Flask prediction service; synthetic data limitation stated\\
+Deployment & Local documents & Vendor-hosted & Docker, Kubernetes, GitHub Actions, Argo CD manifests\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Risk Analysis}
+\begin{longtable}{p{0.23\textwidth}p{0.23\textwidth}p{0.18\textwidth}p{0.26\textwidth}}
+\caption{Project risk matrix.}\label{tab:risk-matrix}\\
+\toprule
+Risk & Cause & Impact & Mitigation in the project\\
+\midrule
+\endfirsthead
+\toprule
+Risk & Cause & Impact & Mitigation in the project\\
+\midrule
+\endhead
+Incorrect score calculation & Mixed individual, team, and legacy objectives & Unfair final evaluation & Dedicated score service and Jest tests for weighting and normalization\\
+Objective visibility leak & Managers and employees share sensitive drafts & Confidentiality issue & Visibility helper hides private draft individual objectives from non-owners\\
+Phase inconsistency & Cycle moves before objectives are ready & Broken annual workflow & Phase checks in cycle routes before phase advancement\\
+AI hallucination & LLM generates unsupported content & Misleading HR text & Prompts instruct use of supplied data only, JSON validation, fallback output\\
+Synthetic model bias & Prediction service trained on generated data & Limited real-world validity & Report states limitation; AI service validates inputs and exposes confidence/probability\\
+Secret exposure & CI/CD and AI keys require secrets & Security incident & Gitleaks secret scan, environment-variable validation, no secrets in report\\
+Deployment drift & Kubernetes manifests diverge from image versions & Broken dev environment & GitOps tag update and Argo CD automated sync\\
+\bottomrule
+\end{longtable}
+
+\input{diagrams/gantt-chart}
+
+The Gantt chart is a reporting reconstruction, not an exported project-management schedule. It organizes the report around dependency order: identity and cycles first, objectives and work evidence second, evaluation and HR control third, AI and analytics fourth, and delivery quality last.
+
+\section{Planning by Sprints}
+The repository does not contain an official sprint calendar. For report clarity, implementation is organized into five engineering sprints reconstructed from module dependencies:
+\begin{enumerate}
+\item Foundation, organization, authentication, users, teams, cycles, and access control.
+\item Objectives, KPIs, task management, check-ins, and phase-aware progress.
+\item Evaluation workflows, final evaluation, HR validation, follow-up actions, and PDF/report exports.
+\item AI assistance, prediction service, analytics, and auditability.
+\item Testing, CI/CD, Docker, Kubernetes, GitOps, and deployment verification.
+\end{enumerate}
+
+\section{Chapter Conclusion}
+The project scope is coherent: it is an internal performance-management platform with strong workflow and governance needs. The main risks are not exotic technology problems; they are business-rule correctness, privacy, phase consistency, and honest AI use.

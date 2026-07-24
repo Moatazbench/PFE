@@ -1,0 +1,16 @@
+\begin{figure}[H]\centering
+\begin{tikzpicture}[node distance=1.3cm, every node/.style={font=\small}, st/.style={draw, rounded corners, fill=PerTrackLight, minimum width=2.2cm, minimum height=0.8cm, align=center}]
+\node[st] (draft) {draft};
+\node[st, right=of draft] (p1) {phase1\\in\_progress};
+\node[st, right=of p1] (p2) {phase2};
+\node[st, right=of p2] (p3) {phase3};
+\node[st, right=of p3] (closed) {closed};
+\draw[-Latex] (draft) -- node[above]{Admin sets phase1} (p1);
+\draw[-Latex] (p1) -- node[above]{only after objective readiness checks} (p2);
+\draw[-Latex] (p2) -- node[above]{approved/validated goals required} (p3);
+\draw[-Latex] (p3) -- node[above]{close cycle} (closed);
+\draw[-Latex, dashed] (p2) to[bend right=25] node[below]{admin rollback if no assessments} (p1);
+\end{tikzpicture}
+\caption{Performance-cycle state diagram. Source: author's own work based on \texttt{backend/routes/cycles.js}.}
+\label{fig:cycle-state}
+\end{figure}

@@ -1,0 +1,21 @@
+\begin{figure}[H]\centering
+\resizebox{0.96\textwidth}{!}{%
+\begin{tikzpicture}[every node/.style={font=\scriptsize}, comp/.style={draw, rounded corners, fill=PerTrackLight, minimum width=2.85cm, minimum height=0.85cm, align=center}, arr/.style={-Latex, thick}]
+\node[comp] (ui) {React AI pages\\drafts and prediction};
+\node[comp, right=0.8cm of ui] (routes) {Node AI routes\\authenticated};
+\node[comp, right=0.8cm of routes] (service) {AI service\\provider abstraction};
+\node[comp, above=0.75cm of service] (llm) {LLM providers\\Gemini, OpenAI, xAI};
+\node[comp, below=0.75cm of service] (ctx) {Review context\\objectives, tasks, feedback};
+\node[comp, right=0.8cm of service] (flask) {Flask predictor\\XGBoost artifacts};
+\node[comp, right=0.8cm of flask] (models) {Saved models\\joblib files};
+\draw[arr] (ui) -- (routes);
+\draw[arr] (routes) -- (service);
+\draw[arr] (ctx) -- (service);
+\draw[arr] (service) -- (llm);
+\draw[arr] (routes) -- (flask);
+\draw[arr] (flask) -- (models);
+\end{tikzpicture}}
+\caption{AI architecture separating generative drafting from predictive scoring. Source: author's own work based on backend AI services and the Flask AI service.}
+\label{fig:ai-service-architecture}
+\end{figure}
+

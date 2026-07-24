@@ -1,0 +1,28 @@
+\begin{figure}[H]\centering
+\begin{tikzpicture}[node distance=0.75cm, every node/.style={font=\scriptsize}, ent/.style={draw, rounded corners, fill=PerTrackLight, minimum width=2.35cm, minimum height=0.7cm, align=center}]
+\node[ent] (user) {User};
+\node[ent, right=of user] (team) {Team};
+\node[ent, below=of user] (cycle) {Cycle};
+\node[ent, right=of cycle] (objective) {Objective\\embedded KPIs};
+\node[ent, right=of objective] (task) {Task};
+\node[ent, below=of objective] (checkin) {CheckIn};
+\node[ent, below=of cycle] (eval) {Evaluation};
+\node[ent, right=of eval] (final) {FinalEvaluation};
+\node[ent, right=of final] (hr) {HRDecision};
+\node[ent, below=of final] (plan) {ImprovementPlan};
+\node[ent, below=of user] (audit) [yshift=-2.4cm] {AuditLog};
+\draw[-Latex] (team) -- node[above]{leader/members} (user);
+\draw[-Latex] (objective) -- node[above]{owner} (user);
+\draw[-Latex] (objective) -- (cycle);
+\draw[-Latex] (task) -- (objective);
+\draw[-Latex] (checkin) -- (objective);
+\draw[-Latex] (eval) -- (user);
+\draw[-Latex] (eval) -- (cycle);
+\draw[-Latex] (final) -- (objective);
+\draw[-Latex] (hr) -- (final);
+\draw[-Latex] (plan) -- (final);
+\draw[-Latex] (audit) -- (user);
+\end{tikzpicture}
+\caption{Database model overview. Source: author's own work based on Mongoose schemas.}
+\label{fig:database-model}
+\end{figure}

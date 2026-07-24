@@ -1,0 +1,27 @@
+\chapter{Test Evidence}
+\section{Backend Tests}
+Local command:
+\begin{lstlisting}[language=bash]
+cd backend
+npm test -- --runInBand
+\end{lstlisting}
+Result: 9 test suites passed, 45 tests passed.
+
+\section{Frontend Tests}
+Local command:
+\begin{lstlisting}[language=bash]
+cd frontend
+npm test -- --runInBand
+\end{lstlisting}
+Result: 5 test suites passed, 14 tests passed.
+
+\section{Frontend Build}
+Local command:
+\begin{lstlisting}[language=bash]
+cd frontend
+npm run build
+\end{lstlisting}
+Result: Vite build succeeded and transformed 881 modules.
+
+\section{AI Artifact Evaluation}
+The saved AI models were evaluated against the repository dataset split with \texttt{random\_state=42} and stratification. The XGBoost rating model achieved 0.9780 accuracy. The XGBoost promotion model achieved 0.7480 accuracy and 0.8218 ROC-AUC. These metrics describe the included synthetic dataset only.

@@ -1,0 +1,20 @@
+\begin{figure}[H]\centering
+\begin{tikzpicture}[node distance=1cm, every node/.style={font=\scriptsize}, box/.style={draw, rounded corners, fill=white, minimum width=2.4cm, minimum height=0.75cm, align=center}, group/.style={draw, rounded corners, fill=PerTrackLight, inner sep=0.25cm}]
+\node[box] (routes) {Routes};
+\node[box, right=of routes] (controllers) {Controllers};
+\node[box, right=of controllers] (services) {Services and utils};
+\node[box, right=of services] (models) {Mongoose models};
+\node[box, below=of controllers] (middleware) {Auth, role, validation, audit};
+\node[box, below=of services] (ai) {AI service wrappers};
+\node[box, below=of models] (mongo) {MongoDB};
+\draw[-Latex] (routes) -- (controllers);
+\draw[-Latex] (controllers) -- (services);
+\draw[-Latex] (controllers) -- (models);
+\draw[-Latex] (services) -- (models);
+\draw[-Latex] (models) -- (mongo);
+\draw[-Latex] (middleware) -- (routes);
+\draw[-Latex] (services) -- (ai);
+\end{tikzpicture}
+\caption{Backend component diagram. Source: author's own work based on Express route and controller structure.}
+\label{fig:component-diagram}
+\end{figure}

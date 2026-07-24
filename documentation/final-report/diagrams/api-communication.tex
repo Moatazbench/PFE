@@ -1,0 +1,20 @@
+\begin{figure}[H]\centering
+\resizebox{0.96\textwidth}{!}{%
+\begin{tikzpicture}[every node/.style={font=\scriptsize}, comp/.style={draw, rounded corners, fill=PerTrackLight, minimum width=2.8cm, minimum height=0.8cm, align=center}, arr/.style={-Latex, thick}]
+\node[comp] (route) {React route\\role and phase guard};
+\node[comp, right=0.9cm of route] (axios) {Axios client\\token and refresh};
+\node[comp, right=0.9cm of axios] (api) {Express route\\auth + role middleware};
+\node[comp, below=0.85cm of api] (service) {Controller/service\\business rules};
+\node[comp, left=0.9cm of service] (mongo) {Mongoose model\\MongoDB};
+\node[comp, right=0.9cm of service] (aisvc) {AI boundary\\LLM or Flask};
+\draw[arr] (route) -- node[above]{REST JSON} (axios);
+\draw[arr] (axios) -- node[above]{Bearer JWT} (api);
+\draw[arr] (api) -- (service);
+\draw[arr] (service) -- (mongo);
+\draw[arr] (service) -- (aisvc);
+\draw[arr, dashed] (api.north) to[bend left=15] node[above]{401 refresh} (axios.north);
+\end{tikzpicture}}
+\caption{Frontend, backend, database, and AI communication flow. Source: author's own work based on API client, routes, services, and AI files.}
+\label{fig:api-communication}
+\end{figure}
+

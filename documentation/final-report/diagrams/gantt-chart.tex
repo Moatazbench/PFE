@@ -1,0 +1,21 @@
+\begin{figure}[H]\centering
+\begin{tikzpicture}[x=1.05cm,y=0.65cm, every node/.style={font=\scriptsize}]
+\foreach \m/\x in {Jan/1,Feb/2,Mar/3,Apr/4,May/5,Jun/6,Jul/7} {
+  \node at (\x,0) {\m};
+  \draw[gray!30] (\x,-0.3) -- (\x,-8.7);
+}
+\node[anchor=east] at (0.7,-1) {Discovery};
+\node[anchor=east] at (0.7,-2) {Architecture};
+\node[anchor=east] at (0.7,-3) {Organization};
+\node[anchor=east] at (0.7,-4) {Objectives};
+\node[anchor=east] at (0.7,-5) {Evaluation};
+\node[anchor=east] at (0.7,-6) {AI/analytics};
+\node[anchor=east] at (0.7,-7) {DevOps};
+\node[anchor=east] at (0.7,-8) {Testing/report};
+\foreach \y/\a/\b in {1/1/2.2,2/1.8/3,3/2.5/4.2,4/3.1/5.2,5/4.5/6.4,6/5.4/7,7/5.8/7,8/6.2/7.4} {
+  \draw[fill=PerTrackBlue!55, draw=PerTrackBlue] (\a,-\y-0.25) rectangle (\b,-\y+0.25);
+}
+\end{tikzpicture}
+\caption{Indicative project planning reconstructed from repository history and module maturity. Source: author's own work; exact internship dates are not present in the repository.}
+\label{fig:gantt-chart}
+\end{figure}

@@ -1,0 +1,20 @@
+\begin{figure}[H]\centering
+\resizebox{0.95\textwidth}{!}{%
+\begin{tikzpicture}[node distance=1cm, every node/.style={font=\small}, box/.style={draw, rounded corners, fill=PerTrackLight, minimum width=2.9cm, minimum height=0.8cm, align=center}]
+\node[box] (browser) {Browser};
+\node[box, right=of browser] (nginx) {Frontend Nginx\\2 replicas in base};
+\node[box, right=of nginx] (backend) {Backend Node pod\\1 replica in base};
+\node[box, right=of backend] (mongo) {MongoDB\\external secret URI};
+\node[box, below=of backend] (secret) {backend-secret};
+\node[box, above=of backend] (registry) {Docker Hub images};
+\draw[-Latex] (browser) -- (nginx);
+\draw[-Latex] (nginx) -- node[above]{/api proxy} (backend);
+\draw[-Latex] (backend) -- (mongo);
+\draw[-Latex] (secret) -- (backend);
+\draw[-Latex] (registry) -- (nginx);
+\draw[-Latex] (registry) -- (backend);
+\end{tikzpicture}
+}
+\caption{Deployment architecture. Source: author's own work based on Docker, Nginx, and Kubernetes manifests.}
+\label{fig:deployment-architecture}
+\end{figure}

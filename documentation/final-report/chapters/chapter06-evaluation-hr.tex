@@ -1,0 +1,71 @@
+\chapter{Sprint 3: Evaluation, HR Review, and Follow-Up Decisions}
+\section{Sprint Objective}
+The third sprint implements the evaluation and HR governance workflows. It transforms approved objectives and progress evidence into manager reviews, HR-validated final evaluations, follow-up plans, career recommendations, and compensation or discipline-related decisions.
+
+\section{Two Evaluation Layers}
+The repository contains both \texttt{Evaluation} and \texttt{FinalEvaluation}. The first model represents a general manager evaluation workflow with statuses from \texttt{draft} to \texttt{completed}, suggested score, final score, score history, approvals, and employee acknowledgment. The second model is richer and appears to be the main end-year workflow: it stores objective breakdown, evidence summaries, manager score, final score, rating label, HR status, workflow history, performance status, recommendation, HR decision, and employee feedback.
+
+This distinction matters. A report that merges both models into one generic evaluation feature would hide the real implementation. The application has a general evaluation module and a final annual evaluation module, with overlapping but different responsibilities.
+
+\input{diagrams/evaluation-sequence}
+
+\section{Automatic Score and Manager Adjustment}
+\texttt{scoreCalculationService.js} calculates automatic objective-based performance. It chooses the achievement value in priority order: manager-adjusted percent, final self percent, then current achievement percent. This means manager confirmation can override employee input, while still preserving the employee achievement in the objective breakdown.
+
+Rating labels are mapped from final score:
+\begin{table}[H]\centering
+\caption{Final score rating bands implemented in \texttt{scoreCalculationService.js}.}
+\label{tab:rating-bands}
+\begin{tabular}{ll}
+\toprule
+Score range & Rating label\\
+\midrule
+90--100 & \texttt{exceptional}\\
+75--89 & \texttt{strong}\\
+50--74 & \texttt{meets\_expectations}\\
+30--49 & \texttt{needs\_improvement}\\
+0--29 & \texttt{unsatisfactory}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{HR Validation}
+HR validation is more than changing a status. \texttt{workflowRules.js} builds warnings and blocking issues before HR review. It checks whether final score, rating, manager comments, strengths, weaknesses, objective breakdown, AI review confirmation, improvement plan, career recommendation, and bonus documentation are coherent. Some warnings are advisory, while blocking issues prevent validation.
+
+\input{diagrams/hr-review-sequence}
+
+\begin{table}[H]\centering\small
+\caption{Examples of HR review controls implemented in workflow rules.}
+\label{tab:hr-blocking-rules}
+\begin{tabularx}{\textwidth}{p{0.30\textwidth}p{0.34\textwidth}Y}
+\toprule
+Control & Why it matters & Effect\\
+\midrule
+Missing final score or rating & HR cannot validate an incomplete evaluation & Blocking issue\\
+Rating inconsistent with final score & Prevents accidental label-score mismatch & Warning or issue depending on context\\
+Large manager override without justification & Protects against unexplained score changes & Warning before validation\\
+Low score without improvement plan & Connects poor performance to follow-up action & Warning\\
+Bonus or penalty without reason/value & Prevents unsupported HR decision records & Blocking validation for that action\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Improvement Plans}
+The \texttt{ImprovementPlan} model links a plan to a final evaluation, employee, and cycle. It stores the improvement objective, deadline, expected outcome, notes, progress status, creator, and updater. The controller restricts creation and destructive actions primarily to HR and admin actors, while allowing scoped visibility for the employee and team leader. This is a realistic design because improvement plans are sensitive and should not behave like ordinary tasks.
+
+\section{HR Decisions and Bonus/Penalty Records}
+\texttt{HRDecision} stores the employee, cycle, final evaluation, individual score, team score, final score, action, action label, decision maker, date, and notes. \texttt{BonusPenalty} stores a bonus or penalty record linked to an employee, final evaluation, optional HR decision, and optional objective. It also stores approval status and review notes. The workflow rules validate that bonus or penalty value must be positive and that a reason is required.
+
+\section{Career Development}
+Career modules include competencies, career paths, development actions, and career recommendations. Recommendations can be generated from a final evaluation and saved with suggested path, skills to develop, source, and basis. The design links development decisions to performance evidence rather than isolating career management as a separate module.
+
+\section{PDF and Report Exports}
+The backend contains PDF routes using PDFKit for team and user reports, and final evaluation export routes. The frontend also includes PDF/export-related components and libraries such as \texttt{jspdf} and \texttt{html2canvas}. The repository verifies PDF capability, but it does not prove that every final report view was manually exported in a production environment.
+
+Screenshots of the manager evaluation and HR validation pages are deferred in this revision by request. The workflow remains supported by model fields, route permissions, sequence diagrams, and the HR rule table above.
+
+\section{Sprint Result}
+The evaluation sprint gives the project its business value. It connects objective evidence with manager judgment and HR governance. The implementation is strongest where it validates process quality before HR validation. Its main limitation is complexity: two evaluation models coexist, and future maintenance should keep their responsibilities clearly separated or consolidate them deliberately.
+
+\section{Design Decisions and Trade-offs}
+Separating manager scoring from HR validation clarifies responsibility. The manager evaluates performance evidence; HR checks whether the process is complete, justified, and aligned with follow-up rules. The cost of this separation is workflow complexity: an evaluation can be generated, edited, recalculated, submitted, returned, validated, and later connected to decisions or improvement plans. The embedded workflow history in \texttt{FinalEvaluation} helps control that complexity by preserving who acted and which state changed.

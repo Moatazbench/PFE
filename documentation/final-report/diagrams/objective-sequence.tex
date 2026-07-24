@@ -1,0 +1,16 @@
+\begin{figure}[H]\centering
+\begin{tikzpicture}[x=2.2cm,y=0.75cm, every node/.style={font=\scriptsize}]
+\foreach \x/\n in {0/Collaborator,1/React UI,2/Express API,3/Objective model,4/Team Leader}
+  \node at (\x,0) {\n};
+\foreach \x in {0,...,4} \draw[dashed] (\x,-0.2) -- (\x,-6.2);
+\draw[-Latex] (0,-1) -- node[above]{create draft} (1,-1);
+\draw[-Latex] (1,-1.8) -- node[above]{POST /objectives} (2,-1.8);
+\draw[-Latex] (2,-2.6) -- node[above]{validate weights and scope} (3,-2.6);
+\draw[-Latex] (0,-3.4) -- node[above]{submit} (1,-3.4);
+\draw[-Latex] (1,-4.2) -- node[above]{POST submit-for-approval} (2,-4.2);
+\draw[-Latex] (2,-5.0) -- node[above]{status pending/pending\_approval} (3,-5.0);
+\draw[-Latex] (2,-5.8) -- node[above]{notify} (4,-5.8);
+\end{tikzpicture}
+\caption{Objective-submission sequence diagram. Source: author's own work based on objective routes and controller workflow.}
+\label{fig:objective-sequence}
+\end{figure}

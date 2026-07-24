@@ -1,0 +1,17 @@
+\begin{figure}[H]\centering
+\begin{tikzpicture}[node distance=0.85cm, every node/.style={font=\scriptsize}, proc/.style={draw, rounded corners, fill=PerTrackLight, minimum width=3.1cm, minimum height=0.7cm, align=center}]
+\node[proc] (login) {Authenticate and load role};
+\node[proc, below=of login] (org) {Create users, teams, subteams};
+\node[proc, below=of org] (cycle) {Create cycle and open phase 1};
+\node[proc, below=of cycle] (goals) {Draft objectives, KPIs, tasks};
+\node[proc, below=of goals] (approve) {Manager approval or revision};
+\node[proc, below=of approve] (mid) {Phase 2 check-ins and mid-year review};
+\node[proc, below=of mid] (final) {Phase 3 self-assessment and manager evaluation};
+\node[proc, below=of final] (hr) {HR validation, return, or close};
+\node[proc, below=of hr] (follow) {Improvement plan, career action, bonus/penalty};
+\foreach \a/\b in {login/org,org/cycle,cycle/goals,goals/approve,approve/mid,mid/final,final/hr,hr/follow}
+  \draw[-Latex, thick] (\a) -- (\b);
+\end{tikzpicture}
+\caption{Global workflow activity diagram. Source: author's own work based on implemented modules.}
+\label{fig:global-workflow}
+\end{figure}

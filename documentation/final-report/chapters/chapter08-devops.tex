@@ -1,0 +1,88 @@
+\chapter{Sprint 5: Testing, Continuous Integration, and Deployment}
+\section{Sprint Objective}
+The fifth sprint verifies the application and prepares it for repeatable deployment. The repository includes local tests, production frontend build scripts, Dockerfiles, Docker Compose, Kubernetes manifests, Kustomize overlays, an Argo CD application, and a GitHub Actions pipeline.
+
+\section{Testing Strategy}
+Backend tests use Jest and Supertest. Frontend tests use Jest, Babel, jsdom, and React Testing Library. Local verification performed for this report produced:
+\begin{itemize}
+\item Backend: 9 test suites passed, 45 tests passed.
+\item Frontend: 5 test suites passed, 14 tests passed.
+\item Frontend production build: Vite build succeeded.
+\end{itemize}
+
+\begin{table}[H]\centering\small
+\caption{Local verification results from July 21, 2026.}
+\label{tab:local-verification}
+\begin{tabularx}{\textwidth}{p{0.28\textwidth}p{0.28\textwidth}Y}
+\toprule
+Command & Result & Evidence used in report\\
+\midrule
+\texttt{backend: npm test -- --runInBand} & 9 suites, 45 tests passed & Scoring, workflow, health, visibility, validation, task privacy\\
+\texttt{frontend: npm test -- --runInBand} & 5 suites, 14 tests passed & Login, app routes, sidebar, objective modal, shared motion\\
+\texttt{frontend: npm run build} & Build succeeded & Vite transformed 881 modules and generated \texttt{dist}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Backend Test Coverage by Behavior}
+The backend tests are especially valuable because they protect business rules. The scoring test confirms weighted objective contributions, manager-adjusted achievement, no division of team-objective weight by member count, exclusion of draft and non-final statuses, normalization of incomplete weight totals, and rating-band mapping. Workflow tests check HR review warnings, blocking issues, and bonus/penalty input. Objective-rule tests check allocation buckets and distributed team objectives.
+
+\section{Frontend Test Coverage by Behavior}
+Frontend tests cover basic application rendering, login behavior, objective modal interaction, sidebar behavior, and shared motion. This confirms that at least the core shell and selected components are testable. The repository does not include end-to-end tests with a real browser, seeded database, and authenticated workflows.
+
+\input{diagrams/test-strategy-map}
+
+\cref{fig:test-strategy-map} makes the testing boundary explicit. The repository has useful unit, integration, frontend, and build evidence, but no stored coverage percentage and no full browser E2E workflow suite.
+
+\section{Dockerization}
+The backend Dockerfile uses \texttt{node:22-alpine}, installs production dependencies with \texttt{npm ci --omit=dev}, exposes port 5000, and starts \texttt{server.js}. The frontend Dockerfile builds the Vite app in a Node stage and serves \texttt{dist} through Nginx. The Nginx configuration routes normal SPA paths to \texttt{index.html} and proxies \texttt{/api} to the backend service.
+
+Docker documentation defines Dockerfiles as text documents containing image build instructions \cite{dockerDocs}. The implementation follows the common pattern of separating frontend build and static serving.
+
+\section{Kubernetes and GitOps}
+Kubernetes manifests define backend and frontend Deployments and ClusterIP Services. The frontend base uses two replicas; the backend base uses one replica and loads environment variables from \texttt{backend-secret}. Kustomize overlays exist for dev, QA, staging, and production. Kustomize bases and overlays match the official Kubernetes model for reusable configuration \cite{kustomizeDocs}.
+
+The Argo CD application points to the GitHub repository path \texttt{k8s/base}, target revision \texttt{main}, namespace \texttt{pfe}, and enables automated sync with prune and self-heal. Argo CD's automated sync model compares desired Git state with live cluster state and can apply changes automatically \cite{argoDocs}.
+
+\input{diagrams/deployment-architecture}
+\input{diagrams/ci-cd-pipeline}
+
+\section{CI/CD Pipeline}
+The GitHub Actions workflow runs on push and pull request. It performs:
+\begin{enumerate}
+\item Secret scanning with Gitleaks.
+\item Backend dependency installation and tests.
+\item Frontend dependency installation, build, and tests.
+\item Docker Buildx setup.
+\item Docker Hub login on push.
+\item Backend and frontend image build.
+\item Image push on push events.
+\item Development Kustomize image tag update for the \texttt{develop} branch.
+\item Trivy vulnerability scans for backend and frontend images.
+\item Optional smoke health check against \texttt{DEV\_APP\_URL}.
+\end{enumerate}
+GitHub Actions workflow syntax is the official mechanism used for these repository automations \cite{githubActionsDocs}.
+
+\begin{table}[H]\centering\small
+\caption{CI/CD stages verified from the GitHub Actions workflow.}
+\label{tab:cicd-stages}
+\begin{tabularx}{\textwidth}{p{0.24\textwidth}p{0.34\textwidth}Y}
+\toprule
+Stage & Verified action & Quality purpose\\
+\midrule
+Secret scan & Gitleaks action after checkout & Prevent committed secrets from moving deeper into the pipeline\\
+Backend tests & Node 18, \texttt{npm ci}, \texttt{npm test} & Protect API and business-rule behavior\\
+Frontend build/tests & Node 18, Vite build, Jest tests & Confirm SPA compilation and selected UI behavior\\
+Image build/push & Docker Buildx, Docker Hub push on push events & Produce deployable backend and frontend images\\
+GitOps update & Update dev Kustomize tag on \texttt{develop} & Connect image version to deployment configuration\\
+Security scan & Trivy backend and frontend image scans & Block high/critical vulnerabilities when detected\\
+Smoke test & Optional \texttt{DEV\_APP\_URL} health check & Verify reachable deployed API when configured\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Deployment Limitations}
+The deployment configuration covers frontend and backend containers, but the Python AI prediction service is not represented in the main Docker Compose or Kubernetes base manifests. The backend depends on secrets such as Mongo URI and JWT secrets, but the report does not expose them. There is no monitoring stack such as Prometheus or Grafana in the repository. No backup or disaster recovery manifest is present beyond demo backup data files.
+
+\section{Chapter Conclusion}
+Testing and DevOps evidence is strong for a graduation project. The tests validate important business rules, and the pipeline connects security scanning, build verification, image creation, vulnerability scanning, and GitOps deployment. The main operational gap is incomplete deployment coverage for the AI microservice and missing observability assets.

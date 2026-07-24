@@ -1,0 +1,19 @@
+\begin{figure}[H]\centering
+\resizebox{0.95\textwidth}{!}{%
+\begin{tikzpicture}[every node/.style={font=\scriptsize}, actor/.style={draw, fill=white, minimum width=2.1cm, align=center}, line/.style={draw, -Latex}]
+\node[actor] (user) {User};
+\node[actor, right=1.2cm of user] (react) {React AuthContext};
+\node[actor, right=1.2cm of react] (auth) {Express auth route};
+\node[actor, right=1.2cm of auth] (mongo) {User model};
+\draw[line] (user) -- node[above]{email/password} (react);
+\draw[line] (react) -- node[above]{POST /auth/login} (auth);
+\draw[line] (auth) -- node[above]{find user} (mongo);
+\draw[line] (mongo) -- node[below]{hash profile} (auth);
+\draw[line] (auth) -- node[below]{access + refresh tokens} (react);
+\draw[line] (react) -- node[below]{store session} (user);
+\draw[line, dashed] (react.north) to[bend left=20] node[above]{refresh after 401} (auth.north);
+\end{tikzpicture}}
+\caption{Authentication and token-refresh sequence. Source: author's own work based on `AuthContext.jsx`, `api.js`, and backend auth middleware.}
+\label{fig:auth-sequence}
+\end{figure}
+
