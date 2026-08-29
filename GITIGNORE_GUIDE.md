@@ -91,7 +91,7 @@ ENV/
 - Database credentials
 - AI service API keys
 - OAuth tokens
-- JWT secrets..
+- JWT secrets.....
 
 ---
 
@@ -101,7 +101,7 @@ backend/uploads/
 uploads/
 ```
 **Why**: User-uploaded files are runtime data, not source code.
-
+....
 **Current**: Backend expects uploads directory for file storage.
 
 ---
