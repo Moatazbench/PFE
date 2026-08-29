@@ -91,7 +91,7 @@ ENV/
 - Database credentials
 - AI service API keys
 - OAuth tokens
-- JWT secrets
+- JWT secrets..
 
 ---
 
