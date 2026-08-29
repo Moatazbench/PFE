@@ -151,6 +151,15 @@ jobs:
           tags: moatazbench/pfe-frontend:${{ steps.vars.outputs.TAG }},moatazbench/pfe-frontend:latest
           load: ${{ github.event_name != 'push' }}
 
+      # ✅ Build AI Service with buildx
+      - name: Build AI Service Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ai-service
+          push: ${{ github.event_name == 'push' }}
+          tags: moatazbench/pfe-ai-service:${{ steps.vars.outputs.TAG }},moatazbench/pfe-ai-service:latest
+          load: ${{ github.event_name != 'push' }}
+
       # ✅ DEV GitOps Auto Update
       - name: Update Kustomize image tag (DEV)
         if: github.ref_name == 'develop'
