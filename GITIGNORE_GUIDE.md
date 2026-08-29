@@ -97,7 +97,7 @@ ENV/
 
 ### 6. Upload Directories
 ```
-backend/uploads/
+backend/uploads/......
 uploads/
 ```
 **Why**: User-uploaded files are runtime data, not source code.
