@@ -118,26 +118,38 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Validate Docker Credentials
+        if: github.event_name == 'push'
+        run: |
+          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ] || [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+            echo "::error::Docker Hub credentials not configured!"
+            echo "Please add DOCKERHUB_USERNAME and DOCKERHUB_TOKEN to GitHub secrets"
+            exit 1
+          fi
 
       # ✅ Use SHA as immutable deployment tag
       - name: Set Image Tag
         id: vars
         run: echo "TAG=${GITHUB_SHA}" >> $GITHUB_OUTPUT
 
-      # ✅ Build backend
+      # ✅ Build backend with buildx
       - name: Build Backend Image
-        run: docker build -t moatazbench/pfe-backend:${{ steps.vars.outputs.TAG }} ./backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: ${{ github.event_name == 'push' }}
+          tags: moatazbench/pfe-backend:${{ steps.vars.outputs.TAG }},moatazbench/pfe-backend:latest
+          load: ${{ github.event_name != 'push' }}
 
-      # ✅ Build frontend
+      # ✅ Build frontend with buildx
       - name: Build Frontend Image
-        run: docker build -t moatazbench/pfe-frontend:${{ steps.vars.outputs.TAG }} ./frontend
-
-      # ✅ Push images FIRST
-      - name: Push Images
-        if: github.event_name == 'push'
-        run: |
-          docker push moatazbench/pfe-backend:${{ steps.vars.outputs.TAG }}
-          docker push moatazbench/pfe-frontend:${{ steps.vars.outputs.TAG }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: ${{ github.event_name == 'push' }}
+          tags: moatazbench/pfe-frontend:${{ steps.vars.outputs.TAG }},moatazbench/pfe-frontend:latest
+          load: ${{ github.event_name != 'push' }}
 
       # ✅ DEV GitOps Auto Update
       - name: Update Kustomize image tag (DEV)
