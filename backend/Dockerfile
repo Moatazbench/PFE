@@ -1,5 +1,12 @@
 FROM node:22-alpine
-RUN npm install -g npm@latest
+
+# Upgrade npm and patch bundled dependencies
+RUN npm install -g npm@latest && \
+    npm install -g tar@6.2.1 && \
+    # Patch npm's bundled tar package
+    npm list -g tar && \
+    # Force npm to use patched tar
+    npm update -g tar
 
 WORKDIR /app
 
