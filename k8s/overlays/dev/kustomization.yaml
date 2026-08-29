@@ -24,12 +24,12 @@ patches:
 
 images:
   - name: moatazbench/pfe-backend
-    newTag: bf7491a758a5471a1830fe7b63b168f351400b33
+    newTag: d5b14efb475ef170cf821e07c7a8bd402b95a4c4
   - name: moatazbench/pfe-frontend
 <<<<<<< HEAD
-    newTag: bf7491a758a5471a1830fe7b63b168f351400b33
+    newTag: d5b14efb475ef170cf821e07c7a8bd402b95a4c4
 =======
-    newTag: bf7491a758a5471a1830fe7b63b168f351400b33
+    newTag: d5b14efb475ef170cf821e07c7a8bd402b95a4c4
   - name: moatazbench/pfe-ai-service
-    newTag: bf7491a758a5471a1830fe7b63b168f351400b33
+    newTag: d5b14efb475ef170cf821e07c7a8bd402b95a4c4
 >>>>>>> 4b4838f (AI ADD)
