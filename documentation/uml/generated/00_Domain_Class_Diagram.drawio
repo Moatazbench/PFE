@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" agent="claude-code" version="24.0.0">
+  <diagram id="class-entity" name="User Team Cycle Classes">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="480" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="clsTeam" value="Team" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=1;resizeParent=1;resizeParentMax=0;collapsible=0;swimlaneFillColor=#ffffff;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="260" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="clsTeamAttr" value="- name : String&#10;- description : String&#10;- leader : User&#10;- members : User[]&#10;- parentTeam : Team&#10;- createdBy : User&#10;- createdAt : Date" style="text;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="clsTeam">
+          <mxGeometry y="26" width="260" height="154" as="geometry" />
+        </mxCell>
+        <mxCell id="clsTeamOp" value="+ addMember(user)&#10;+ removeMember(user)" style="text;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="clsTeam">
+          <mxGeometry y="180" width="260" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="clsUser" value="User" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=1;resizeParent=1;resizeParentMax=0;collapsible=0;swimlaneFillColor=#ffffff;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="380" y="40" width="280" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="clsUserAttr" value="- name : String&#10;- email : String (unique, @biat.com)&#10;- password : String (bcrypt hash, select:false)&#10;- role : Role {ADMIN, HR, TEAM_LEADER, COLLABORATOR}&#10;- team : Team&#10;- manager : User&#10;- isActive : Boolean&#10;- refreshToken : String (select:false)&#10;- isDeleted : Boolean" style="text;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="clsUser">
+          <mxGeometry y="26" width="280" height="194" as="geometry" />
+        </mxCell>
+        <mxCell id="clsUserOp" value="+ comparePassword(candidate)&#10;+ pre-save: hash password (bcrypt, salt=12)" style="text;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="clsUser">
+          <mxGeometry y="220" width="280" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="clsCycle" value="Cycle" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=1;resizeParent=1;resizeParentMax=0;collapsible=0;swimlaneFillColor=#ffffff;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="720" y="40" width="280" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="clsCycleAttr" value="- name : String&#10;- year : Number (unique)&#10;- status : {draft, open, active, in_progress, closed}&#10;- phase1Start / phase1End : Date&#10;- phase2Start / phase2End : Date&#10;- phase3Start / phase3End : Date&#10;- currentPhase : {phase1, phase2, phase3, closed}&#10;- createdBy : User" style="text;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="clsCycle">
+          <mxGeometry y="26" width="280" height="194" as="geometry" />
+        </mxCell>
+        <mxCell id="clsCycleOp" value="+ pre-save: validate phase dates&#10;  are strictly sequential" style="text;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="clsCycle">
+          <mxGeometry y="220" width="280" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rTeamLead" value="1 leads 0..1" style="html=1;endArrow=open;endFill=1;fontSize=10;exitX=1;exitY=0.3;entryX=0;entryY=0.3;" edge="1" parent="1" source="clsTeam" target="clsUser"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="rTeamMembers" value="1 has 0..*" style="html=1;endArrow=open;endFill=1;fontSize=10;exitX=1;exitY=0.6;entryX=0;entryY=0.6;" edge="1" parent="1" source="clsTeam" target="clsUser"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="rTeamParent" value="parent of" style="html=1;endArrow=open;endFill=1;fontSize=10;exitX=0;exitY=0.3;entryX=0;entryY=0.7;" edge="1" parent="1" source="clsTeam" target="clsTeam">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="10" y="110"/><mxPoint x="10" y="230"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="rUserManager" value="reports to" style="html=1;endArrow=open;endFill=1;fontSize=10;exitX=0.5;exitY=0;entryX=1;entryY=0;" edge="1" parent="1" source="clsUser" target="clsUser">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="520" y="15"/><mxPoint x="670" y="15"/><mxPoint x="670" y="55"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="rCycleUser" value="0..* created by 1" style="html=1;endArrow=open;endFill=1;fontSize=10;exitX=0;exitY=0.5;entryX=1;entryY=0.6;" edge="1" parent="1" source="clsCycle" target="clsUser"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

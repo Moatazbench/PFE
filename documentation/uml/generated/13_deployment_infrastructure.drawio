@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" agent="claude-code" version="24.0.0">
+  <diagram id="deployment-infra" name="Deployment Infrastructure">
+    <mxGraphModel dx="1300" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1380" pageHeight="560" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="gitRepo" value="&lt;&lt;device&gt;&gt;&#10;GitHub Repository" style="shape=cube;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;size=12;" vertex="1" parent="1"><mxGeometry x="40" y="60" width="200" height="100" as="geometry" /></mxCell>
+
+        <mxCell id="ghActions" value="&lt;&lt;execution environment&gt;&gt;&#10;GitHub Actions Runner" style="shape=cube;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;size=12;" vertex="1" parent="1"><mxGeometry x="300" y="60" width="200" height="100" as="geometry" /></mxCell>
+
+        <mxCell id="dockerHub" value="&lt;&lt;device&gt;&gt;&#10;Docker Hub Registry&#10;moatazbench/pfe-backend&#10;moatazbench/pfe-frontend" style="shape=cube;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;size=12;" vertex="1" parent="1"><mxGeometry x="560" y="60" width="220" height="100" as="geometry" /></mxCell>
+
+        <mxCell id="argocd" value="&lt;&lt;execution environment&gt;&gt;&#10;ArgoCD Controller&#10;(GitOps sync)" style="shape=cube;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;size=12;" vertex="1" parent="1"><mxGeometry x="840" y="60" width="200" height="100" as="geometry" /></mxCell>
+
+        <mxCell id="k8sCluster" value="&lt;&lt;device&gt;&gt;  Kubernetes Cluster&#10;(overlays: dev / qa / staging / prod)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;fontStyle=1;fontSize=13;align=left;spacingLeft=10;spacingTop=8;fillColor=#F5F5F5;strokeColor=#666666;" vertex="1" parent="1"><mxGeometry x="300" y="220" width="460" height="220" as="geometry" /></mxCell>
+        <mxCell id="backendPod" value="&lt;&lt;artifact&gt;&gt;&#10;Backend Pod&#10;(Node.js / Express, port 5000)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="330" y="270" width="190" height="90" as="geometry" /></mxCell>
+        <mxCell id="frontendPod" value="&lt;&lt;artifact&gt;&gt;&#10;Frontend Pod&#10;(nginx serving React build, port 80)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="540" y="270" width="200" height="90" as="geometry" /></mxCell>
+
+        <mxCell id="mongoAtlas" value="&lt;&lt;device&gt;&gt;&#10;MongoDB Atlas&#10;(external, not in cluster)" style="shape=cube;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;size=12;" vertex="1" parent="1"><mxGeometry x="840" y="220" width="220" height="100" as="geometry" /></mxCell>
+
+        <mxCell id="aiMicro" value="&lt;&lt;device&gt;&gt;&#10;AI Microservice (Flask)&#10;standalone — not containerized&#10;in this cluster" style="shape=cube;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;size=12;dashed=1;" vertex="1" parent="1"><mxGeometry x="840" y="360" width="220" height="100" as="geometry" /></mxCell>
+
+        <mxCell id="e1" value="push triggers" style="html=1;endArrow=block;rounded=0;fontSize=10;" edge="1" parent="1" source="gitRepo" target="ghActions"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" value="build &amp; push image" style="html=1;endArrow=block;rounded=0;fontSize=10;" edge="1" parent="1" source="ghActions" target="dockerHub"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" value="patch kustomization.yaml&#10;(GitOps commit)" style="html=1;endArrow=block;rounded=0;fontSize=10;" edge="1" parent="1" source="ghActions" target="gitRepo">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="400" y="20" /><mxPoint x="140" y="20" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e4" value="detects change,&#10;syncs cluster" style="html=1;endArrow=block;rounded=0;fontSize=10;" edge="1" parent="1" source="gitRepo" target="argocd">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="140" y="15" /><mxPoint x="940" y="15" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e5" style="html=1;endArrow=block;rounded=0;" edge="1" parent="1" source="argocd" target="k8sCluster"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" value="Mongoose driver" style="html=1;endArrow=block;rounded=0;fontSize=10;" edge="1" parent="1" source="backendPod" target="mongoAtlas"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e7" value="HTTP (architectural gap:&#10;not yet part of pipeline)" style="html=1;endArrow=block;rounded=0;fontSize=10;dashed=1;" edge="1" parent="1" source="backendPod" target="aiMicro"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

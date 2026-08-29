@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" agent="claude-code" version="24.0.0">
+  <diagram id="uc-team" name="Team Management">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="820" pageHeight="420" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="sys" value="Team Management" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=center;fontStyle=1;fontSize=13;dashed=1;strokeColor=#999999;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="180" y="20" width="600" height="360" as="geometry" />
+        </mxCell>
+
+        <mxCell id="actAdmin" value="Admin" style="shape=umlActor;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;html=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="30" y="70" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="actLeader" value="Team Leader" style="shape=umlActor;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;html=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="30" y="260" width="30" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc1" value="Create Team&#10;(POST /api/teams)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="210" y="50" width="160" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="uc2" value="Assign Team Leader" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="400" y="50" width="160" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="uc3" value="Define Parent Team&#10;(Hierarchy Nesting)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="590" y="50" width="160" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="uc4" value="Add Team Member&#10;(POST /api/team-members)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="210" y="140" width="180" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="uc5" value="Remove Team Member" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="420" y="140" width="180" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="uc6" value="View Team Roster" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="210" y="240" width="180" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="uc7" value="View Team Performance&#10;Overview" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="420" y="240" width="180" height="55" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" style="html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="actAdmin" target="uc1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" value="" style="html=1;endArrow=none;startArrow=none;exitX=0.5;exitY=0;entryX=0.5;entryY=0;edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="actAdmin" target="uc2">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="70" y="25"/><mxPoint x="485" y="25"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e3" style="html=1;endArrow=none;startArrow=none;exitX=0.5;exitY=0;entryX=0.5;entryY=0;edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="actAdmin" target="uc3">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="80" y="18"/><mxPoint x="675" y="18"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e4" style="html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="actAdmin" target="uc4"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" style="html=1;endArrow=none;startArrow=none;exitX=0.5;exitY=1;entryX=0.5;entryY=0;edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="actAdmin" target="uc5">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="60" y="122"/><mxPoint x="510" y="122"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e6" style="html=1;endArrow=none;startArrow=none;exitX=0.5;exitY=0;entryX=0.5;entryY=1;edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="actLeader" target="uc4">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="45" y="205"/><mxPoint x="300" y="205"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e7" style="html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="actLeader" target="uc6"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e8" style="html=1;endArrow=none;startArrow=none;exitX=0.5;exitY=0;entryX=0.5;entryY=0;edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="actLeader" target="uc7">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="60" y="217"/><mxPoint x="510" y="217"/></Array></mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

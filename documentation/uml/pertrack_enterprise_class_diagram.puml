@@ -1,0 +1,984 @@
+@startuml
+' PerTrack UML class diagram generated from Mongoose model analysis
+left to right direction
+skinparam backgroundColor #0b1020
+skinparam packageStyle rectangle
+skinparam classBackgroundColor #f8fafc
+skinparam classBorderColor #0f172a
+skinparam classFontColor #111827
+skinparam classHeaderBackgroundColor #dae8fc
+skinparam ArrowColor #cbd5e1
+skinparam ArrowFontColor #e5e7eb
+skinparam packageBackgroundColor #111827
+skinparam packageBorderColor #334155
+skinparam packageFontColor #93c5fd
+package "User & Organization" {
+class User as "User" {
+  - name : String {required, trim}
+  - email : String {required, unique, lowercase, trim, validate @biat.com}
+  - password : String {required, select:false}
+  - role : UserRole {required, default=COLLABORATOR, index}
+  - team : ObjectId ref Team {default=null}
+  - manager : ObjectId ref User {default=null}
+  - isActive : Boolean {default=true}
+  - tenantId : String {default=default, index}
+  - refreshToken : String {select:false}
+  - isDeleted : Boolean {default=false, index}
+  - profileImage : String {default=""}
+  - createdAt : Date {timestamps}
+  - updatedAt : Date {timestamps}
+  --
+  + comparePassword(candidate) : Promise<Boolean>
+}
+class Team as "Team" {
+  - name : String {required}
+  - description : String {default=""}
+  - leader : ObjectId ref User
+  - members : ObjectId[] ref User
+  - parentTeam : ObjectId ref Team {default=null}
+  - createdBy : ObjectId ref User
+  - createdAt : Date
+}
+enum UserRole as "UserRole" {
+  ADMIN
+  HR
+  TEAM_LEADER
+  COLLABORATOR
+}
+}
+package "Workflow" {
+class Cycle as "Cycle" {
+  - name : String {required}
+  - year : Number {required, unique}
+  - status : CycleStatus {default=draft}
+  - phase1Start : Date {default=null}
+  - phase1End : Date {default=null}
+  - phase2Start : Date {default=null}
+  - phase2End : Date {default=null}
+  - phase3Start : Date {default=null}
+  - phase3End : Date {default=null}
+  - currentPhase : CyclePhase {default=phase1}
+  - createdBy : ObjectId ref User
+  - createdAt : Date
+  - updatedAt : Date {timestamps}
+}
+enum CycleStatus as "CycleStatus" {
+  draft
+  open
+  active
+  in_progress
+  closed
+}
+enum CyclePhase as "CyclePhase" {
+  phase1
+  phase2
+  phase3
+  closed
+}
+}
+package "Goal Management" {
+class Objective as "Objective" {
+  - title : String {required, trim}
+  - dueDate : Date {default=null}
+  - description : String {default=""}
+  - successIndicator : String {required, trim}
+  - owner : ObjectId ref User {required, index}
+  - cycle : ObjectId ref Cycle {required, index}
+  - category : ObjectiveCategory {default=individual}
+  - team : ObjectId ref Team {default=null, index}
+  - assignedUsers : ObjectId[] ref User
+  - weight : Number {required, [1..100]}
+  - priority : ObjectivePriority {default=medium, index}
+  - achievementPercent : Number {[0..100], default=null}
+  - selfAssessment : String {default=""}
+  - finalSelfAssessment : String {default=""}
+  - finalSelfRating : Number {[1..5], default=null}
+  - finalSelfPercent : Number {[0..100], default=null}
+  - finalSelfSubmittedAt : Date {default=null}
+  - finalSelfAttachments : FinalSelfAttachment[]
+  - finalSelfAttachment : Mixed {default=null}
+  - managerAdjustedPercent : Number {[0..100], default=null}
+  - managerComments : String {default=""}
+  - weightedScore : Number {default=null}
+  - status : ObjectiveStatus {default=draft, index}
+  - source : ObjectiveSource {default=employee_created}
+  - assignedBy : ObjectId ref User {default=null}
+  - submittedTo : ObjectId ref User {default=null}
+  - submittedBy : ObjectId ref User {default=null}
+  - rejectionReason : String {default=""}
+  - revisionReason : String {default=""}
+  - evaluationRating : ObjectiveEvaluationRating {default=""}
+  - evaluationComment : String {default=""}
+  - evaluationNumericRating : Number {[1..5], default=null}
+  - evaluationEvidence : String {default=""}
+  - evaluatedBy : ObjectId ref User {default=null}
+  - evaluatedAt : Date {default=null}
+  - validatedBy : ObjectId ref User {default=null}
+  - validatedAt : Date {default=null}
+  - labels : String[] {trim}
+  - visibility : ObjectiveVisibility {default=public}
+  - parentObjective : ObjectId ref Objective {default=null, index}
+  - kpis : Kpi[]
+  - progressUpdates : ProgressUpdate[]
+  - comments : ObjectiveComment[]
+  - attachments : ObjectiveAttachment[]
+  - changeRequests : ObjectiveChangeRequest[]
+  - activityLog : ObjectiveActivityLog[]
+  - manager_notes : ManagerNote[]
+  - createdAt : Date {timestamps}
+  - updatedAt : Date {timestamps}
+}
+class Kpi as "Kpi" {
+  - title : String {required, trim}
+  - metricType : KpiMetricType {default=percent}
+  - initialValue : Number {default=0}
+  - targetValue : Number {default=100}
+  - currentValue : Number {default=0}
+  - unit : String {default=""}
+  - status : KpiStatus {default=not_started}
+  - createdAt : Date {timestamps}
+  - updatedAt : Date {timestamps}
+}
+class ProgressUpdate as "ProgressUpdate" {
+  - user : ObjectId ref User {required}
+  - message : String {required}
+  - createdAt : Date {default=Date.now}
+}
+class ObjectiveComment as "ObjectiveComment" {
+  - user : ObjectId ref User {required}
+  - text : String {required}
+  - createdAt : Date {default=Date.now}
+}
+class ObjectiveAttachment as "ObjectiveAttachment" {
+  - filename : String {required}
+  - originalName : String {required}
+  - size : Number {default=0}
+  - uploadedBy : ObjectId ref User
+  - uploadedAt : Date {default=Date.now}
+}
+class FinalSelfAttachment as "FinalSelfAttachment" {
+  - name : String {default=""}
+  - url : String {default=""}
+  - type : String {default=file}
+  - size : Number {default=0}
+  - mimetype : String {default=""}
+  - storageProvider : String {default=local}
+  - publicId : String {default=null}
+}
+class ObjectiveChangeRequest as "ObjectiveChangeRequest" {
+  - requestType : ChangeRequestType {required}
+  - requestedBy : ObjectId ref User {required}
+  - reason : String {required}
+  - newDeadline : Date {default=null}
+  - newDescription : String {default=""}
+  - newTitle : String {default=""}
+  - status : ChangeRequestStatus {default=pending}
+  - resolvedBy : ObjectId ref User {default=null}
+  - resolvedAt : Date {default=null}
+  - resolutionNote : String {default=""}
+  - createdAt : Date {default=Date.now}
+  - updatedAt : Date {timestamps}
+}
+class ObjectiveActivityLog as "ObjectiveActivityLog" {
+  - user : ObjectId ref User {required}
+  - action : String {required}
+  - details : String {default=""}
+  - fromStatus : String {default=""}
+  - toStatus : String {default=""}
+  - createdAt : Date {default=Date.now}
+}
+class ManagerNote as "ManagerNote" {
+  - text : String {required}
+  - created_at : Date {default=Date.now}
+}
+class CheckIn as "CheckIn" {
+  - objective_id : ObjectId ref Objective {required}
+  - employee_id : ObjectId ref User {required}
+  - cycle_id : ObjectId ref Cycle {required}
+  - status : CheckInStatus {default=draft}
+  - manager_feedback : String
+  - manager_id : ObjectId ref User
+  - reviewedBy : ObjectId ref User
+  - reviewedAt : Date
+  - progress_percent : Number {[0..100]}
+  - notes : String
+  - priority : Priority3 {default=medium}
+  - attachments : CheckInAttachment[]
+  - history : CheckInHistory[]
+  - submitted_at : Date
+  - last_edited_at : Date
+  - createdAt : Date {timestamps}
+  - updatedAt : Date {timestamps}
+}
+class CheckInAttachment as "CheckInAttachment" {
+  - name : String
+  - url : String
+  - type : String {default=file}
+  - size : Number
+  - mimetype : String
+}
+class CheckInHistory as "CheckInHistory" {
+  - submitted_at : Date
+  - content : String
+  - status : String
+  - manager_feedback : String
+}
+class Task as "Task" {
+  - title : String {required, trim}
+  - description : String {default=""}
+  - assignee : ObjectId ref User {required}
+  - assignedBy : ObjectId ref User {required}
+  - status : TaskStatus {default=todo}
+  - priority : TaskPriority {default=medium}
+  - workflowStage : TaskWorkflowStage {default=todo}
+  - progress : Number {[0..100], default=0}
+  - labels : String[] {trim}
+  - dueDate : Date {default=null}
+  - completedAt : Date {default=null}
+  - recurring : TaskRecurrence {default=none}
+  - linkedGoal : ObjectId ref Objective {default=null}
+  - objective_id : ObjectId ref Objective
+  - phase : TaskPhase
+  - kpi_id : ObjectId ref KPI
+  - linkedMeeting : ObjectId ref Meeting {default=null}
+  - team : ObjectId ref Team {default=null}
+  - notes : String {default=""}
+  - timeTracking : TimeTracking
+  - totalTimeSpent : Number {default=0, min=0}
+  - totalTrackedTime : Number {default=0, min=0}
+  - timeSessions : TimeSession[]
+  - createdAt : Date {timestamps}
+  - updatedAt : Date {timestamps}
+}
+class TimeTracking as "TimeTracking" {
+  - totalSeconds : Number {default=0, min=0}
+  - lastTrackedAt : Date {default=null}
+  - sessions : TimeTrackingSession[]
+}
+class TimeTrackingSession as "TimeTrackingSession" {
+  - startedAt : Date {required}
+  - endedAt : Date {required}
+  - durationSeconds : Number {required, min=0}
+  - focusMode : Boolean {default=false}
+  - source : String {default=timer}
+  - notes : String {default=""}
+}
+class TimeSession as "TimeSession" {
+  - startTime : Date {required}
+  - endTime : Date {required}
+  - duration : Number {required, min=0}
+  - focusMode : Boolean {default=false}
+  - source : String {default=timer}
+  - notes : String {default=""}
+}
+enum ObjectiveStatus as "ObjectiveStatus" {
+  draft
+  pending
+  submitted
+  pending_approval
+  revision_requested
+  rejected
+  assigned
+  acknowledged
+  approved
+  validated
+  locked
+  cancelled
+  evaluated
+  archived
+}
+enum GoalEnums as "GoalEnums" {
+  ObjectiveCategory: individual
+  ObjectiveCategory: team
+  ObjectivePriority: low
+  ObjectivePriority: medium
+  ObjectivePriority: high
+  ObjectivePriority: critical
+  ObjectiveSource: employee_created
+  ObjectiveSource: manager_assigned
+  ObjectiveEvaluationRating: exceeded
+  ObjectiveEvaluationRating: met
+  ObjectiveEvaluationRating: partially_met
+  ObjectiveEvaluationRating: not_met
+  ObjectiveEvaluationRating: ""
+  ObjectiveVisibility: private
+  ObjectiveVisibility: team
+  ObjectiveVisibility: department
+  ObjectiveVisibility: public
+  KpiMetricType: percent
+  KpiMetricType: number
+  KpiMetricType: currency
+  KpiMetricType: boolean
+  KpiMetricType: milestone
+  KpiStatus: not_started
+  KpiStatus: in_progress
+  KpiStatus: completed
+  ChangeRequestType: due_date_extension
+  ChangeRequestType: scope_change
+  ChangeRequestType: pause
+  ChangeRequestType: cancellation
+  ChangeRequestStatus: pending
+  ChangeRequestStatus: approved
+  ChangeRequestStatus: rejected
+  ChangeRequestStatus: modified
+}
+enum TaskCheckInEnums as "TaskCheckInEnums" {
+  CheckInStatus: draft
+  CheckInStatus: pending_review
+  CheckInStatus: revision_requested
+  CheckInStatus: approved
+  Priority3: low
+  Priority3: medium
+  Priority3: high
+  TaskStatus: todo
+  TaskStatus: in_progress
+  TaskStatus: done
+  TaskStatus: cancelled
+  TaskPriority: low
+  TaskPriority: medium
+  TaskPriority: high
+  TaskPriority: urgent
+  TaskWorkflowStage: backlog
+  TaskWorkflowStage: todo
+  TaskWorkflowStage: in_progress
+  TaskWorkflowStage: review
+  TaskWorkflowStage: completed
+  TaskWorkflowStage: cancelled
+  TaskRecurrence: none
+  TaskRecurrence: daily
+  TaskRecurrence: weekly
+  TaskRecurrence: monthly
+  TaskPhase: 1
+  TaskPhase: 2
+  TaskPhase: 3
+}
+}
+package "Evaluation System" {
+class Evaluation as "Evaluation" {
+  - employeeId : ObjectId ref User {required, index}
+  - evaluatorId : ObjectId ref User {required, index}
+  - cycleId : ObjectId ref Cycle {required, index}
+  - period : String {default=""}
+  - status : EvaluationStatus {default=draft, index}
+  - objectiveAssessments : ObjectiveAssessment[]
+  - scoringMethod : ScoringMethod {default=objective_weighted_sum}
+  - suggestedScore : Number {[0..100], default=null}
+  - finalScore : Number {[0..100], default=null}
+  - scoreHistory : ScoreHistory[]
+  - overallComments : String {default=""}
+  - strengths : String {default=""}
+  - areasForImprovement : String {default=""}
+  - developmentRecommendations : String {default=""}
+  - nextSteps : String {default=""}
+  - approvals : Approval[]
+  - employeeAcknowledgment : EmployeeAcknowledgment
+  - submittedAt : Date {default=null}
+  - completedAt : Date {default=null}
+  - createdAt : Date {timestamps}
+  - updatedAt : Date {timestamps}
+}
+class ObjectiveAssessment as "ObjectiveAssessment" {
+  - objectiveId : ObjectId ref Objective {required}
+}
+class ScoreHistory as "ScoreHistory" {
+  - previousScore : Number {default=null}
+  - newScore : Number {default=null}
+  - changedBy : ObjectId ref User {required}
+  - changedAt : Date {default=Date.now}
+  - reason : String {default=""}
+}
+class Approval as "Approval" {
+  - approverId : ObjectId ref User {required}
+  - status : ApprovalStatus {default=pending}
+  - comments : String {default=""}
+  - date : Date {default=null}
+}
+class EmployeeAcknowledgment as "EmployeeAcknowledgment" {
+  - acknowledged : Boolean {default=false}
+  - date : Date {default=null}
+}
+class FinalEvaluation as "FinalEvaluation" {
+  - employee_id : ObjectId ref User {required}
+  - cycle_id : ObjectId ref Cycle {required}
+  - auto_score : Number
+  - manager_score : Number
+  - final_score : Number
+  - rating_label : RatingLabel
+  - score_difference : Number {default=0}
+  - manager_adjustment_justification : String {default=""}
+  - objective_weight_total : Number {default=0}
+  - objective_score_normalized : Boolean {default=false}
+  - objective_breakdown : ObjectiveBreakdown[]
+  - evidence_summary : EvidenceSummary
+  - consistency_warnings : String[]
+  - ai_assisted : Boolean {default=false}
+  - ai_draft_generated_at : Date {default=null}
+  - ai_reviewed_by_manager : Boolean {default=false}
+  - strengths : String[]
+  - weaknesses : String[]
+  - improvement_suggestions : String[]
+  - manager_comments : String
+  - recommendation : FinalRecommendation
+  - evaluator_id : ObjectId ref User {default=null}
+  - evaluator_role : EvaluatorRole {default=null}
+  - evaluated_at : Date
+  - status : FinalEvaluationStatus {default=draft}
+  - hr_validated_by : ObjectId ref User
+  - hr_validated_at : Date
+  - hr_review_notes : String {default=""}
+  - hr_return_reason : String {default=""}
+  - workflow_history : WorkflowHistoryEntry[]
+  - performance_status : PerformanceStatus {default=null}
+  - exported_at : Date
+  - hr_decision : HRDecisionSnapshot
+  - employee_feedback : EmployeeFeedback
+  - createdAt : Date {timestamps}
+  - updatedAt : Date {timestamps}
+}
+class ObjectiveBreakdown as "ObjectiveBreakdown" {
+  - objective_id : ObjectId ref Objective
+  - title : String
+  - category : String
+  - weight : Number
+  - employee_achievement : Number
+  - manager_confirmed_achievement : Number
+  - achievement_used : Number
+  - weighted_points : Number
+  - status : String
+}
+class EvidenceSummary as "EvidenceSummary" {
+  - tasks.total : Number {default=0}
+  - tasks.completed : Number {default=0}
+  - tasks.completion_rate : Number {default=null}
+  - checkins.total : Number {default=0}
+  - checkins.approved : Number {default=0}
+  - checkins.approval_rate : Number {default=null}
+  - checkins.average_progress : Number {default=null}
+}
+class WorkflowHistoryEntry as "WorkflowHistoryEntry" {
+  - action : WorkflowAction
+  - reason : String {default=""}
+  - performed_by : ObjectId ref User
+  - performed_at : Date {default=Date.now}
+}
+class HRDecisionSnapshot as "HRDecisionSnapshot" {
+  - action : HRDecisionSnapshotAction
+  - notes : String
+  - decided_by : ObjectId ref User
+  - decided_at : Date
+}
+class EmployeeFeedback as "EmployeeFeedback" {
+  - acknowledged : Boolean {default=false}
+  - comment : String {default=""}
+  - acknowledged_at : Date {default=null}
+  - updated_at : Date {default=null}
+}
+class HRDecision as "HRDecision" {
+  - user : ObjectId ref User {required}
+  - cycle : ObjectId ref Cycle {required}
+  - finalEvaluation : ObjectId ref FinalEvaluation {required}
+  - individualScore : Number {default=0}
+  - teamScore : Number {default=0}
+  - finalScore : Number {required}
+  - action : HRDecisionAction {required}
+  - actionLabel : String {default=""}
+  - decidedBy : ObjectId ref User
+  - decidedAt : Date {default=Date.now}
+  - notes : String {default=""}
+  - createdAt : Date
+}
+class BonusPenalty as "BonusPenalty" {
+  - employee : ObjectId ref User {required}
+  - assignedBy : ObjectId ref User {required}
+  - type : BonusPenaltyType {required}
+  - value : Number {required, min=0.01}
+  - reason : String {required}
+  - finalEvaluation : ObjectId ref FinalEvaluation {required}
+  - hrDecision : ObjectId ref HRDecision {default=null}
+  - objective : ObjectId ref Objective {default=null}
+  - approvalStatus : BonusPenaltyApprovalStatus {default=approved}
+  - reviewNotes : String {default=""}
+  - reviewedBy : ObjectId ref User {default=null}
+  - reviewedAt : Date {default=null}
+  - paymentDate : Date {default=null}
+  - createdAt : Date
+}
+class ImprovementPlan as "ImprovementPlan" {
+  - evaluation_id : ObjectId ref FinalEvaluation {required}
+  - employee_id : ObjectId ref User {required}
+  - cycle_id : ObjectId ref Cycle {required}
+  - objective_goal : String {required, trim}
+  - deadline : Date {required}
+  - expected_outcome : String {required, trim}
+  - notes : String {default="", trim}
+  - progress_status : ImprovementProgressStatus {default=not_started}
+  - created_by : ObjectId ref User {required}
+  - updated_by : ObjectId ref User {default=null}
+  - createdAt : Date {timestamps}
+  - updatedAt : Date {timestamps}
+}
+class Feedback as "Feedback" {
+  - sender : ObjectId ref User {required}
+  - recipient : ObjectId ref User {required}
+  - type : FeedbackType {default=praise}
+  - message : String {required, trim}
+  - anonymous : Boolean {default=false}
+  - visibility : FeedbackVisibility {default=private}
+  - relatedMeeting : ObjectId ref Meeting {default=null}
+  - relatedReview : ObjectId ref ManagerReview {default=null}
+  - relatedObjective : ObjectId ref Objective {default=null}
+  - objective_id : ObjectId ref Objective
+  - check_in_id : ObjectId ref CheckIn
+  - cycle_id : ObjectId ref Cycle
+  - rating : Number {[1..5], default=null}
+  - tags : String[] {trim}
+  - status : FeedbackStatus {default=active}
+  - requestedBy : ObjectId ref User {default=null}
+  - isRequested : Boolean {default=false}
+  - createdAt : Date {timestamps}
+  - updatedAt : Date {timestamps}
+}
+enum EvaluationEnums as "EvaluationEnums" {
+  EvaluationStatus: draft
+  EvaluationStatus: in_progress
+  EvaluationStatus: submitted
+  EvaluationStatus: approved
+  EvaluationStatus: rejected
+  EvaluationStatus: completed
+  ScoringMethod: objective_weighted_sum
+  ScoringMethod: simple_average
+  ScoringMethod: weighted_average
+  ApprovalStatus: pending
+  ApprovalStatus: approved
+  ApprovalStatus: rejected
+}
+enum FinalEvaluationEnums as "FinalEvaluationEnums" {
+  RatingLabel: exceptional
+  RatingLabel: strong
+  RatingLabel: meets_expectations
+  RatingLabel: needs_improvement
+  RatingLabel: unsatisfactory
+  FinalRecommendation: promotion
+  FinalRecommendation: bonus_eligible
+  FinalRecommendation: performance_improvement_plan
+  FinalRecommendation: no_action
+  FinalRecommendation: department_transfer
+  EvaluatorRole: ADMIN
+  EvaluatorRole: HR
+  EvaluatorRole: TEAM_LEADER
+  EvaluatorRole: COLLABORATOR
+  FinalEvaluationStatus: draft
+  FinalEvaluationStatus: pending_hr
+  FinalEvaluationStatus: validated
+  FinalEvaluationStatus: closed
+  WorkflowAction: submitted
+  WorkflowAction: validated
+  WorkflowAction: sent_back
+  PerformanceStatus: excellent_performance
+  PerformanceStatus: satisfactory
+  PerformanceStatus: needs_improvement
+  PerformanceStatus: critical_attention
+  PerformanceStatus: null
+  HRDecisionSnapshotAction: promotion
+  HRDecisionSnapshotAction: bonus
+  HRDecisionSnapshotAction: pip
+  HRDecisionSnapshotAction: transfer
+  HRDecisionSnapshotAction: no_action
+}
+enum HRDecisionAction as "HRDecisionAction" {
+  reward
+  promotion
+  bonus
+  satisfactory
+  coaching
+  training
+  position_change
+  termination_review
+}
+enum BonusPenaltyEnums as "BonusPenaltyEnums" {
+  BonusPenaltyType: bonus
+  BonusPenaltyType: penalty
+  BonusPenaltyApprovalStatus: pending
+  BonusPenaltyApprovalStatus: approved
+  BonusPenaltyApprovalStatus: rejected
+}
+enum ImprovementProgressStatus as "ImprovementProgressStatus" {
+  not_started
+  in_progress
+  completed
+}
+enum FeedbackEnums as "FeedbackEnums" {
+  FeedbackType: praise
+  FeedbackType: suggestion
+  FeedbackType: concern
+  FeedbackType: 360
+  FeedbackType: peer
+  FeedbackType: manager
+  FeedbackType: self
+  FeedbackVisibility: public
+  FeedbackVisibility: private
+  FeedbackVisibility: manager_only
+  FeedbackStatus: active
+  FeedbackStatus: archived
+  FeedbackStatus: flagged
+}
+}
+package "Communication" {
+class Meeting as "Meeting" {
+  - title : String {required, trim}
+  - description : String {default=""}
+  - organizer : ObjectId ref User {required}
+  - attendees : ObjectId[] ref User
+  - participants : ObjectId[] ref User
+  - meeting_type : MeetingBusinessType {default=general}
+  - cycle_id : ObjectId ref Cycle
+  - employee_id : ObjectId ref User
+  - final_evaluation_id : ObjectId ref FinalEvaluation
+  - date : Date {required}
+  - startTime : String {default=09:00}
+  - endTime : String {default=10:00}
+  - type : MeetingType {default=team}
+  - status : MeetingStatus {default=scheduled}
+  - agenda : AgendaItem[]
+  - notes : String {default=""}
+  - relatedObjectives : ObjectId[] ref Objective
+  - team : ObjectId ref Team
+  - recurring : Recurrence {default=none}
+  - location : String {default=""}
+  - actionItems : ActionItem[]
+  - createdAt : Date {timestamps}
+  - updatedAt : Date {timestamps}
+}
+class AgendaItem as "AgendaItem" {
+  - title : String {required}
+  - duration : Number {default=5}
+  - presenter : ObjectId ref User
+  - notes : String {default=""}
+  - completed : Boolean {default=false}
+}
+class ActionItem as "ActionItem" {
+  - title : String {required}
+  - assignee : ObjectId ref User
+  - dueDate : Date
+  - completed : Boolean {default=false}
+}
+class Notification as "Notification" {
+  - recipient : ObjectId ref User {required}
+  - sender : ObjectId ref User
+  - type : NotificationType {required}
+  - title : String {required}
+  - message : String {required}
+  - link : String
+  - isRead : Boolean {default=false}
+  - createdAt : Date
+  - updatedAt : Date {timestamps}
+}
+enum MeetingEnums as "MeetingEnums" {
+  MeetingBusinessType: general
+  MeetingBusinessType: mid-year-review
+  MeetingBusinessType: final-evaluation
+  MeetingType: one_on_one
+  MeetingType: team
+  MeetingType: all_hands
+  MeetingType: check_in
+  MeetingType: review
+  MeetingType: planning
+  MeetingType: other
+  MeetingStatus: scheduled
+  MeetingStatus: in_progress
+  MeetingStatus: completed
+  MeetingStatus: cancelled
+  Recurrence: none
+  Recurrence: daily
+  Recurrence: weekly
+  Recurrence: biweekly
+  Recurrence: monthly
+}
+enum NotificationType as "NotificationType" {
+  DEADLINE
+  KPI_DROP
+  MENTION
+  GOAL_UPDATE
+  COMMENT
+  FEEDBACK
+  GOAL_SUBMITTED
+  GOAL_APPROVED
+  GOAL_REJECTED
+  GOAL_REVISION_REQUESTED
+  GOAL_ASSIGNED
+  GOAL_ACKNOWLEDGED
+  GOAL_COMPLETED
+  GOAL_EVALUATED
+  CHANGE_REQUEST
+  CHANGE_REQUEST_RESOLVED
+  GOAL_CANCELLED
+  MEETING_INVITE
+  MEETING_UPDATE
+  MIDYEAR_REVIEW_COMPLETED
+  FINAL_EVALUATION_COMPLETED
+  PHASE_OPENED
+  PHASE_CLOSED
+  DEADLINE_REMINDER
+  OVERDUE_ALERT
+  EVALUATION_CREATED
+  EVALUATION_SUBMITTED
+  EVALUATION_APPROVED
+  EVALUATION_REJECTED
+  EVALUATION_COMPLETED
+}
+}
+package "Career & Competencies" {
+class CareerPath as "CareerPath" {
+  - user : ObjectId ref User {required}
+  - currentRole : String {required, trim}
+  - currentLevel : String {default=""}
+  - targetRole : String {default="", trim}
+  - targetLevel : String {default=""}
+  - targetDate : Date {default=null}
+  - competencies : CareerPathCompetency[]
+  - developmentPlan : DevelopmentAction[]
+  - finalEvaluation : ObjectId ref FinalEvaluation {default=null}
+  - mentorId : ObjectId ref User {default=null}
+  - status : CareerPathStatus {default=active}
+  - notes : String {default=""}
+  - createdBy : ObjectId ref User
+  - createdAt : Date {timestamps}
+  - updatedAt : Date {timestamps}
+}
+class CareerPathCompetency as "CareerPathCompetency" {
+  - competency : ObjectId ref Competency
+  - currentLevel : CompetencyLevel {default=beginner}
+  - targetLevel : CompetencyLevel {default=advanced}
+  - gap : Number {default=0}
+}
+class DevelopmentAction as "DevelopmentAction" {
+  - title : String {required}
+  - type : DevelopmentActionType {default=other}
+  - status : DevelopmentActionStatus {default=planned}
+  - dueDate : Date {default=null}
+  - completedAt : Date {default=null}
+  - notes : String {default=""}
+  - createdFromEvaluation : ObjectId ref FinalEvaluation {default=null}
+}
+class Competency as "Competency" {
+  - name : String {required, trim}
+  - description : String {default=""}
+  - category : CompetencyCategory {default=other}
+  - level : CompetencyLevel {default=beginner}
+  - skills : String[] {trim}
+  - roles : String[] {trim}
+  - isActive : Boolean {default=true}
+  - createdBy : ObjectId ref User
+  - createdAt : Date {timestamps}
+  - updatedAt : Date {timestamps}
+}
+class CareerRecommendation as "CareerRecommendation" {
+  - employee_id : ObjectId ref User {required}
+  - cycle_id : ObjectId ref Cycle {required}
+  - suggested_path : String {required}
+  - skills_to_develop : String[]
+  - source : CareerRecommendationSource {default=manager}
+  - basis : String {default=""}
+  - createdAt : Date {timestamps}
+  - updatedAt : Date {timestamps}
+}
+enum CareerEnums as "CareerEnums" {
+  CareerPathStatus: active
+  CareerPathStatus: completed
+  CareerPathStatus: paused
+  CompetencyLevel: beginner
+  CompetencyLevel: intermediate
+  CompetencyLevel: advanced
+  CompetencyLevel: expert
+  DevelopmentActionType: training
+  DevelopmentActionType: mentoring
+  DevelopmentActionType: project
+  DevelopmentActionType: certification
+  DevelopmentActionType: reading
+  DevelopmentActionType: other
+  DevelopmentActionStatus: planned
+  DevelopmentActionStatus: in_progress
+  DevelopmentActionStatus: completed
+  DevelopmentActionStatus: overdue
+  DevelopmentActionStatus: cancelled
+  CompetencyCategory: technical
+  CompetencyCategory: leadership
+  CompetencyCategory: communication
+  CompetencyCategory: problem_solving
+  CompetencyCategory: teamwork
+  CompetencyCategory: domain
+  CompetencyCategory: management
+  CompetencyCategory: other
+}
+enum CareerRecommendationSource as "CareerRecommendationSource" {
+  manager
+  auto
+}
+}
+package "Audit & Integrations" {
+class CalendarConnection as "CalendarConnection" {
+  - user : ObjectId ref User {required, index}
+  - provider : CalendarProvider {required}
+  - email : String {default=""}
+  - accessToken : String {default="", select:false}
+  - refreshToken : String {default="", select:false}
+  - expiresAt : Date {default=null}
+  - scope : String {default=""}
+  - metadata : Object {default={}}
+  - lastSyncAt : Date {default=null}
+  - createdAt : Date {timestamps}
+  - updatedAt : Date {timestamps}
+}
+class AuditLog as "AuditLog" {
+  - user : ObjectId ref User {required, index}
+  - user_id : ObjectId ref User {default=null}
+  - action : String {required}
+  - entityType : String {default="", index}
+  - entity_type : String {default=""}
+  - entityId : ObjectId {default=null, index}
+  - entity_id : ObjectId {default=null}
+  - entityName : String {default=""}
+  - userName : String {default=""}
+  - userRole : String {default=""}
+  - description : String {default=""}
+  - changes.before : Mixed {default=null}
+  - changes.after : Mixed {default=null}
+  - metadata : Mixed {default=null}
+  - ipAddress : String {default=""}
+  - timestamp : Date {default=Date.now, index}
+  - createdAt : Date {timestamps}
+  - updatedAt : Date {timestamps}
+}
+class CorrectionRequest as "CorrectionRequest" {
+  - objectiveId : ObjectId ref Objective {required, index}
+  - field : CorrectionField {required}
+  - oldValue : String {default=""}
+  - newValue : String {required}
+  - correctionReason : String {required}
+  - requestedBy : ObjectId ref User {required}
+  - status : CorrectionStatus {default=PENDING, index}
+  - reviewedBy : ObjectId ref User {default=null}
+  - reviewedAt : Date {default=null}
+  - resolutionNote : String {default=""}
+  - createdAt : Date
+  - updatedAt : Date
+}
+enum CalendarProvider as "CalendarProvider" {
+  google
+  outlook
+}
+enum CorrectionEnums as "CorrectionEnums" {
+  CorrectionField: description
+  CorrectionField: successIndicator
+  CorrectionStatus: PENDING
+  CorrectionStatus: APPROVED
+  CorrectionStatus: REJECTED
+}
+}
+User "*" -- "0..1" Team : belongs to
+User "*" -- "0..1" User : reports to
+Team "1" o-- "*" User : contains members
+Team "*" o-- "0..1" Team : has parent
+Cycle "*" -- "0..1" User : created by
+Objective "*" -- "1" User : owned/assigned by
+Objective "*" -- "1" Cycle : belongs to
+Objective "*" -- "0..1" Team : targets team
+Objective "0..1" *-- "*" Objective : contains sub-objectives
+Objective "1" *-- "*" Kpi : contains
+Objective "1" *-- "*" ProgressUpdate : contains
+Objective "1" *-- "*" ObjectiveComment : contains
+Objective "1" *-- "*" ObjectiveAttachment : contains
+Objective "1" *-- "*" FinalSelfAttachment : contains
+Objective "1" *-- "*" ObjectiveChangeRequest : contains
+Objective "1" *-- "*" ObjectiveActivityLog : records
+Objective "1" *-- "*" ManagerNote : contains
+CheckIn "*" -- "1" Objective : tracks
+CheckIn "*" -- "0..1" User : submitted/reviewed by
+CheckIn "*" -- "1" Cycle : belongs to
+CheckIn "1" *-- "*" CheckInAttachment : contains
+CheckIn "1" *-- "*" CheckInHistory : records
+Task "*" -- "1" User : assigned/created by
+Task "*" -- "0..1" Objective : links to
+Task "*" -- "0..1" Meeting : links to
+Task "*" -- "0..1" Team : belongs to
+Task "1" *-- "1" TimeTracking : contains
+TimeTracking "1" *-- "*" TimeTrackingSession : contains
+Task "1" *-- "*" TimeSession : contains
+Evaluation "*" -- "1" User : evaluates employee
+Evaluation "*" -- "1" Cycle : belongs to
+Evaluation "1" *-- "*" ObjectiveAssessment : contains
+ObjectiveAssessment "*" -- "1" Objective : assesses
+Evaluation "1" *-- "*" ScoreHistory : records
+ScoreHistory "*" -- "1" User : changed by
+Evaluation "1" *-- "*" Approval : contains
+Approval "*" -- "1" User : approved by
+Evaluation "1" *-- "1" EmployeeAcknowledgment : contains
+FinalEvaluation "*" -- "1" User : evaluates employee
+FinalEvaluation "*" -- "1" Cycle : belongs to
+FinalEvaluation "1" *-- "*" ObjectiveBreakdown : contains
+ObjectiveBreakdown "*" -- "0..1" Objective : summarizes
+FinalEvaluation "1" *-- "1" EvidenceSummary : contains
+FinalEvaluation "1" *-- "*" WorkflowHistoryEntry : records
+WorkflowHistoryEntry "*" -- "0..1" User : performed by
+FinalEvaluation "1" *-- "1" HRDecisionSnapshot : contains
+HRDecisionSnapshot "*" -- "0..1" User : decided by
+FinalEvaluation "1" *-- "1" EmployeeFeedback : contains
+HRDecision "*" -- "0..1" User : decides for/by
+HRDecision "*" -- "1" Cycle : belongs to
+HRDecision "*" -- "1" FinalEvaluation : based on
+BonusPenalty "*" -- "0..1" User : assigned/reviewed for
+BonusPenalty "*" -- "1" FinalEvaluation : based on
+BonusPenalty "*" -- "0..1" HRDecision : implements
+BonusPenalty "*" -- "0..1" Objective : relates to
+ImprovementPlan "*" -- "1" FinalEvaluation : comes from
+ImprovementPlan "*" -- "0..1" User : maintained for/by
+ImprovementPlan "*" -- "1" Cycle : belongs to
+Feedback "*" -- "0..1" User : sent/requested/received by
+Feedback "*" -- "0..1" Meeting : relates to
+Feedback "*" -- "0..1" Objective : relates to
+Feedback "*" -- "0..1" CheckIn : relates to
+Feedback "*" -- "0..1" Cycle : belongs to
+Meeting "*" -- "1..*" User : organized/attended by
+Meeting "*" -- "0..1" Cycle : belongs to
+Meeting "*" -- "0..1" FinalEvaluation : supports
+Meeting "*" -- "*" Objective : relates to
+Meeting "*" -- "0..1" Team : for team
+Meeting "1" *-- "*" AgendaItem : contains
+AgendaItem "*" -- "0..1" User : presented by
+Meeting "1" *-- "*" ActionItem : contains
+ActionItem "*" -- "0..1" User : assigned to
+Notification "*" -- "0..1" User : sent to/from
+CareerPath "*" -- "0..1" User : for/mentored by
+CareerPath "*" -- "0..1" FinalEvaluation : informed by
+CareerPath "1" *-- "*" CareerPathCompetency : contains
+CareerPathCompetency "*" -- "0..1" Competency : targets
+CareerPath "1" *-- "*" DevelopmentAction : contains
+DevelopmentAction "*" -- "0..1" FinalEvaluation : created from
+Competency "*" -- "0..1" User : created by
+CareerRecommendation "*" -- "1" User : recommends for
+CareerRecommendation "*" -- "1" Cycle : belongs to
+CalendarConnection "*" -- "1" User : belongs to
+AuditLog "*" -- "0..1" User : records actor
+CorrectionRequest "*" -- "1" Objective : requests correction for
+CorrectionRequest "*" -- "0..1" User : requested/reviewed by
+User ..> UserRole : <<use>>
+Cycle ..> CycleStatus : <<use>>
+Cycle ..> CyclePhase : <<use>>
+Objective ..> ObjectiveStatus : <<use>>
+Objective ..> GoalEnums : <<use>>
+CheckIn ..> TaskCheckInEnums : <<use>>
+Task ..> TaskCheckInEnums : <<use>>
+Evaluation ..> EvaluationEnums : <<use>>
+FinalEvaluation ..> FinalEvaluationEnums : <<use>>
+HRDecision ..> HRDecisionAction : <<use>>
+BonusPenalty ..> BonusPenaltyEnums : <<use>>
+ImprovementPlan ..> ImprovementProgressStatus : <<use>>
+Feedback ..> FeedbackEnums : <<use>>
+Meeting ..> MeetingEnums : <<use>>
+Notification ..> NotificationType : <<use>>
+CareerPath ..> CareerEnums : <<use>>
+Competency ..> CareerEnums : <<use>>
+CareerRecommendation ..> CareerRecommendationSource : <<use>>
+CalendarConnection ..> CalendarProvider : <<use>>
+CorrectionRequest ..> CorrectionEnums : <<use>>
+@enduml

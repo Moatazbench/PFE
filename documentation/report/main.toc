@@ -1,0 +1,170 @@
+\contentsline {chapter}{General presentation}{2}{chapter*.1}%
+\contentsline {chapter}{\numberline {1}Global context}{3}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Introduction}{4}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Project workspace}{4}{section.1.2}%
+\contentsline {subsection}{\numberline {1.2.1}Host institution}{4}{subsection.1.2.1}%
+\contentsline {subsection}{\numberline {1.2.2}The PerTrack platform}{4}{subsection.1.2.2}%
+\contentsline {subsection}{\numberline {1.2.3}PerTrack's audience}{5}{subsection.1.2.3}%
+\contentsline {subsection}{\numberline {1.2.4}Development methodology}{5}{subsection.1.2.4}%
+\contentsline {subsubsection}{Kanban definition}{5}{subsubsection*.3}%
+\contentsline {subsubsection}{Task management (Kanban)}{5}{subsubsection*.4}%
+\contentsline {section}{\numberline {1.3}Used tools}{6}{section.1.3}%
+\contentsline {subsection}{\numberline {1.3.1}GitHub}{6}{subsection.1.3.1}%
+\contentsline {subsection}{\numberline {1.3.2}GitHub Projects}{6}{subsection.1.3.2}%
+\contentsline {subsection}{\numberline {1.3.3}Visual Studio Code}{6}{subsection.1.3.3}%
+\contentsline {section}{\numberline {1.4}Conclusion}{6}{section.1.4}%
+\contentsline {chapter}{\numberline {2}Project assessment and planning}{8}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Introduction}{9}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Description of PerTrack}{9}{section.2.2}%
+\contentsline {section}{\numberline {2.3}Problem statements}{9}{section.2.3}%
+\contentsline {section}{\numberline {2.4}Available solutions}{10}{section.2.4}%
+\contentsline {subsection}{\numberline {2.4.1}Workday Performance Management}{10}{subsection.2.4.1}%
+\contentsline {subsection}{\numberline {2.4.2}Lattice}{10}{subsection.2.4.2}%
+\contentsline {subsection}{\numberline {2.4.3}15Five}{11}{subsection.2.4.3}%
+\contentsline {section}{\numberline {2.5}Study of the existing}{12}{section.2.5}%
+\contentsline {section}{\numberline {2.6}Project scheduling}{12}{section.2.6}%
+\contentsline {section}{\numberline {2.7}Conclusion}{13}{section.2.7}%
+\contentsline {chapter}{\numberline {3}Project initiation}{14}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Introduction}{15}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Requirements specification}{15}{section.3.2}%
+\contentsline {subsection}{\numberline {3.2.1}Users identification}{15}{subsection.3.2.1}%
+\contentsline {subsection}{\numberline {3.2.2}Functional requirements}{15}{subsection.3.2.2}%
+\contentsline {subsubsection}{User and team management}{15}{subsubsection*.11}%
+\contentsline {subsubsection}{Cycle and objective management}{15}{subsubsection*.12}%
+\contentsline {subsubsection}{Check-ins and progress tracking}{16}{subsubsection*.13}%
+\contentsline {subsubsection}{Task management}{16}{subsubsection*.14}%
+\contentsline {subsubsection}{Evaluation and HR decisions}{16}{subsubsection*.15}%
+\contentsline {subsubsection}{Collaboration and communication}{16}{subsubsection*.16}%
+\contentsline {subsubsection}{Notifications and automated reminders}{16}{subsubsection*.17}%
+\contentsline {subsubsection}{Correction requests}{17}{subsubsection*.18}%
+\contentsline {subsubsection}{Reporting, analytics, and audit}{17}{subsubsection*.19}%
+\contentsline {subsubsection}{AI-assisted features}{17}{subsubsection*.20}%
+\contentsline {subsection}{\numberline {3.2.3}Non-functional requirements}{17}{subsection.3.2.3}%
+\contentsline {subsubsection}{Performance}{17}{subsubsection*.21}%
+\contentsline {subsubsection}{Security and auditability}{17}{subsubsection*.22}%
+\contentsline {subsubsection}{Observability}{17}{subsubsection*.23}%
+\contentsline {subsubsection}{Evolvability}{18}{subsubsection*.24}%
+\contentsline {subsection}{\numberline {3.2.4}Backlog}{18}{subsection.3.2.4}%
+\contentsline {section}{\numberline {3.3}Project architecture}{19}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}Logical architecture}{19}{subsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.3.2}Platform structure}{20}{subsection.3.3.2}%
+\contentsline {subsection}{\numberline {3.3.3}Backend architecture}{20}{subsection.3.3.3}%
+\contentsline {subsection}{\numberline {3.3.4}Frontend architecture}{21}{subsection.3.3.4}%
+\contentsline {subsection}{\numberline {3.3.5}Component diagram}{22}{subsection.3.3.5}%
+\contentsline {subsection}{\numberline {3.3.6}Package diagram}{22}{subsection.3.3.6}%
+\contentsline {subsection}{\numberline {3.3.7}Data model (entity-relationship diagram)}{23}{subsection.3.3.7}%
+\contentsline {section}{\numberline {3.4}Tools and technologies}{23}{section.3.4}%
+\contentsline {subsection}{\numberline {3.4.1}Node.js}{23}{subsection.3.4.1}%
+\contentsline {subsection}{\numberline {3.4.2}Express.js}{24}{subsection.3.4.2}%
+\contentsline {subsection}{\numberline {3.4.3}MongoDB / Mongoose}{24}{subsection.3.4.3}%
+\contentsline {subsection}{\numberline {3.4.4}React}{24}{subsection.3.4.4}%
+\contentsline {subsection}{\numberline {3.4.5}Vite}{25}{subsection.3.4.5}%
+\contentsline {subsection}{\numberline {3.4.6}Python / Flask}{25}{subsection.3.4.6}%
+\contentsline {subsection}{\numberline {3.4.7}Docker}{25}{subsection.3.4.7}%
+\contentsline {subsection}{\numberline {3.4.8}Kubernetes}{26}{subsection.3.4.8}%
+\contentsline {subsection}{\numberline {3.4.9}ArgoCD}{26}{subsection.3.4.9}%
+\contentsline {subsection}{\numberline {3.4.10}Postman}{26}{subsection.3.4.10}%
+\contentsline {subsection}{\numberline {3.4.11}@dnd-kit}{27}{subsection.3.4.11}%
+\contentsline {section}{\numberline {3.5}Conclusion}{27}{section.3.5}%
+\contentsline {chapter}{\numberline {4}Sprint 1: Entity and access management}{28}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Introduction}{29}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Functionality overview}{29}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Functional specifications}{29}{section.4.3}%
+\contentsline {subsection}{\numberline {4.3.1}Sprint backlog}{29}{subsection.4.3.1}%
+\contentsline {subsection}{\numberline {4.3.2}Use case diagram}{30}{subsection.4.3.2}%
+\contentsline {subsection}{\numberline {4.3.3}Sequence diagram}{31}{subsection.4.3.3}%
+\contentsline {subsection}{\numberline {4.3.4}Class/entity diagram}{32}{subsection.4.3.4}%
+\contentsline {section}{\numberline {4.4}Technical specifications}{32}{section.4.4}%
+\contentsline {subsection}{\numberline {4.4.1}JSON Web Token (access and refresh)}{32}{subsection.4.4.1}%
+\contentsline {subsection}{\numberline {4.4.2}Bcrypt}{33}{subsection.4.4.2}%
+\contentsline {subsection}{\numberline {4.4.3}Role and ownership middleware (RBAC)}{33}{subsection.4.4.3}%
+\contentsline {subsection}{\numberline {4.4.4}Audit logging}{33}{subsection.4.4.4}%
+\contentsline {section}{\numberline {4.5}Build phase}{33}{section.4.5}%
+\contentsline {subsection}{\numberline {4.5.1}Sign-in and session flow}{33}{subsection.4.5.1}%
+\contentsline {subsection}{\numberline {4.5.2}Team hierarchy management}{34}{subsection.4.5.2}%
+\contentsline {subsection}{\numberline {4.5.3}Cycle creation and phase configuration}{34}{subsection.4.5.3}%
+\contentsline {section}{\numberline {4.6}Conclusion}{35}{section.4.6}%
+\contentsline {chapter}{\numberline {5}Sprint 2: Objective and cycle workflow}{36}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Introduction}{37}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Functionality overview}{37}{section.5.2}%
+\contentsline {section}{\numberline {5.3}Functional specifications}{38}{section.5.3}%
+\contentsline {subsection}{\numberline {5.3.1}Sprint backlog}{38}{subsection.5.3.1}%
+\contentsline {subsection}{\numberline {5.3.2}Use case diagram}{39}{subsection.5.3.2}%
+\contentsline {subsection}{\numberline {5.3.3}Sequence diagram}{40}{subsection.5.3.3}%
+\contentsline {subsection}{\numberline {5.3.4}Document/class model diagram}{41}{subsection.5.3.4}%
+\contentsline {subsection}{\numberline {5.3.5}State machine diagram}{41}{subsection.5.3.5}%
+\contentsline {subsection}{\numberline {5.3.6}Activity diagrams}{41}{subsection.5.3.6}%
+\contentsline {section}{\numberline {5.4}Technical specifications}{43}{section.5.4}%
+\contentsline {subsection}{\numberline {5.4.1}Business-rule modules}{43}{subsection.5.4.1}%
+\contentsline {subsection}{\numberline {5.4.2}Weighted score computation}{43}{subsection.5.4.2}%
+\contentsline {subsection}{\numberline {5.4.3}Visibility and access control}{43}{subsection.5.4.3}%
+\contentsline {subsection}{\numberline {5.4.4}Task board implementation}{43}{subsection.5.4.4}%
+\contentsline {subsection}{\numberline {5.4.5}Correction request workflow}{43}{subsection.5.4.5}%
+\contentsline {subsection}{\numberline {5.4.6}Notification triggers and automated reminders}{44}{subsection.5.4.6}%
+\contentsline {section}{\numberline {5.5}Build phase}{44}{section.5.5}%
+\contentsline {subsection}{\numberline {5.5.1}Objective creation and KPI definition}{44}{subsection.5.5.1}%
+\contentsline {subsection}{\numberline {5.5.2}Approval / revision workflow UI}{44}{subsection.5.5.2}%
+\contentsline {subsection}{\numberline {5.5.3}Check-in submission and progress tracking}{45}{subsection.5.5.3}%
+\contentsline {subsection}{\numberline {5.5.4}Kanban task board and task-objective linking}{45}{subsection.5.5.4}%
+\contentsline {subsection}{\numberline {5.5.5}Correction request submission and approval UI}{45}{subsection.5.5.5}%
+\contentsline {subsection}{\numberline {5.5.6}Notification center}{46}{subsection.5.5.6}%
+\contentsline {section}{\numberline {5.6}Conclusion}{46}{section.5.6}%
+\contentsline {chapter}{\numberline {6}Sprint 3: Evaluation, HR decisions and career development}{47}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Introduction}{48}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Functionality overview}{48}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Functional specifications}{49}{section.6.3}%
+\contentsline {subsection}{\numberline {6.3.1}Sprint backlog}{49}{subsection.6.3.1}%
+\contentsline {subsection}{\numberline {6.3.2}Use case diagram}{50}{subsection.6.3.2}%
+\contentsline {subsection}{\numberline {6.3.3}Sequence diagram}{52}{subsection.6.3.3}%
+\contentsline {subsection}{\numberline {6.3.4}Document model diagram}{53}{subsection.6.3.4}%
+\contentsline {section}{\numberline {6.4}Technical specifications}{53}{section.6.4}%
+\contentsline {subsection}{\numberline {6.4.1}Score calculation service}{53}{subsection.6.4.1}%
+\contentsline {subsection}{\numberline {6.4.2}Consistency-warning and evidence-summary logic}{53}{subsection.6.4.2}%
+\contentsline {subsection}{\numberline {6.4.3}PDF export and analytics dashboard}{54}{subsection.6.4.3}%
+\contentsline {subsection}{\numberline {6.4.4}360-degree feedback visibility rules}{54}{subsection.6.4.4}%
+\contentsline {subsection}{\numberline {6.4.5}Meeting scheduling and calendar sync}{54}{subsection.6.4.5}%
+\contentsline {section}{\numberline {6.5}Build phase}{54}{section.6.5}%
+\contentsline {subsection}{\numberline {6.5.1}Final evaluation scoring interface}{54}{subsection.6.5.1}%
+\contentsline {subsection}{\numberline {6.5.2}HR decision and bonus/penalty workflow}{54}{subsection.6.5.2}%
+\contentsline {subsection}{\numberline {6.5.3}Career path and competency gap view}{54}{subsection.6.5.3}%
+\contentsline {subsection}{\numberline {6.5.4}360-degree feedback and meeting scheduling}{55}{subsection.6.5.4}%
+\contentsline {subsection}{\numberline {6.5.5}Analytics dashboard and PDF export}{55}{subsection.6.5.5}%
+\contentsline {section}{\numberline {6.6}Conclusion}{55}{section.6.6}%
+\contentsline {chapter}{\numberline {7}Sprint 4: AI features}{56}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Introduction}{57}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Functionality overview}{57}{section.7.2}%
+\contentsline {section}{\numberline {7.3}Functional specifications}{57}{section.7.3}%
+\contentsline {subsection}{\numberline {7.3.1}Sprint backlog}{57}{subsection.7.3.1}%
+\contentsline {subsection}{\numberline {7.3.2}Use case diagram}{58}{subsection.7.3.2}%
+\contentsline {subsection}{\numberline {7.3.3}Document/class model diagram}{58}{subsection.7.3.3}%
+\contentsline {section}{\numberline {7.4}Technical specifications}{59}{section.7.4}%
+\contentsline {subsection}{\numberline {7.4.1}Provider-agnostic AI adapter}{59}{subsection.7.4.1}%
+\contentsline {subsection}{\numberline {7.4.2}Prompt design and JSON-output validation}{59}{subsection.7.4.2}%
+\contentsline {subsection}{\numberline {7.4.3}Flask ML microservice}{59}{subsection.7.4.3}%
+\contentsline {subsection}{\numberline {7.4.4}scikit-learn / XGBoost models}{59}{subsection.7.4.4}%
+\contentsline {subsection}{\numberline {7.4.5}Synthetic dataset generation}{59}{subsection.7.4.5}%
+\contentsline {section}{\numberline {7.5}Build phase}{60}{section.7.5}%
+\contentsline {subsection}{\numberline {7.5.1}AI-assisted objective/KPI suggestion}{60}{subsection.7.5.1}%
+\contentsline {subsection}{\numberline {7.5.2}AI-generated review drafting}{60}{subsection.7.5.2}%
+\contentsline {subsection}{\numberline {7.5.3}Performance prediction dashboard}{60}{subsection.7.5.3}%
+\contentsline {section}{\numberline {7.6}Conclusion}{60}{section.7.6}%
+\contentsline {chapter}{\numberline {8}Sprint 5: DevOps}{61}{chapter.8}%
+\contentsline {section}{\numberline {8.1}Introduction}{62}{section.8.1}%
+\contentsline {section}{\numberline {8.2}Functional specifications}{62}{section.8.2}%
+\contentsline {subsection}{\numberline {8.2.1}Sprint backlog}{62}{subsection.8.2.1}%
+\contentsline {section}{\numberline {8.3}Technical specifications}{62}{section.8.3}%
+\contentsline {subsection}{\numberline {8.3.1}GitHub Actions}{62}{subsection.8.3.1}%
+\contentsline {subsection}{\numberline {8.3.2}Jest and Supertest}{63}{subsection.8.3.2}%
+\contentsline {subsection}{\numberline {8.3.3}Gitleaks}{63}{subsection.8.3.3}%
+\contentsline {subsection}{\numberline {8.3.4}Docker}{63}{subsection.8.3.4}%
+\contentsline {subsection}{\numberline {8.3.5}Trivy}{64}{subsection.8.3.5}%
+\contentsline {subsection}{\numberline {8.3.6}Kubernetes and Kustomize}{64}{subsection.8.3.6}%
+\contentsline {subsection}{\numberline {8.3.7}ArgoCD}{64}{subsection.8.3.7}%
+\contentsline {section}{\numberline {8.4}Build phase}{65}{section.8.4}%
+\contentsline {subsection}{\numberline {8.4.1}Testing and quality gates}{65}{subsection.8.4.1}%
+\contentsline {subsection}{\numberline {8.4.2}CI/CD pipeline stages}{65}{subsection.8.4.2}%
+\contentsline {subsection}{\numberline {8.4.3}Image build and registry}{65}{subsection.8.4.3}%
+\contentsline {subsection}{\numberline {8.4.4}Kubernetes deployment and ArgoCD sync}{65}{subsection.8.4.4}%
+\contentsline {subsection}{\numberline {8.4.5}Environment-specific delivery}{66}{subsection.8.4.5}%
+\contentsline {section}{\numberline {8.5}Conclusion}{66}{section.8.5}%
+\contentsline {chapter}{General conclusion and perspectives}{68}{chapter*.82}%

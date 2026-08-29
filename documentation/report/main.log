@@ -1,0 +1,1458 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (MiKTeX 26.5) (preloaded format=pdflatex 2026.5.31)  27 AUG 2026 17:12
+entering extended mode
+ restricted \write18 enabled.
+ file:line:error style messages enabled.
+ %&-line parsing enabled.
+**c:/Users/moata/OneDrive/Documents/application_gestion_competences/application_gestion_competences/documentation/report/main.tex
+(c:/Users/moata/OneDrive/Documents/application_gestion_competences/application_gestion_competences/documentation/report/main.tex
+LaTeX2e <2025-11-01>
+L3 programming layer <2026-04-28>
+(C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/base\report.cls
+Document Class: report 2025/01/22 v1.4n Standard LaTeX document class
+(C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/base\size12.clo
+File: size12.clo 2025/01/22 v1.4n Standard LaTeX file (size option)
+)
+\c@part=\count276
+\c@chapter=\count277
+\c@section=\count278
+\c@subsection=\count279
+\c@subsubsection=\count280
+\c@paragraph=\count281
+\c@subparagraph=\count282
+\c@figure=\count283
+\c@table=\count284
+\abovecaptionskip=\skip49
+\belowcaptionskip=\skip50
+\bibindent=\dimen150
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/base\inputenc.sty
+Package: inputenc 2024/02/08 v1.3d Input encoding file
+\inpenc@prehook=\toks17
+\inpenc@posthook=\toks18
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/base\fontenc.sty
+Package: fontenc 2025/07/18 v2.1d Standard LaTeX package
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/geometry\geometry.sty
+Package: geometry 2026/03/07 v6.0 Page Geometry
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/graphics\keyval.sty
+Package: keyval 2022/05/29 v1.15 key=value parser (DPC)
+\KV@toks@=\toks19
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/generic/iftex\ifvtex.sty
+Package: ifvtex 2019/10/25 v1.7 ifvtex legacy package. Use iftex instead.
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/generic/iftex\iftex.sty
+Package: iftex 2024/12/12 v1.0g TeX engine tests
+))
+\Gm@cnth=\count285
+\Gm@cntv=\count286
+\c@Gm@tempcnt=\count287
+\Gm@bindingoffset=\dimen151
+\Gm@wd@mp=\dimen152
+\Gm@odd@mp=\dimen153
+\Gm@even@mp=\dimen154
+\Gm@layoutwidth=\dimen155
+\Gm@layoutheight=\dimen156
+\Gm@layouthoffset=\dimen157
+\Gm@layoutvoffset=\dimen158
+\Gm@dimlist=\toks20
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/geometry\geometry.cfg)) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphicx.sty
+Package: graphicx 2024/12/31 v1.2e Enhanced LaTeX Graphics (DPC,SPQR)
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphics.sty
+Package: graphics 2024/08/06 v1.4g Standard LaTeX Graphics (DPC,SPQR)
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/graphics\trig.sty
+Package: trig 2023/12/02 v1.11 sin cos tan (DPC)
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\graphics.cfg
+File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
+)
+Package graphics Info: Driver file: pdftex.def on input line 106.
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/graphics-def\pdftex.def
+File: pdftex.def 2025/09/29 v1.2d Graphics/color driver for pdftex
+))
+\Gin@req@height=\dimen159
+\Gin@req@width=\dimen160
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\times.sty
+Package: times 2020/03/25 PSNFSS-v9.3 (SPQR) 
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/tools\indentfirst.sty
+Package: indentfirst 2023/07/02 v1.03 Indent first paragraph (DPC)
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/xcolor\xcolor.sty
+Package: xcolor 2024/09/29 v3.02 LaTeX color extensions (UK)
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\color.cfg
+File: color.cfg 2016/01/02 v1.6 sample color configuration
+)
+Package xcolor Info: Driver file: pdftex.def on input line 274.
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/graphics\mathcolor.ltx)
+Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1349.
+Package xcolor Info: Model `hsb' substituted by `rgb' on input line 1353.
+Package xcolor Info: Model `RGB' extended on input line 1365.
+Package xcolor Info: Model `HTML' substituted by `rgb' on input line 1367.
+Package xcolor Info: Model `Hsb' substituted by `hsb' on input line 1368.
+Package xcolor Info: Model `tHsb' substituted by `hsb' on input line 1369.
+Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1370.
+Package xcolor Info: Model `Gray' substituted by `gray' on input line 1371.
+Package xcolor Info: Model `wave' substituted by `hsb' on input line 1372.
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/booktabs\booktabs.sty
+Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
+\heavyrulewidth=\dimen161
+\lightrulewidth=\dimen162
+\cmidrulewidth=\dimen163
+\belowrulesep=\dimen164
+\belowbottomsep=\dimen165
+\aboverulesep=\dimen166
+\abovetopsep=\dimen167
+\cmidrulesep=\dimen168
+\cmidrulekern=\dimen169
+\defaultaddspace=\dimen170
+\@cmidla=\count288
+\@cmidlb=\count289
+\@aboverulesep=\dimen171
+\@belowrulesep=\dimen172
+\@thisruleclass=\count290
+\@lastruleclass=\count291
+\@thisrulewidth=\dimen173
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/tools\array.sty
+Package: array 2025/09/25 v2.6n Tabular extension package (FMi)
+\col@sep=\dimen174
+\ar@mcellbox=\box53
+\extrarowheight=\dimen175
+\NC@list=\toks21
+\extratabsurround=\skip51
+\backup@length=\skip52
+\ar@cellbox=\box54
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/multirow\multirow.sty
+Package: multirow 2024/11/12 v2.9 Span multiple rows of a table
+\multirow@colwidth=\skip53
+\multirow@cntb=\count292
+\multirow@dima=\skip54
+\bigstrutjot=\dimen176
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/tools\longtable.sty
+Package: longtable 2025-10-13 v4.24 Multi-page Table package (DPC)
+\LTleft=\skip55
+\LTright=\skip56
+\LTpre=\skip57
+\LTpost=\skip58
+\LTchunksize=\count293
+\LTcapwidth=\dimen177
+\LT@head=\box55
+\LT@firsthead=\box56
+\LT@foot=\box57
+\LT@lastfoot=\box58
+\LT@gbox=\box59
+\LT@cols=\count294
+\LT@rows=\count295
+\c@LT@tables=\count296
+\c@LT@chunks=\count297
+\LT@p@ftn=\toks22
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsmath.sty
+Package: amsmath 2025/07/09 v2.17z AMS math features
+\@mathmargin=\skip59
+
+For additional information on amsmath, use the `?' option.
+(C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amstext.sty
+Package: amstext 2024/11/17 v2.01 AMS text
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsgen.sty
+File: amsgen.sty 1999/11/30 v2.0 generic functions
+\@emptytoks=\toks23
+\ex@=\dimen178
+)) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsbsy.sty
+Package: amsbsy 1999/11/29 v1.2d Bold Symbols
+\pmbraise@=\dimen179
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsopn.sty
+Package: amsopn 2022/04/08 v2.04 operator names
+)
+\inf@bad=\count298
+LaTeX Info: Redefining \frac on input line 233.
+\uproot@=\count299
+\leftroot@=\count300
+LaTeX Info: Redefining \overline on input line 398.
+LaTeX Info: Redefining \colon on input line 409.
+\classnum@=\count301
+\DOTSCASE@=\count302
+LaTeX Info: Redefining \ldots on input line 495.
+LaTeX Info: Redefining \dots on input line 498.
+LaTeX Info: Redefining \cdots on input line 619.
+\Mathstrutbox@=\box60
+\strutbox@=\box61
+LaTeX Info: Redefining \big on input line 721.
+LaTeX Info: Redefining \Big on input line 722.
+LaTeX Info: Redefining \bigg on input line 723.
+LaTeX Info: Redefining \Bigg on input line 724.
+\big@size=\dimen180
+LaTeX Font Info:    Redeclaring font encoding OML on input line 742.
+LaTeX Font Info:    Redeclaring font encoding OMS on input line 743.
+\macc@depth=\count303
+LaTeX Info: Redefining \bmod on input line 904.
+LaTeX Info: Redefining \pmod on input line 909.
+LaTeX Info: Redefining \smash on input line 939.
+LaTeX Info: Redefining \relbar on input line 969.
+LaTeX Info: Redefining \Relbar on input line 970.
+\c@MaxMatrixCols=\count304
+\dotsspace@=\muskip17
+\c@parentequation=\count305
+\dspbrk@lvl=\count306
+\tag@help=\toks24
+\row@=\count307
+\column@=\count308
+\maxfields@=\count309
+\andhelp@=\toks25
+\eqnshift@=\dimen181
+\alignsep@=\dimen182
+\tagshift@=\dimen183
+\tagwidth@=\dimen184
+\totwidth@=\dimen185
+\lineht@=\dimen186
+\@envbody=\toks26
+\multlinegap=\skip60
+\multlinetaggap=\skip61
+\mathdisplay@stack=\toks27
+LaTeX Info: Redefining \[ on input line 2950.
+LaTeX Info: Redefining \] on input line 2951.
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/listings\listings.sty
+\lst@mode=\count310
+\lst@gtempboxa=\box62
+\lst@token=\toks28
+\lst@length=\count311
+\lst@currlwidth=\dimen187
+\lst@column=\count312
+\lst@pos=\count313
+\lst@lostspace=\dimen188
+\lst@width=\dimen189
+\lst@newlines=\count314
+\lst@lineno=\count315
+\lst@maxwidth=\dimen190
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/listings\lstpatch.sty
+File: lstpatch.sty 2025/11/14 1.11b (Carsten Heinz)
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/listings\lstmisc.sty
+File: lstmisc.sty 2025/11/14 1.11b (Carsten Heinz)
+\c@lstnumber=\count316
+\lst@skipnumbers=\count317
+\lst@framebox=\box63
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/listings\listings.cfg
+File: listings.cfg 2025/11/14 1.11b listings configuration
+))
+Package: listings 2025/11/14 1.11b (Carsten Heinz)
+
+==> First Aid for listings.sty no longer applied!
+    Expected:
+        2024/09/23 1.10c (Carsten Heinz)
+    but found:
+        2025/11/14 1.11b (Carsten Heinz)
+    so I'm assuming it got fixed.
+(C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/fancyhdr\fancyhdr.sty
+Package: fancyhdr 2025/02/07 v5.2 Extensive control of page headers and footers
+\f@nch@headwidth=\skip62
+\f@nch@offset@elh=\skip63
+\f@nch@offset@erh=\skip64
+\f@nch@offset@olh=\skip65
+\f@nch@offset@orh=\skip66
+\f@nch@offset@elf=\skip67
+\f@nch@offset@erf=\skip68
+\f@nch@offset@olf=\skip69
+\f@nch@offset@orf=\skip70
+\f@nch@height=\skip71
+\f@nch@footalignment=\skip72
+\f@nch@widthL=\skip73
+\f@nch@widthC=\skip74
+\f@nch@widthR=\skip75
+\@temptokenb=\toks29
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/titlesec\titlesec.sty
+Package: titlesec 2025/01/04 v2.17 Sectioning titles
+\ttl@box=\box64
+\beforetitleunit=\skip76
+\aftertitleunit=\skip77
+\ttl@plus=\dimen191
+\ttl@minus=\dimen192
+\ttl@toksa=\toks30
+\titlewidth=\dimen193
+\titlewidthlast=\dimen194
+\titlewidthfirst=\dimen195
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/tocloft\tocloft.sty
+Package: tocloft 2017/08/31 v2.3i parameterised ToC, etc., typesetting
+Package tocloft Info: The document has chapter divisions on input line 51.
+\cftparskip=\skip78
+\cftbeforetoctitleskip=\skip79
+\cftaftertoctitleskip=\skip80
+\cftbeforepartskip=\skip81
+\cftpartnumwidth=\skip82
+\cftpartindent=\skip83
+\cftbeforechapskip=\skip84
+\cftchapindent=\skip85
+\cftchapnumwidth=\skip86
+\cftbeforesecskip=\skip87
+\cftsecindent=\skip88
+\cftsecnumwidth=\skip89
+\cftbeforesubsecskip=\skip90
+\cftsubsecindent=\skip91
+\cftsubsecnumwidth=\skip92
+\cftbeforesubsubsecskip=\skip93
+\cftsubsubsecindent=\skip94
+\cftsubsubsecnumwidth=\skip95
+\cftbeforeparaskip=\skip96
+\cftparaindent=\skip97
+\cftparanumwidth=\skip98
+\cftbeforesubparaskip=\skip99
+\cftsubparaindent=\skip100
+\cftsubparanumwidth=\skip101
+\cftbeforeloftitleskip=\skip102
+\cftafterloftitleskip=\skip103
+\cftbeforefigskip=\skip104
+\cftfigindent=\skip105
+\cftfignumwidth=\skip106
+\c@lofdepth=\count318
+\c@lotdepth=\count319
+\cftbeforelottitleskip=\skip107
+\cftafterlottitleskip=\skip108
+\cftbeforetabskip=\skip109
+\cfttabindent=\skip110
+\cfttabnumwidth=\skip111
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/caption\caption.sty
+Package: caption 2023/08/05 v3.6o Customizing captions (AR)
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/caption\caption3.sty
+Package: caption3 2023/07/31 v2.4d caption3 kernel (AR)
+\caption@tempdima=\dimen196
+\captionmargin=\dimen197
+\caption@leftmargin=\dimen198
+\caption@rightmargin=\dimen199
+\caption@width=\dimen256
+\caption@indent=\dimen257
+\caption@parindent=\dimen258
+\caption@hangindent=\dimen259
+Package caption Info: Standard document class detected.
+)
+\c@caption@flags=\count320
+\c@continuedfloat=\count321
+Package caption Info: listings package is loaded.
+Package caption Info: longtable package is loaded.
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/caption\ltcaption.sty
+Package: ltcaption 2021/01/08 v1.4c longtable captions (AR)
+)) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/float\float.sty
+Package: float 2001/11/08 v1.3d Float enhancements (AL)
+\c@float@type=\count322
+\float@exts=\toks31
+\float@box=\box65
+\@float@everytoks=\toks32
+\@floatcapt=\box66
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/enumitem\enumitem.sty
+Package: enumitem 2025/02/06 v3.11 Customized lists
+\labelindent=\skip112
+\enit@outerparindent=\dimen260
+\enit@toks=\toks33
+\enit@inbox=\box67
+\enit@count@id=\count323
+\enitdp@description=\count324
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/setspace\setspace.sty
+Package: setspace 2022/12/04 v6.7b set line spacing
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/xurl\xurl.sty
+Package: xurl 2022/01/09 v 0.10 modify URL breaks
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/url\url.sty
+\Urlmuskip=\muskip18
+Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
+)) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hyperref.sty
+Package: hyperref 2026-04-24 v7.01q Hypertext links for LaTeX
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/kvsetkeys\kvsetkeys.sty
+Package: kvsetkeys 2022-10-05 v1.19 Key value parser (HO)
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/generic/kvdefinekeys\kvdefinekeys.sty
+Package: kvdefinekeys 2019-12-19 v1.6 Define keys (HO)
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/generic/pdfescape\pdfescape.sty
+Package: pdfescape 2019/12/09 v1.15 Implements pdfTeX's escape features (HO)
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/generic/ltxcmds\ltxcmds.sty
+Package: ltxcmds 2023-12-04 v1.26 LaTeX kernel commands for general use (HO)
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/generic/pdftexcmds\pdftexcmds.sty
+Package: pdftexcmds 2020-06-27 v0.33 Utility functions of pdfTeX for LuaTeX (HO)
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/generic/infwarerr\infwarerr.sty
+Package: infwarerr 2019/12/03 v1.5 Providing info/warning/error messages (HO)
+)
+Package pdftexcmds Info: \pdf@primitive is available.
+Package pdftexcmds Info: \pdf@ifprimitive is available.
+Package pdftexcmds Info: \pdfdraftmode found.
+)) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/hycolor\hycolor.sty
+Package: hycolor 2020-01-27 v1.10 Color options for hyperref/bookmark (HO)
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\nameref.sty
+Package: nameref 2026-01-29 v2.58 Cross-referencing by name of section
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/refcount\refcount.sty
+Package: refcount 2019/12/15 v3.6 Data extraction from label references (HO)
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/generic/gettitlestring\gettitlestring.sty
+Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/kvoptions\kvoptions.sty
+Package: kvoptions 2022-06-15 v3.15 Key value format for package options (HO)
+))
+\c@section@level=\count325
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/etoolbox\etoolbox.sty
+Package: etoolbox 2025/10/02 v2.5m e-TeX tools for LaTeX (JAW)
+\etb@tempcnta=\count326
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/generic/stringenc\stringenc.sty
+Package: stringenc 2019/11/29 v1.12 Convert strings between diff. encodings (HO)
+)
+\@linkdim=\dimen261
+\Hy@linkcounter=\count327
+\Hy@pagecounter=\count328
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\pd1enc.def
+File: pd1enc.def 2026-04-24 v7.01q Hyperref: PDFDocEncoding definition (HO)
+Now handling font encoding PD1 ...
+... no UTF-8 mapping file for font encoding PD1
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/generic/intcalc\intcalc.sty
+Package: intcalc 2019/12/15 v1.3 Expandable calculations with integers (HO)
+)
+\Hy@SavedSpaceFactor=\count329
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\puenc.def
+File: puenc.def 2026-04-24 v7.01q Hyperref: PDF Unicode definition (HO)
+Now handling font encoding PU ...
+... no UTF-8 mapping file for font encoding PU
+)
+Package hyperref Info: Hyper figures OFF on input line 4199.
+Package hyperref Info: Link nesting OFF on input line 4204.
+Package hyperref Info: Hyper index ON on input line 4207.
+Package hyperref Info: Plain pages OFF on input line 4214.
+Package hyperref Info: Backreferencing OFF on input line 4219.
+Package hyperref Info: Implicit mode ON; LaTeX internals redefined.
+Package hyperref Info: Bookmarks ON on input line 4466.
+\c@Hy@tempcnt=\count330
+LaTeX Info: Redefining \url on input line 4805.
+\XeTeXLinkMargin=\dimen262
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/generic/bitset\bitset.sty
+Package: bitset 2019/12/09 v1.3 Handle bit-vector datatype (HO)
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/generic/bigintcalc\bigintcalc.sty
+Package: bigintcalc 2019/12/15 v1.5 Expandable calculations on big integers (HO)
+))
+\Fld@menulength=\count331
+\Field@Width=\dimen263
+\Fld@charsize=\dimen264
+Package hyperref Info: Hyper figures OFF on input line 6091.
+Package hyperref Info: Link nesting OFF on input line 6096.
+Package hyperref Info: Hyper index ON on input line 6099.
+Package hyperref Info: backreferencing OFF on input line 6106.
+Package hyperref Info: Link coloring OFF on input line 6111.
+Package hyperref Info: Link coloring with OCG OFF on input line 6116.
+Package hyperref Info: PDF/A mode OFF on input line 6121.
+\Hy@abspage=\count332
+\c@Item=\count333
+\c@Hfootnote=\count334
+)
+Package hyperref Info: Driver (autodetected): hpdftex.
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hpdftex.def
+File: hpdftex.def 2026-04-24 v7.01q Hyperref driver for pdfTeX
+\Fld@listcount=\count335
+\c@bookmark@seq@number=\count336
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/rerunfilecheck\rerunfilecheck.sty
+Package: rerunfilecheck 2025-06-21 v1.11 Rerun checks for auxiliary files (HO)
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/generic/uniquecounter\uniquecounter.sty
+Package: uniquecounter 2019/12/15 v1.4 Provide unlimited unique counter (HO)
+)
+Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 284.
+)
+\Hy@SectionHShift=\skip113
+)
+Package hyperref Info: Option `colorlinks' set `true' on input line 39.
+LaTeX Font Info:    Trying to load font information for T1+ptm on input line 117.
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\t1ptm.fd
+File: t1ptm.fd 2001/06/04 font definitions for T1/ptm.
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3backend-pdftex.def
+File: l3backend-pdftex.def 2026-02-18 L3 backend support: PDF output (pdfTeX)
+\l__color_backend_stack_int=\count337
+) (main.aux)
+\openout1 = `main.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 117.
+LaTeX Font Info:    ... okay on input line 117.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 117.
+LaTeX Font Info:    ... okay on input line 117.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 117.
+LaTeX Font Info:    ... okay on input line 117.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 117.
+LaTeX Font Info:    ... okay on input line 117.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 117.
+LaTeX Font Info:    ... okay on input line 117.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 117.
+LaTeX Font Info:    ... okay on input line 117.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 117.
+LaTeX Font Info:    ... okay on input line 117.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 117.
+LaTeX Font Info:    ... okay on input line 117.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 117.
+LaTeX Font Info:    ... okay on input line 117.
+
+*geometry* driver: auto-detecting
+*geometry* detected driver: pdftex
+*geometry* verbose mode - [ preamble ] result:
+* driver: pdftex
+* paper: a4paper
+* layout: <same size as paper>
+* layoutoffset:(h,v)=(0.0pt,0.0pt)
+* modes: 
+* h-part:(L,W,R)=(71.13188pt, 455.24411pt, 71.13188pt)
+* v-part:(T,H,B)=(71.13188pt, 702.78308pt, 71.13188pt)
+* \paperwidth=597.50787pt
+* \paperheight=845.04684pt
+* \textwidth=455.24411pt
+* \textheight=702.78308pt
+* \oddsidemargin=-1.1381pt
+* \evensidemargin=-1.1381pt
+* \topmargin=-71.1381pt
+* \headheight=45.0pt
+* \headsep=25.0pt
+* \topskip=12.0pt
+* \footskip=30.0pt
+* \marginparwidth=35.0pt
+* \marginparsep=10.0pt
+* \columnsep=10.0pt
+* \skip\footins=10.8pt plus 4.0pt minus 2.0pt
+* \hoffset=0.0pt
+* \voffset=0.0pt
+* \mag=1000
+* \@twocolumnfalse
+* \@twosidefalse
+* \@mparswitchfalse
+* \@reversemarginfalse
+* (1in=72.27pt=25.4mm, 1cm=28.453pt)
+
+(C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/context/base/mkii\supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+\scratchcounter=\count338
+\scratchdimen=\dimen265
+\scratchbox=\box68
+\nofMPsegments=\count339
+\nofMParguments=\count340
+\everyMPshowfont=\toks34
+\MPscratchCnt=\count341
+\MPscratchDim=\dimen266
+\MPnumerator=\count342
+\makeMPintoPDFobject=\count343
+\everyMPtoPDFconversion=\toks35
+) (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/epstopdf-pkg\epstopdf-base.sty
+Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
+Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 485.
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/00miktex\epstopdf-sys.cfg
+File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
+))
+\c@lstlisting=\count344
+Package caption Info: Begin \AtBeginDocument code.
+Package caption Info: float package is loaded.
+Package caption Info: hyperref package is loaded.
+Package caption Info: End \AtBeginDocument code.
+Package hyperref Info: Link coloring ON on input line 117.
+\@outlinefile=\write3
+\openout3 = `main.out'.
+
+<Images/Esprit.png, id=3, 903.375pt x 597.23125pt>
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 124.
+(pdftex.def)             Requested size: 94.67108pt x 62.59596pt.
+<Images/biatIt.jpg, id=4, 200.75pt x 200.75pt>
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 151.
+(pdftex.def)             Requested size: 51.21353pt x 51.21504pt.
+ [1
+
+{C:/Users/moata/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}{C:/Users/moata/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc} <./Images/Esprit.png> <./Images/biatIt.jpg>] [1
+
+]
+No file main.toc.
+\tf@toc=\write4
+\openout4 = `main.toc'.
+
+
+pdfTeX warning (ext4): destination with the same identifier (name{page.}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.178 \clearpage
+                 [2
+
+]
+No file main.lof.
+\tf@lof=\write5
+\openout5 = `main.lof'.
+
+
+pdfTeX warning (ext4): destination with the same identifier (name{page.}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.181 \clearpage
+                 [3
+
+]
+pdfTeX warning (ext4): destination with the same identifier (name{page.1}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.205 \chapter*{General presentation}
+                                      [1
+
+
+]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 214.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 214.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [2
+
+]
+Chapter 1.
+[3
+
+
+]
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 232.
+(pdftex.def)             Requested size: 182.09486pt x 182.10689pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 240.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 240.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [4
+
+]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 258.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 258.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [5]
+LaTeX Font Info:    Trying to load font information for T1+pcr on input line 265.
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\t1pcr.fd
+File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
+)
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 278.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 278.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [6]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 279.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 279.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [7]
+Chapter 2.
+[8
+
+
+]
+LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 303.
+ (C:\Users\moata\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ts1ptm.fd
+File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
+)
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 308.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 308.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [9
+
+]
+<Images/workday.png, id=82, 602.25pt x 602.25pt>
+File: Images/workday.png Graphic file (type png)
+<use Images/workday.png>
+Package pdftex.def Info: Images/workday.png  used on input line 321.
+(pdftex.def)             Requested size: 136.57462pt x 136.57558pt.
+<Images/latice.png, id=83, 401.5pt x 401.5pt>
+File: Images/latice.png Graphic file (type png)
+<use Images/latice.png>
+Package pdftex.def Info: Images/latice.png  used on input line 332.
+(pdftex.def)             Requested size: 113.81102pt x 113.80992pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 335.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 335.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [10 <./Images/workday.png>]
+<Images/15Five.png, id=93, 240.9pt x 240.9pt>
+File: Images/15Five.png Graphic file (type png)
+<use Images/15Five.png>
+Package pdftex.def Info: Images/15Five.png  used on input line 343.
+(pdftex.def)             Requested size: 113.81102pt x 113.81114pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 365.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 365.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [11 <./Images/latice.png> <./Images/15Five.png>]
+<Images/Gant.png, id=104, 1656.1875pt x 956.57375pt>
+File: Images/Gant.png Graphic file (type png)
+<use Images/Gant.png>
+Package pdftex.def Info: Images/Gant.png  used on input line 372.
+(pdftex.def)             Requested size: 455.24411pt x 262.93452pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 380.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 380.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [12 <./Images/Gant.png (PNG copy)>]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 381.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 381.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [13]
+Chapter 3.
+[14
+
+]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 410.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 410.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [15
+
+]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 434.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 434.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [16]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 460.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 460.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [17]
+ignored: Infinite glue shrinkage found in box being split
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 522.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 522.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [18]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 530.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 530.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [19]
+<Images/Project_Architecture.png, id=166, 693.34032pt x 180.675pt>
+File: Images/Project_Architecture.png Graphic file (type png)
+<use Images/Project_Architecture.png>
+Package pdftex.def Info: Images/Project_Architecture.png  used on input line 532.
+(pdftex.def)             Requested size: 113.81102pt x 29.6557pt.
+<Images/diagrams/20_api_communication_flow.png, id=168, 4060.16875pt x 686.565pt>
+File: Images/diagrams/20_api_communication_flow.png Graphic file (type png)
+<use Images/diagrams/20_api_communication_flow.png>
+Package pdftex.def Info: Images/diagrams/20_api_communication_flow.png  used on input line 537.
+(pdftex.def)             Requested size: 455.24411pt x 76.97856pt.
+<Images/diagrams/11_backend_architecture.png, id=169, 3126.68124pt x 2732.2075pt>
+File: Images/diagrams/11_backend_architecture.png Graphic file (type png)
+<use Images/diagrams/11_backend_architecture.png>
+Package pdftex.def Info: Images/diagrams/11_backend_architecture.png  used on input line 543.
+(pdftex.def)             Requested size: 309.56265pt x 270.48521pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 544.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 544.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [20 <./Images/Project_Architecture.png> <./Images/diagrams/20_api_communication_flow.png (PNG copy)>]
+<Images/diagrams/12_frontend_architecture.png, id=178, 2519.4125pt x 2566.58875pt>
+File: Images/diagrams/12_frontend_architecture.png Graphic file (type png)
+<use Images/diagrams/12_frontend_architecture.png>
+Package pdftex.def Info: Images/diagrams/12_frontend_architecture.png  used on input line 549.
+(pdftex.def)             Requested size: 250.38564pt x 255.06822pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 550.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 550.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [21 <./Images/diagrams/11_backend_architecture.png (PNG copy)>]
+<Images/diagrams/14_component_diagram.png, id=186, 2946.00626pt x 1079.03125pt>
+File: Images/diagrams/14_component_diagram.png Graphic file (type png)
+<use Images/diagrams/14_component_diagram.png>
+Package pdftex.def Info: Images/diagrams/14_component_diagram.png  used on input line 553.
+(pdftex.def)             Requested size: 409.71692pt x 150.05899pt.
+<Images/diagrams/15_package_diagram.png, id=187, 3061.4375pt x 1166.3575pt>
+File: Images/diagrams/15_package_diagram.png Graphic file (type png)
+<use Images/diagrams/15_package_diagram.png>
+Package pdftex.def Info: Images/diagrams/15_package_diagram.png  used on input line 559.
+(pdftex.def)             Requested size: 409.71692pt x 156.08109pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 560.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 560.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [22 <./Images/diagrams/12_frontend_architecture.png (PNG copy)> <./Images/diagrams/14_component_diagram.png (PNG copy)>]
+<Images/diagrams/16_erd_logical.png, id=196, 4713.61pt x 2289.55376pt>
+File: Images/diagrams/16_erd_logical.png Graphic file (type png)
+<use Images/diagrams/16_erd_logical.png>
+Package pdftex.def Info: Images/diagrams/16_erd_logical.png  used on input line 565.
+(pdftex.def)             Requested size: 455.24411pt x 221.10825pt.
+<Images/Nodejs.png, id=197, 963.6pt x 590.205pt>
+File: Images/Nodejs.png Graphic file (type png)
+<use Images/Nodejs.png>
+Package pdftex.def Info: Images/Nodejs.png  used on input line 574.
+(pdftex.def)             Requested size: 91.04742pt x 55.76385pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 577.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 577.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [23 <./Images/diagrams/15_package_diagram.png (PNG copy)> <./Images/diagrams/16_erd_logical.png (PNG copy)>]
+<Images/express.png, id=207, 869.2475pt x 652.4375pt>
+File: Images/express.png Graphic file (type png)
+<use Images/express.png>
+Package pdftex.def Info: Images/express.png  used on input line 584.
+(pdftex.def)             Requested size: 91.04742pt x 68.33374pt.
+<Images/mongodb.png, id=208, 256.96pt x 256.96pt>
+File: Images/mongodb.png Graphic file (type png)
+<use Images/mongodb.png>
+Package pdftex.def Info: Images/mongodb.png  used on input line 594.
+(pdftex.def)             Requested size: 91.04742pt x 91.04695pt.
+<Images/react.png, id=209, 448.67625pt x 448.67625pt>
+File: Images/react.png Graphic file (type png)
+<use Images/react.png>
+Package pdftex.def Info: Images/react.png  used on input line 604.
+(pdftex.def)             Requested size: 113.81102pt x 113.80504pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 608.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 608.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [24 <./Images/Nodejs.png> <./Images/express.png (PNG copy)> <./Images/mongodb.png (PNG copy)>]
+<Images/vite.png, id=221, 501.875pt x 494.84875pt>
+File: Images/vite.png Graphic file (type png)
+<use Images/vite.png>
+Package pdftex.def Info: Images/vite.png  used on input line 615.
+(pdftex.def)             Requested size: 113.81102pt x 112.21205pt.
+<Images/python.png, id=222, 513.92pt x 513.92pt>
+File: Images/python.png Graphic file (type png)
+<use Images/python.png>
+Package pdftex.def Info: Images/python.png  used on input line 625.
+(pdftex.def)             Requested size: 81.9406pt x 81.93872pt.
+<Images/docker.png, id=223, 401.5pt x 401.5pt>
+File: Images/docker.png Graphic file (type png)
+<use Images/docker.png>
+Package pdftex.def Info: Images/docker.png  used on input line 636.
+(pdftex.def)             Requested size: 68.28383pt x 68.28471pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 640.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 640.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [25 <./Images/react.png> <./Images/vite.png> <./Images/python.png>]
+<Images/Kubernetes.png, id=237, 963.6pt x 936.49875pt>
+File: Images/Kubernetes.png Graphic file (type png)
+<use Images/Kubernetes.png>
+Package pdftex.def Info: Images/Kubernetes.png  used on input line 646.
+(pdftex.def)             Requested size: 113.81102pt x 110.60306pt.
+<Images/ArgoCD.png, id=238, 448.67625pt x 448.67625pt>
+File: Images/ArgoCD.png Graphic file (type png)
+<use Images/ArgoCD.png>
+Package pdftex.def Info: Images/ArgoCD.png  used on input line 656.
+(pdftex.def)             Requested size: 113.81102pt x 113.80504pt.
+<Images/postman.png, id=239, 513.92pt x 513.92pt>
+File: Images/postman.png Graphic file (type png)
+<use Images/postman.png>
+Package pdftex.def Info: Images/postman.png  used on input line 666.
+(pdftex.def)             Requested size: 113.81102pt x 113.80771pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 670.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 670.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [26 <./Images/docker.png (PNG copy)> <./Images/Kubernetes.png> <./Images/ArgoCD.png>]
+<Images/dnd.png, id=252, 200.75pt x 200.75pt>
+File: Images/dnd.png Graphic file (type png)
+<use Images/dnd.png>
+Package pdftex.def Info: Images/dnd.png  used on input line 676.
+(pdftex.def)             Requested size: 91.04742pt x 91.05038pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 685.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 685.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [27 <./Images/postman.png> <./Images/dnd.png (PNG copy)>]
+Chapter 4.
+[28
+
+]
+Overfull \vbox (13.60004pt too high) detected at line 707
+ []
+
+
+LaTeX Warning: File `C:/Users/moata/Downloads/Use_case_general.jpg' not found on input line 739.
+
+
+c:/Users/moata/OneDrive/Documents/application_gestion_competences/application_gestion_competences/documentation/report/main.tex:739: Package pdftex.def Error: File `C:/Users/moata/Downloads/Use_case_general.jpg' not found: using draft setting.
+
+See the pdftex.def package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.739 ...ers/moata/Downloads/Use_case_general.jpg}
+                                                  
+Try typing  <return>  to proceed.
+If that doesn't work, type  X <return>  to quit.
+
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 741.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 741.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+[29
+
+]
+<Images/SEq.png, id=277, 1159.33125pt x 1367.1075pt>
+File: Images/SEq.png Graphic file (type png)
+<use Images/SEq.png>
+Package pdftex.def Info: Images/SEq.png  used on input line 746.
+(pdftex.def)             Requested size: 455.24411pt x 536.82034pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 749.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 749.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [30]
+<C:/Users/moata/Downloads/Diag_de_class.jpg, id=284, 1033.8625pt x 1027.84pt>
+File: C:/Users/moata/Downloads/Diag_de_class.jpg Graphic file (type jpg)
+<use C:/Users/moata/Downloads/Diag_de_class.jpg>
+Package pdftex.def Info: C:/Users/moata/Downloads/Diag_de_class.jpg  used on input line 753.
+(pdftex.def)             Requested size: 455.24411pt x 452.59604pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 757.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 757.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [31 <./Images/SEq.png (PNG copy)>]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 764.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 764.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [32 <C:/Users/moata/Downloads/Diag_de_class.jpg>]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 785.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 785.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [33]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 801.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 801.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [34]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 802.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 802.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [35]
+Chapter 5.
+[36
+
+]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 864.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 864.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [37
+
+]
+<Images/Diag_de_usecase_Sprint2.jpg, id=335, 292.6935pt x 211.992pt>
+File: Images/Diag_de_usecase_Sprint2.jpg Graphic file (type jpg)
+<use Images/Diag_de_usecase_Sprint2.jpg>
+Package pdftex.def Info: Images/Diag_de_usecase_Sprint2.jpg  used on input line 869.
+(pdftex.def)             Requested size: 432.48051pt x 313.24185pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 873.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 873.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [38]
+<Images/diagrams/22_objective_approval_sequence.png, id=342, 2279.51625pt x 3098.57625pt>
+File: Images/diagrams/22_objective_approval_sequence.png Graphic file (type png)
+<use Images/diagrams/22_objective_approval_sequence.png>
+Package pdftex.def Info: Images/diagrams/22_objective_approval_sequence.png  used on input line 876.
+(pdftex.def)             Requested size: 455.24411pt x 618.80595pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 877.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 877.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [39 <./Images/Diag_de_usecase_Sprint2.jpg>]
+<Images/diagrams/PerTrack_Document_Model_Diagram.png, id=350, 3638.59375pt x 2026.57124pt>
+File: Images/diagrams/PerTrack_Document_Model_Diagram.png Graphic file (type png)
+<use Images/diagrams/PerTrack_Document_Model_Diagram.png>
+Package pdftex.def Info: Images/diagrams/PerTrack_Document_Model_Diagram.png  used on input line 880.
+(pdftex.def)             Requested size: 455.24411pt x 253.53725pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 881.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 881.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [40 <./Images/diagrams/22_objective_approval_sequence.png (PNG copy)>]
+<Images/diagrams/10_state_machine_objective.png, id=357, 4758.77875pt x 1584.92125pt>
+File: Images/diagrams/10_state_machine_objective.png Graphic file (type png)
+<use Images/diagrams/10_state_machine_objective.png>
+Package pdftex.def Info: Images/diagrams/10_state_machine_objective.png  used on input line 886.
+(pdftex.def)             Requested size: 432.48051pt x 144.01524pt.
+<Images/diagrams/17_activity_objective_approval.png, id=358, 3126.68124pt x 2042.63126pt>
+File: Images/diagrams/17_activity_objective_approval.png Graphic file (type png)
+<use Images/diagrams/17_activity_objective_approval.png>
+Package pdftex.def Info: Images/diagrams/17_activity_objective_approval.png  used on input line 892.
+(pdftex.def)             Requested size: 432.48051pt x 282.50677pt.
+<Images/diagrams/18_activity_checkin_review.png, id=359, 3126.68124pt x 1801.73125pt>
+File: Images/diagrams/18_activity_checkin_review.png Graphic file (type png)
+<use Images/diagrams/18_activity_checkin_review.png>
+Package pdftex.def Info: Images/diagrams/18_activity_checkin_review.png  used on input line 893.
+(pdftex.def)             Requested size: 432.48051pt x 249.18903pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 893.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 893.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [41 <./Images/diagrams/PerTrack_Document_Model_Diagram.png (PNG copy)> <./Images/diagrams/10_state_machine_objective.png (PNG copy)>]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 900.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 900.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [42 <./Images/diagrams/17_activity_objective_approval.png (PNG copy)> <./Images/diagrams/18_activity_checkin_review.png (PNG copy)>]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 920.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 920.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [43]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 938.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 938.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [44]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 952.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 952.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [45]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 963.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 963.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [46]
+Chapter 6.
+[47
+
+]
+Overfull \vbox (13.60004pt too high) detected at line 1015
+ []
+
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 1025.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 1025.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+[48
+
+]
+<Images/diagrams/04_Performance_Evaluation.png, id=425, 3819.26875pt x 2163.08125pt>
+File: Images/diagrams/04_Performance_Evaluation.png Graphic file (type png)
+<use Images/diagrams/04_Performance_Evaluation.png>
+Package pdftex.def Info: Images/diagrams/04_Performance_Evaluation.png  used on input line 1028.
+(pdftex.def)             Requested size: 386.96027pt x 219.1593pt.
+<Images/diagrams/07_Feedback_Management.png, id=426, 3698.81876pt x 1801.73125pt>
+File: Images/diagrams/07_Feedback_Management.png Graphic file (type png)
+<use Images/diagrams/07_Feedback_Management.png>
+Package pdftex.def Info: Images/diagrams/07_Feedback_Management.png  used on input line 1029.
+(pdftex.def)             Requested size: 386.96027pt x 188.48631pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 1029.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 1029.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [49]
+<Images/diagrams/23_meetings_calendar_usecase.png, id=433, 3728.93124pt x 1681.28125pt>
+File: Images/diagrams/23_meetings_calendar_usecase.png Graphic file (type png)
+<use Images/diagrams/23_meetings_calendar_usecase.png>
+Package pdftex.def Info: Images/diagrams/23_meetings_calendar_usecase.png  used on input line 1030.
+(pdftex.def)             Requested size: 386.96027pt x 174.44891pt.
+<Images/diagrams/09_Reporting_PDF.png, id=434, 3217.01875pt x 1560.83125pt>
+File: Images/diagrams/09_Reporting_PDF.png Graphic file (type png)
+<use Images/diagrams/09_Reporting_PDF.png>
+Package pdftex.def Info: Images/diagrams/09_Reporting_PDF.png  used on input line 1031.
+(pdftex.def)             Requested size: 386.96027pt x 187.74417pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 1031.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 1031.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [50 <./Images/diagrams/04_Performance_Evaluation.png (PNG copy)> <./Images/diagrams/07_Feedback_Management.png (PNG copy)>]
+<Images/diagrams/perftrack_diagram_7_final_evaluation_sequence.png, id=442, 2714.14pt x 2295.57625pt>
+File: Images/diagrams/perftrack_diagram_7_final_evaluation_sequence.png Graphic file (type png)
+<use Images/diagrams/perftrack_diagram_7_final_evaluation_sequence.png>
+Package pdftex.def Info: Images/diagrams/perftrack_diagram_7_final_evaluation_sequence.png  used on input line 1035.
+(pdftex.def)             Requested size: 455.24411pt x 385.02368pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 1036.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 1036.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [51 <./Images/diagrams/23_meetings_calendar_usecase.png (PNG copy)> <./Images/diagrams/09_Reporting_PDF.png (PNG copy)>]
+File: Images/diagrams/PerTrack_Document_Model_Diagram.png Graphic file (type png)
+<use Images/diagrams/PerTrack_Document_Model_Diagram.png>
+Package pdftex.def Info: Images/diagrams/PerTrack_Document_Model_Diagram.png  used on input line 1039.
+(pdftex.def)             Requested size: 455.24411pt x 253.53725pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 1040.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 1040.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [52 <./Images/diagrams/perftrack_diagram_7_final_evaluation_sequence.png (PNG copy)>]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 1054.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 1054.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [53]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 1080.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 1080.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [54]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 1089.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 1089.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [55]
+Chapter 7.
+[56
+
+]
+Overfull \vbox (13.60002pt too high) detected at line 1117
+ []
+
+
+Overfull \vbox (13.60004pt too high) detected at line 1121
+ []
+
+<Images/diagrams/perftrack_diagram_8_ai_assistant_usecase.png, id=488, 3277.24374pt x 1861.95625pt>
+File: Images/diagrams/perftrack_diagram_8_ai_assistant_usecase.png Graphic file (type png)
+<use Images/diagrams/perftrack_diagram_8_ai_assistant_usecase.png>
+Package pdftex.def Info: Images/diagrams/perftrack_diagram_8_ai_assistant_usecase.png  used on input line 1134.
+(pdftex.def)             Requested size: 386.96027pt x 219.8453pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 1135.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 1135.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+[57
+
+]
+File: Images/diagrams/PerTrack_Document_Model_Diagram.png Graphic file (type png)
+<use Images/diagrams/PerTrack_Document_Model_Diagram.png>
+Package pdftex.def Info: Images/diagrams/PerTrack_Document_Model_Diagram.png  used on input line 1138.
+(pdftex.def)             Requested size: 455.24411pt x 253.53725pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 1145.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 1145.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [58 <./Images/diagrams/perftrack_diagram_8_ai_assistant_usecase.png (PNG copy)>]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 1167.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 1167.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [59]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 1180.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 1180.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [60]
+Chapter 8.
+[61
+
+]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 1228.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 1228.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [62
+
+]
+<Images/gitleakslogo.png, id=541, 244.915pt x 84.315pt>
+File: Images/gitleakslogo.png Graphic file (type png)
+<use Images/gitleakslogo.png>
+Package pdftex.def Info: Images/gitleakslogo.png  used on input line 1241.
+(pdftex.def)             Requested size: 136.57462pt x 47.01793pt.
+File: Images/docker.png Graphic file (type png)
+<use Images/docker.png>
+Package pdftex.def Info: Images/docker.png  used on input line 1252.
+(pdftex.def)             Requested size: 68.28383pt x 68.28471pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 1255.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 1255.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [63 <./Images/gitleakslogo.png>]
+<Images/Trivy.png, id=554, 501.875pt x 501.875pt>
+File: Images/Trivy.png Graphic file (type png)
+<use Images/Trivy.png>
+Package pdftex.def Info: Images/Trivy.png  used on input line 1263.
+(pdftex.def)             Requested size: 91.04742pt x 91.04579pt.
+File: Images/Kubernetes.png Graphic file (type png)
+<use Images/Kubernetes.png>
+Package pdftex.def Info: Images/Kubernetes.png  used on input line 1274.
+(pdftex.def)             Requested size: 81.9406pt x 79.62277pt.
+File: Images/ArgoCD.png Graphic file (type png)
+<use Images/ArgoCD.png>
+Package pdftex.def Info: Images/ArgoCD.png  used on input line 1285.
+(pdftex.def)             Requested size: 81.9406pt x 81.93579pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 1289.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 1289.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [64 <./Images/Trivy.png>]
+<Images/diagrams/perftrack_diagram_9_cicd_pipeline.png, id=566, 3247.13126pt x 895.345pt>
+File: Images/diagrams/perftrack_diagram_9_cicd_pipeline.png Graphic file (type png)
+<use Images/diagrams/perftrack_diagram_9_cicd_pipeline.png>
+Package pdftex.def Info: Images/diagrams/perftrack_diagram_9_cicd_pipeline.png  used on input line 1300.
+(pdftex.def)             Requested size: 455.24411pt x 125.52504pt.
+<Images/diagrams/13_deployment_infrastructure.png, id=567, 3126.68124pt x 1428.33624pt>
+File: Images/diagrams/13_deployment_infrastructure.png Graphic file (type png)
+<use Images/diagrams/13_deployment_infrastructure.png>
+Package pdftex.def Info: Images/diagrams/13_deployment_infrastructure.png  used on input line 1310.
+(pdftex.def)             Requested size: 455.24411pt x 207.96434pt.
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 1310.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 1310.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [65 <./Images/diagrams/perftrack_diagram_9_cicd_pipeline.png (PNG copy)>]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 1320.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 1320.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [66 <./Images/diagrams/13_deployment_infrastructure.png (PNG copy)>] [67
+
+]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 1328.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 1328.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [68
+
+]
+File: Images/Esprit.png Graphic file (type png)
+<use Images/Esprit.png>
+Package pdftex.def Info: Images/Esprit.png  used on input line 1331.
+(pdftex.def)             Requested size: 38.7203pt x 25.6073pt.
+File: Images/biatIt.jpg Graphic file (type jpg)
+<use Images/biatIt.jpg>
+Package pdftex.def Info: Images/biatIt.jpg  used on input line 1331.
+(pdftex.def)             Requested size: 25.60524pt x 25.6073pt.
+ [69] (main.aux)
+ ***********
+LaTeX2e <2025-11-01>
+L3 programming layer <2026-04-28>
+ ***********
+
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+
+Package rerunfilecheck Warning: File `main.out' has changed.
+(rerunfilecheck)                Rerun to get outlines right
+(rerunfilecheck)                or use package `bookmark'.
+
+Package rerunfilecheck Info: Checksums for `main.out':
+(rerunfilecheck)             Before: <no file>
+(rerunfilecheck)             After:  13DE8E8850B7761BA37AFA394115AC5B;26027.
+ ) 
+Here is how much of TeX's memory you used:
+ 15583 strings out of 467683
+ 254881 string characters out of 5414721
+ 699837 words of memory out of 5000000
+ 44149 multiletter control sequences out of 15000+600000
+ 664727 words of font info for 80 fonts, out of 8000000 for 9000
+ 1141 hyphenation exceptions out of 8191
+ 75i,15n,79p,2256b,656s stack positions out of 10000i,1000n,20000p,200000b,200000s
+<C:/Users/moata/AppData/Local/Programs/MiKTeX/fonts/type1/urw/courier/ucrr8a.pfb><C:/Users/moata/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/Users/moata/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmr8a.pfb>
+Output written on main.pdf (73 pages, 8914092 bytes).
+PDF statistics:
+ 682 PDF objects out of 1000 (max. 8388607)
+ 306 named destinations out of 1000 (max. 500000)
+ 211 words of extra memory for PDF output out of 10000 (max. 10000000)
+

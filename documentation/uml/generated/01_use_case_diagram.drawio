@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" agent="claude-code" version="24.0.0">
+  <diagram id="global-use-case" name="Global Use Case Diagram">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1050" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- System boundary -->
+        <mxCell id="sysBoundary" value="PerTrack Platform" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=center;fontStyle=1;fontSize=14;dashed=1;strokeColor=#999999;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="260" y="30" width="1400" height="960" as="geometry" />
+        </mxCell>
+
+        <!-- Actors -->
+        <mxCell id="actCollab" value="Collaborator" style="shape=umlActor;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;html=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="480" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="actLeader" value="Team Leader" style="shape=umlActor;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;html=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="260" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="actHR" value="HR" style="shape=umlActor;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;html=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="700" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="actAdmin" value="Admin" style="shape=umlActor;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;html=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="900" width="30" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Generalizations: Leader/HR/Admin generalize Collaborator (every role is also a base platform user) -->
+        <mxCell id="genLeader" style="html=1;endArrow=block;endFill=0;startArrow=none;dashed=0;edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="actLeader" target="actCollab">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="30" y="500"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="genHR" style="html=1;endArrow=block;endFill=0;startArrow=none;dashed=0;edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="actHR" target="actCollab">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="30" y="520"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="genAdmin" style="html=1;endArrow=block;endFill=0;startArrow=none;dashed=0;edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="actAdmin" target="actCollab">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="20" y="540"/></Array></mxGeometry>
+        </mxCell>
+
+        <!-- Group: Auth and Profile (shared) -->
+        <mxCell id="grpAuth" value="Authentication &amp; Profile" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;fontStyle=1;fontSize=11;dashed=1;strokeColor=#999999;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="300" y="470" width="260" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="ucSignIn" value="Sign In&#10;(JWT + Refresh Token)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="330" y="500" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ucProfile" value="View / Update&#10;My Profile" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="330" y="565" width="140" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eCollabSignIn" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="actCollab" target="ucSignIn">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eCollabProfile" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="actCollab" target="ucProfile">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Group: Entity & Access Management (Admin) -->
+        <mxCell id="grpEntity" value="Entity &amp; Access Management" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;fontStyle=1;fontSize=11;dashed=1;strokeColor=#999999;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="300" y="820" width="440" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="ucManageUsers" value="Manage Users&#10;&amp; Roles" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="330" y="850" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ucManageTeams" value="Manage Teams&#10;&amp; Hierarchy" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="500" y="850" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ucConfigCycle" value="Configure Cycle&#10;&amp; Phases" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="330" y="915" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ucAuditLog" value="View Audit Log" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="500" y="915" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="eAdminUsers" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="actAdmin" target="ucManageUsers">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eAdminTeams" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.6;entryX=0;entryY=0.5;" edge="1" parent="1" source="actAdmin" target="ucManageTeams">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eAdminCycle" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.7;entryX=0;entryY=0.5;" edge="1" parent="1" source="actAdmin" target="ucConfigCycle">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eAdminAudit" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.85;entryX=0;entryY=0.5;" edge="1" parent="1" source="actAdmin" target="ucAuditLog">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="280" y="1000"/><mxPoint x="280" y="965"/></Array></mxGeometry>
+        </mxCell>
+
+        <!-- Group: Objective & Cycle Workflow (Collaborator/Leader) -->
+        <mxCell id="grpObj" value="Objective &amp; Cycle Workflow" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;fontStyle=1;fontSize=11;dashed=1;strokeColor=#999999;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="620" y="220" width="480" height="360" as="geometry" />
+        </mxCell>
+        <mxCell id="ucCreateObj" value="Create Objective&#10;&amp; Define KPIs" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="650" y="250" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ucSubmitObj" value="Submit Objective&#10;for Approval" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="820" y="250" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ucReviewObj" value="Review / Approve /&#10;Reject Objective" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="990" y="250" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ucCheckin" value="Submit Check-in" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="650" y="320" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ucTasks" value="Manage Tasks&#10;(Kanban Board)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="820" y="320" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ucCorrection" value="Submit Correction&#10;Request" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="990" y="320" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ucNotif" value="Receive&#10;Notifications" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="650" y="390" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="incInclude1" value="&lt;&lt;include&gt;&gt;" style="html=1;endArrow=open;dashed=1;startArrow=none;fontSize=9;edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="ucSubmitObj" target="ucReviewObj">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eCollabCreateObj" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.42;entryX=0;entryY=0.5;" edge="1" parent="1" source="actCollab" target="ucCreateObj">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="220" y="510"/><mxPoint x="220" y="275"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="eCollabCheckin" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="actCollab" target="ucCheckin">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="240" y="530"/><mxPoint x="240" y="345"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="eCollabTasks" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.58;entryX=0;entryY=0.5;" edge="1" parent="1" source="actCollab" target="ucTasks">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="200" y="550"/><mxPoint x="200" y="345"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="eCollabCorrection" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.7;entryX=0;entryY=0.5;" edge="1" parent="1" source="actCollab" target="ucCorrection">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="180" y="570"/><mxPoint x="180" y="345"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="eCollabNotif" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.8;entryX=0;entryY=0.5;" edge="1" parent="1" source="actCollab" target="ucNotif">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="160" y="590"/><mxPoint x="160" y="415"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="eLeaderReview" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.35;entryX=0.5;entryY=1;" edge="1" parent="1" source="actLeader" target="ucReviewObj">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1065" y="180"/></Array></mxGeometry>
+        </mxCell>
+
+        <!-- Group: Evaluation & HR -->
+        <mxCell id="grpEval" value="Evaluation &amp; HR Decisions" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;fontStyle=1;fontSize=11;dashed=1;strokeColor=#999999;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="220" width="480" height="290" as="geometry" />
+        </mxCell>
+        <mxCell id="ucSelfAssess" value="Complete&#10;Self-Assessment" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="250" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ucScoreObj" value="Score Objectives /&#10;Final Evaluation" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="250" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ucHRDecision" value="Record HR Decision&#10;(Promotion/Bonus)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="320" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ucBonusPenalty" value="Manage Bonus /&#10;Penalty" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="320" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ucCareer" value="View Career Path&#10;&amp; Competency Gaps" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="390" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="eCollabSelfAssess" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.9;entryX=0;entryY=1;" edge="1" parent="1" source="actCollab" target="ucSelfAssess">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="130" y="605"/><mxPoint x="130" y="150"/><mxPoint x="1245" y="150"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="eLeaderScore" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.65;entryX=0.5;entryY=0;" edge="1" parent="1" source="actLeader" target="ucScoreObj">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1415" y="180"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="eHRDecision" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.15;entryX=0;entryY=0.5;" edge="1" parent="1" source="actHR" target="ucHRDecision">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1100" y="710"/><mxPoint x="1100" y="345"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="eHRBonus" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.25;entryX=0.5;entryY=1;" edge="1" parent="1" source="actHR" target="ucBonusPenalty">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1085" y="725"/><mxPoint x="1085" y="470"/><mxPoint x="1415" y="470"/></Array></mxGeometry>
+        </mxCell>
+
+        <!-- Group: Collaboration -->
+        <mxCell id="grpCollab" value="Collaboration" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;fontStyle=1;fontSize=11;dashed=1;strokeColor=#999999;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="620" y="620" width="480" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="ucFeedback" value="Give / Receive&#10;360deg Feedback" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="650" y="650" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ucMeeting" value="Schedule Meeting&#10;&amp; Sync Calendar" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="820" y="650" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="eCollabFeedback" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="actCollab" target="ucFeedback">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eLeaderMeeting" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.85;entryX=0.5;entryY=0;" edge="1" parent="1" source="actLeader" target="ucMeeting">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1050" y="655"/></Array></mxGeometry>
+        </mxCell>
+
+        <!-- Group: AI Features -->
+        <mxCell id="grpAI" value="AI Assistance" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;fontStyle=1;fontSize=11;dashed=1;strokeColor=#999999;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="540" width="480" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="ucAISuggest" value="Request AI Goal /&#10;KPI Suggestion" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="570" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ucAIPredict" value="View Performance&#10;Prediction" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="570" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="eCollabAISuggest" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.95;entryX=0;entryY=1;" edge="1" parent="1" source="actCollab" target="ucAISuggest">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="140" y="610"/><mxPoint x="140" y="780"/><mxPoint x="1245" y="780"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="eLeaderAIPredict" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.95;entryX=0.5;entryY=1;" edge="1" parent="1" source="actLeader" target="ucAIPredict">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1450" y="820"/></Array></mxGeometry>
+        </mxCell>
+
+        <!-- Group: Reporting (HR) -->
+        <mxCell id="grpReport" value="Reporting &amp; Analytics" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;fontStyle=1;fontSize=11;dashed=1;strokeColor=#999999;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="780" y="820" width="320" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="ucExportPDF" value="Export Evaluation&#10;to PDF" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="810" y="850" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ucDashboard" value="View Analytics&#10;Dashboard" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="960" y="850" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="eHRExport" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.55;entryX=0;entryY=0.5;" edge="1" parent="1" source="actHR" target="ucExportPDF">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="240" y="740"/><mxPoint x="240" y="875"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="eHRDashboard" style="html=1;endArrow=none;startArrow=none;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.7;entryX=0;entryY=0.5;" edge="1" parent="1" source="actHR" target="ucDashboard">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="220" y="755"/><mxPoint x="220" y="875"/></Array></mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" agent="claude-code" version="24.0.0">
+  <diagram id="objective-state-machine" name="Objective State Machine">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1780" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="initial" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1"><mxGeometry x="30" y="215" width="26" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="draft" value="draft" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1"><mxGeometry x="120" y="195" width="130" height="65" as="geometry" /></mxCell>
+
+        <mxCell id="pending" value="pending / submitted /&#10;pending_approval" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1"><mxGeometry x="330" y="195" width="180" height="65" as="geometry" /></mxCell>
+
+        <mxCell id="assigned" value="assigned" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1"><mxGeometry x="330" y="30" width="130" height="65" as="geometry" /></mxCell>
+        <mxCell id="acknowledged" value="acknowledged" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1"><mxGeometry x="540" y="30" width="130" height="65" as="geometry" /></mxCell>
+
+        <mxCell id="approved" value="approved&#10;(active goal)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1"><mxGeometry x="600" y="195" width="140" height="65" as="geometry" /></mxCell>
+        <mxCell id="rejected" value="rejected" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="1"><mxGeometry x="330" y="380" width="130" height="65" as="geometry" /></mxCell>
+        <mxCell id="revisionReq" value="revision_requested" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1"><mxGeometry x="120" y="380" width="150" height="65" as="geometry" /></mxCell>
+        <mxCell id="cancelled" value="cancelled" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="1"><mxGeometry x="600" y="380" width="140" height="65" as="geometry" /></mxCell>
+
+        <mxCell id="locked" value="locked&#10;(no edits)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1"><mxGeometry x="850" y="195" width="140" height="65" as="geometry" /></mxCell>
+        <mxCell id="evaluated" value="evaluated" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1"><mxGeometry x="1100" y="195" width="140" height="65" as="geometry" /></mxCell>
+        <mxCell id="archived" value="archived" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1"><mxGeometry x="1350" y="195" width="140" height="65" as="geometry" /></mxCell>
+
+        <mxCell id="finalMain" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1"><mxGeometry x="1560" y="215" width="26" height="26" as="geometry" /></mxCell>
+        <mxCell id="finalRing" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1"><mxGeometry x="1554" y="209" width="38" height="38" as="geometry" /></mxCell>
+
+        <mxCell id="finalCancel" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1"><mxGeometry x="850" y="480" width="26" height="26" as="geometry" /></mxCell>
+        <mxCell id="finalCancelRing" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1"><mxGeometry x="844" y="474" width="38" height="38" as="geometry" /></mxCell>
+
+        <!-- Transitions -->
+        <mxCell id="t1" value="create()" style="html=1;endArrow=block;rounded=0;fontSize=11;" edge="1" parent="1" source="initial" target="draft"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="t2" value="submit()&#10;[employee_created]" style="html=1;endArrow=block;rounded=0;fontSize=10;" edge="1" parent="1" source="draft" target="pending"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="tAssign" value="create()&#10;[manager_assigned]" style="html=1;endArrow=block;rounded=0;fontSize=10;exitX=0.3;exitY=0;entryX=0;entryY=0.5;" edge="1" parent="1" source="draft" target="assigned">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="170" y="90"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="tAck" value="acknowledge()" style="html=1;endArrow=block;rounded=0;fontSize=10;" edge="1" parent="1" source="assigned" target="acknowledged"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="tAckApprove" value="(acts as approved)" style="html=1;endArrow=block;rounded=0;fontSize=9;exitX=0.7;exitY=1;entryX=0.3;entryY=0;" edge="1" parent="1" source="acknowledged" target="approved">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="t4" value="approve() / validate()" style="html=1;endArrow=block;rounded=0;fontSize=10;" edge="1" parent="1" source="pending" target="approved"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="t5" value="reject()" style="html=1;endArrow=block;rounded=0;fontSize=11;exitX=0.3;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="pending" target="rejected">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="395" y="340"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="t6" value="requestRevision()" style="html=1;endArrow=block;rounded=0;fontSize=10;exitX=0.15;exitY=1;entryX=1;entryY=0.3;" edge="1" parent="1" source="pending" target="revisionReq">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t7" value="edit() / resubmit()" style="html=1;endArrow=block;rounded=0;fontSize=10;exitX=0.3;exitY=0;entryX=0.3;entryY=1;" edge="1" parent="1" source="revisionReq" target="draft">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="155" y="330"/></Array></mxGeometry>
+        </mxCell>
+
+        <mxCell id="t8" value="cycle.closePhase1()" style="html=1;endArrow=block;rounded=0;fontSize=10;" edge="1" parent="1" source="approved" target="locked"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="t9" value="finalEvaluation.compute()" style="html=1;endArrow=block;rounded=0;fontSize=10;" edge="1" parent="1" source="locked" target="evaluated"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="t10" value="cycle.close()" style="html=1;endArrow=block;rounded=0;fontSize=11;" edge="1" parent="1" source="evaluated" target="archived"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="t11" style="html=1;endArrow=block;rounded=0;" edge="1" parent="1" source="archived" target="finalMain"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="t12" value="cancel()" style="html=1;endArrow=block;rounded=0;fontSize=11;exitX=0.7;exitY=1;entryX=0.3;entryY=0;" edge="1" parent="1" source="draft" target="cancelled">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="670" y="330"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="t13" value="cancel()" style="html=1;endArrow=block;rounded=0;fontSize=11;exitX=0.7;exitY=1;entryX=0;entryY=0.3;" edge="1" parent="1" source="pending" target="cancelled">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t14" style="html=1;endArrow=block;rounded=0;" edge="1" parent="1" source="cancelled" target="finalCancel"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="t15" value="" style="html=1;endArrow=block;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="rejected" target="finalCancel">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="395" y="530"/></Array></mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

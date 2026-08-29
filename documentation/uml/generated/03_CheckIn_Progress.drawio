@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" agent="claude-code" version="24.0.0">
+  <diagram id="uc-checkin" name="CheckIn Progress">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="820" pageHeight="520" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="sys" value="Check-in Submission and Review" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=center;fontStyle=1;fontSize=13;dashed=1;strokeColor=#999999;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="180" y="10" width="600" height="470" as="geometry" />
+        </mxCell>
+
+        <mxCell id="actCollab" value="Collaborator" style="shape=umlActor;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;html=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="30" y="150" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="actLeader" value="Team Leader" style="shape=umlActor;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;html=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="750" y="300" width="30" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Row1: y 60-130 -->
+        <mxCell id="uc1" value="Submit Check-in&#10;(progress %, Phase 2 only)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="230" y="60" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="uc2" value="Attach Evidence&#10;to Check-in" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="440" y="60" width="170" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Row2: y 210-280 -->
+        <mxCell id="uc3" value="View Progress History" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="230" y="210" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="uc4" value="Revise Check-in&#10;(after revision request)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="440" y="210" width="170" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Row3: y 360-430 -->
+        <mxCell id="uc5" value="Review Check-in&#10;(team scope)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="230" y="360" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="uc6" value="Approve Check-in&#10;(updates achievementPercent)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="440" y="360" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" style="html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="actCollab" target="uc1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" style="html=1;endArrow=none;startArrow=none;exitX=0.5;exitY=0;entryX=0.5;entryY=1;edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="actCollab" target="uc2">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="45" y="145"/><mxPoint x="525" y="145"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e3" style="html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="actCollab" target="uc3"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" style="html=1;endArrow=none;startArrow=none;exitX=0.5;exitY=1;entryX=0.5;entryY=0;edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="actCollab" target="uc4">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="45" y="295"/><mxPoint x="525" y="295"/></Array></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e5" style="html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="actLeader" target="uc6"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e6" style="html=1;endArrow=none;startArrow=none;exitX=0.5;exitY=0;entryX=1;entryY=0.5;edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="actLeader" target="uc5">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="765" y="270"/></Array></mxGeometry>
+        </mxCell>
+
+        <mxCell id="inc1" value="&lt;&lt;include&gt;&gt;" style="html=1;endArrow=open;dashed=1;startArrow=none;fontSize=9;" edge="1" parent="1" source="uc5" target="uc6"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

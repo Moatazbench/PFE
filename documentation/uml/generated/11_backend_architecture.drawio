@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" agent="claude-code" version="24.0.0">
+  <diagram id="backend-arch" name="Backend Architecture">
+    <mxGraphModel dx="1300" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Express Application (backend/app.js)" style="text;align=center;fontStyle=1;fontSize=15;html=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="10" width="1020" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Middleware stack, in real app.use() order -->
+        <mxCell id="mwBox" value="Global middleware stack (applied in order, backend/app.js)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;fontStyle=1;fontSize=12;dashed=1;strokeColor=#999999;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="40" y="60" width="1020" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="mw1" value="helmet()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1"><mxGeometry x="60" y="95" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="mw2" value="cors()&#10;(origin allow-list)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1"><mxGeometry x="175" y="95" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="mw3" value="compression()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1"><mxGeometry x="290" y="95" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="mw4" value="express.json()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1"><mxGeometry x="405" y="95" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="mw5" value="xss-clean" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1"><mxGeometry x="520" y="95" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="mw6" value="express-mongo-&#10;sanitize" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1"><mxGeometry x="635" y="95" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="mw7" value="no-cache&#10;headers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1"><mxGeometry x="750" y="95" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="mw8" value="express-rate-limit&#10;(5000/15min)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1"><mxGeometry x="865" y="95" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="mw9" value="/uploads static&#10;(checkins blocked, ETag+7d cache)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1"><mxGeometry x="60" y="150" width="200" height="40" as="geometry" /></mxCell>
+
+        <mxCell id="mwArrow1" style="html=1;endArrow=block;startArrow=none;fontSize=10;" edge="1" parent="1" source="mw1" target="mw2"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="mwArrow2" style="html=1;endArrow=block;startArrow=none;fontSize=10;" edge="1" parent="1" source="mw2" target="mw3"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="mwArrow3" style="html=1;endArrow=block;startArrow=none;fontSize=10;" edge="1" parent="1" source="mw3" target="mw4"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="mwArrow4" style="html=1;endArrow=block;startArrow=none;fontSize=10;" edge="1" parent="1" source="mw4" target="mw5"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="mwArrow5" style="html=1;endArrow=block;startArrow=none;fontSize=10;" edge="1" parent="1" source="mw5" target="mw6"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="mwArrow6" style="html=1;endArrow=block;startArrow=none;fontSize=10;" edge="1" parent="1" source="mw6" target="mw7"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="mwArrow7" style="html=1;endArrow=block;startArrow=none;fontSize=10;" edge="1" parent="1" source="mw7" target="mw8"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- Route modules layer -->
+        <mxCell id="routesBox" value="Route modules (26 mounted under /api, e.g. /api/objectives, /api/teams, /api/checkins, /api/final-evaluations, /api/ai, /api/bonus-penalty, ...)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;fontStyle=1;fontSize=12;dashed=1;strokeColor=#999999;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="40" y="240" width="1020" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="routeMods" value="objectives.js  |  teams.js  |  cycles.js  |  checkins.js  |  tasks.js  |  evaluations.js  |  finalEvaluations.js  |  hrDecisions.js  |  bonusPenalty.js  |  feedback.js  |  meetings.js  |  calendar.js  |  career.js  |  ai.js  |  notifications.js  |  auditLog.js  |  pdf.js  |  reports.js  |  stats.js  |  users.js  |  auth.js  |  ..." style="text;align=center;verticalAlign=middle;whiteSpace=wrap;html=1;fontSize=10;fontFamily=Courier New;" vertex="1" parent="1">
+          <mxGeometry x="60" y="270" width="980" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Per-route auth/role/ownership layer -->
+        <mxCell id="authLayer" value="Per-route access-control middleware (composed per route, not global)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;fontStyle=1;fontSize=12;dashed=1;strokeColor=#999999;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="40" y="370" width="1020" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="al1" value="auth.js&#10;(verify JWT, attach req.user)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1"><mxGeometry x="70" y="400" width="200" height="50" as="geometry" /></mxCell>
+        <mxCell id="al2" value="role.js&#10;(RBAC: ADMIN/HR/TEAM_LEADER/COLLABORATOR)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1"><mxGeometry x="320" y="400" width="220" height="50" as="geometry" /></mxCell>
+        <mxCell id="al3" value="ownership.js&#10;(resource-owner check)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1"><mxGeometry x="590" y="400" width="180" height="50" as="geometry" /></mxCell>
+        <mxCell id="al4" value="validate.js&#10;(request schema validation)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1"><mxGeometry x="820" y="400" width="180" height="50" as="geometry" /></mxCell>
+        <mxCell id="alArrow1" style="html=1;endArrow=block;startArrow=none;fontSize=10;" edge="1" parent="1" source="al1" target="al2"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="alArrow2" style="html=1;endArrow=block;startArrow=none;fontSize=10;" edge="1" parent="1" source="al2" target="al3"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="alArrow3" style="html=1;endArrow=block;startArrow=none;fontSize=10;" edge="1" parent="1" source="al3" target="al4"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- Controller layer -->
+        <mxCell id="ctrlBox" value="Controllers (15, one per domain area -- thin HTTP handlers)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;fontStyle=1;fontSize=12;dashed=1;strokeColor=#999999;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="40" y="500" width="1020" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrlMods" value="objectiveController  |  teamController  |  cycleController  |  checkInController  |  taskController  |  evaluationController  |  finalEvaluationController  |  hrDecisionController  |  feedbackController  |  improvementPlanController  |  careerController  |  aiController  |  notificationController  |  statsController  |  userController" style="text;align=center;verticalAlign=middle;whiteSpace=wrap;html=1;fontSize=10;fontFamily=Courier New;" vertex="1" parent="1">
+          <mxGeometry x="60" y="530" width="980" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Services layer -->
+        <mxCell id="svcBox" value="Services (business logic extracted from controllers)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;fontStyle=1;fontSize=12;dashed=1;strokeColor=#999999;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="40" y="610" width="1020" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="svc1" value="scoreCalculationService&#10;(weighted final score)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1"><mxGeometry x="70" y="640" width="220" height="45" as="geometry" /></mxCell>
+        <mxCell id="svc2" value="reviewContextService&#10;(evidence summary)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1"><mxGeometry x="320" y="640" width="220" height="45" as="geometry" /></mxCell>
+        <mxCell id="svc3" value="aiService&#10;(generative-AI provider adapter)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1"><mxGeometry x="570" y="640" width="220" height="45" as="geometry" /></mxCell>
+
+        <!-- Models + external -->
+        <mxCell id="modelsBox" value="Mongoose Models (20)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="740" width="260" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="mongoBox" value="MongoDB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="850" width="260" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="aiSvcBox" value="Flask ML microservice&#10;(ai-service/app.py, port 5000)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="740" width="260" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="genAIBox" value="External generative-AI&#10;providers (LLM APIs)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="740" y="740" width="260" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="errHandlerBox" value="errorHandler.js&#10;(centralized error middleware, last in chain)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="700" y="850" width="300" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- vertical flow arrows -->
+        <mxCell id="fv1" style="html=1;endArrow=block;startArrow=none;fontSize=10;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="mwBox" target="routesBox"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="fv2" style="html=1;endArrow=block;startArrow=none;fontSize=10;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="routesBox" target="authLayer"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="fv3" style="html=1;endArrow=block;startArrow=none;fontSize=10;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="authLayer" target="ctrlBox"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="fv4" style="html=1;endArrow=block;startArrow=none;fontSize=10;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="ctrlBox" target="svcBox"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="fv5" style="html=1;endArrow=block;startArrow=none;fontSize=10;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="svc1" target="modelsBox"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="180" y="710"/></Array></mxGeometry></mxCell>
+        <mxCell id="fv6" style="html=1;endArrow=block;startArrow=none;fontSize=10;" edge="1" parent="1" source="modelsBox" target="mongoBox"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="fv7" value="HTTP" style="html=1;endArrow=block;startArrow=none;fontSize=9;" edge="1" parent="1" source="svc3" target="aiSvcBox"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="530" y="710"/></Array></mxGeometry></mxCell>
+        <mxCell id="fv8" value="HTTPS" style="html=1;endArrow=block;startArrow=none;fontSize=9;" edge="1" parent="1" source="svc3" target="genAIBox"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="870" y="710"/></Array></mxGeometry></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

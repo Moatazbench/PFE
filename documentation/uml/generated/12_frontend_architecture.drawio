@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" agent="claude-code" version="24.0.0">
+  <diagram id="frontend-arch" name="Frontend Architecture">
+    <mxGraphModel dx="1300" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="React SPA (frontend/src)" style="text;align=center;fontStyle=1;fontSize=15;html=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="10" width="820" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="app" value="App.jsx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="330" y="60" width="200" height="45" as="geometry" />
+        </mxCell>
+
+        <mxCell id="routeConfig" value="routeConfig.jsx&#10;(single source of truth:&#10;routes, roles, cycle phase)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="330" y="140" width="200" height="65" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sidebar" value="EnterpriseSidebar.jsx /&#10;Sidebar.jsx&#10;(generated from routeConfig)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="80" y="240" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Guards -->
+        <mxCell id="guardBox" value="Route guards (generated from routeConfig)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;fontStyle=1;fontSize=11;dashed=1;strokeColor=#999999;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="330" y="240" width="410" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="g1" value="RouteGuard.jsx&#10;(authentication)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="350" y="270" width="115" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="g2" value="ProtectedRoute.jsx&#10;(role check)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="480" y="270" width="115" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="g3" value="CyclePhaseRoute.jsx&#10;(cycle-phase eligibility)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="610" y="270" width="115" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Contexts -->
+        <mxCell id="ctxBox" value="Context providers (components/)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;fontStyle=1;fontSize=11;dashed=1;strokeColor=#999999;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="80" y="390" width="660" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx1" value="AuthContext.jsx&#10;(current user, JWT)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="100" y="420" width="180" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx2" value="ActiveCycleContext.jsx&#10;(current cycle + phase)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="300" y="420" width="180" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ctx3" value="ThemeContext.jsx&#10;(UI theme)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="500" y="420" width="180" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Pages -->
+        <mxCell id="pagesBox" value="Lazy-loaded pages (pages/)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;fontStyle=1;fontSize=11;dashed=1;strokeColor=#999999;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="80" y="520" width="660" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pagesTxt" value="Dashboard | Objectives | CheckIns | Tasks (Kanban) | Evaluations | HRDecisions | Feedback | Meetings | Career | AI Assistant | Admin | Reports/Analytics" style="text;align=center;verticalAlign=middle;whiteSpace=wrap;html=1;fontSize=10;fontFamily=Courier New;" vertex="1" parent="1">
+          <mxGeometry x="100" y="550" width="620" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- API layer -->
+        <mxCell id="apiBox" value="API client layer (src/api/)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;fontStyle=1;fontSize=11;dashed=1;strokeColor=#999999;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="80" y="650" width="660" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="apiClient" value="apiClient.js&#10;(axios instance, JWT header, refresh-on-401 interceptor)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="100" y="680" width="300" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="apiModules" value="users.js | teams.js | cycles.js | hrDecisions.js | ai.js | ..." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="420" y="680" width="300" height="45" as="geometry" />
+        </mxCell>
+
+        <mxCell id="backend" value="Express Backend API&#10;(HTTPS / JSON)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="280 " y="790" width="260" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Arrows -->
+        <mxCell id="e1" style="html=1;endArrow=block;startArrow=none;fontSize=10;" edge="1" parent="1" source="app" target="routeConfig"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" style="html=1;endArrow=block;startArrow=none;fontSize=10;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="routeConfig" target="sidebar"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="190" y="205"/></Array></mxGeometry></mxCell>
+        <mxCell id="e3" style="html=1;endArrow=block;startArrow=none;fontSize=10;" edge="1" parent="1" source="routeConfig" target="guardBox"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" style="html=1;endArrow=block;startArrow=none;fontSize=10;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="guardBox" target="ctxBox"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" style="html=1;endArrow=block;startArrow=none;fontSize=10;" edge="1" parent="1" source="ctxBox" target="pagesBox"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e6" style="html=1;endArrow=block;startArrow=none;fontSize=10;" edge="1" parent="1" source="pagesBox" target="apiBox"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e7" value="HTTPS / JSON" style="html=1;endArrow=block;startArrow=none;fontSize=10;" edge="1" parent="1" source="apiBox" target="backend"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

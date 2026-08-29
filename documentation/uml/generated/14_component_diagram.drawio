@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" agent="claude-code" version="24.0.0">
+  <diagram id="component" name="Component Diagram">
+    <mxGraphModel dx="1300" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="420" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="c1" value="&lt;&lt;component&gt;&gt;&#10;Frontend SPA&#10;(React + Vite)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="140" width="220" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c2" value="&lt;&lt;component&gt;&gt;&#10;Backend API&#10;(Node.js + Express)&#10;incl. generative-AI adapter" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="380" y="140" width="240" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c3" value="&lt;&lt;component&gt;&gt;&#10;ML Prediction Microservice&#10;(Python + Flask, port 5000)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="740" y="40" width="260" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c4" value="&lt;&lt;component&gt;&gt;&#10;MongoDB" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="740" y="190" width="260" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c5" value="&lt;&lt;component&gt;&gt;&#10;External generative-AI providers&#10;(LLM APIs)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="380" y="290" width="240" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" value="HTTPS / JSON REST" style="html=1;endArrow=block;startArrow=block;fontSize=10;" edge="1" parent="1" source="c1" target="c2"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" value="HTTP (internal)" style="html=1;endArrow=block;startArrow=block;fontSize=10;exitX=1;exitY=0.3;entryX=0;entryY=0.5;" edge="1" parent="1" source="c2" target="c3"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" value="Mongoose driver" style="html=1;endArrow=block;startArrow=none;fontSize=10;exitX=1;exitY=0.7;entryX=0;entryY=0.5;" edge="1" parent="1" source="c2" target="c4"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" value="HTTPS" style="html=1;endArrow=block;startArrow=none;fontSize=10;" edge="1" parent="1" source="c2" target="c5"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="note" value="The frontend never calls the AI microservice or the LLM providers directly -- the backend is the single point that enforces auth, RBAC, and audit logging in front of every data source." style="text;align=left;verticalAlign=top;whiteSpace=wrap;html=1;fontSize=10;fontStyle=2;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="290" width="300" height="60" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

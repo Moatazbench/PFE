@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" agent="claude-code" version="24.0.0">
+  <diagram id="api-flow" name="API Communication Flow">
+    <mxGraphModel dx="1300" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="360" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="n1" value="React&#10;Component&#10;(e.g. ObjectiveForm.jsx)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="120" width="170" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="API client module&#10;(src/api/objectives.js)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="270" y="120" width="170" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="apiClient.js&#10;(axios instance:&#10;JWT header, refresh-on-401)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="500" y="120" width="170" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="Express middleware chain&#10;(helmet, cors, json,&#10;xss, sanitize, rate-limit)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="730" y="120" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="auth.js / role.js /&#10;ownership.js&#10;(per-route access control)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="970" y="120" width="170" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="objectiveController&#10;-&gt; Mongoose Model&#10;-&gt; MongoDB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="120" width="170" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" value="fetchObjectives()" style="html=1;endArrow=block;startArrow=none;fontSize=9;" edge="1" parent="1" source="n1" target="n2"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" value="GET /api/objectives" style="html=1;endArrow=block;startArrow=none;fontSize=9;" edge="1" parent="1" source="n2" target="n3"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" value="HTTPS request" style="html=1;endArrow=block;startArrow=none;fontSize=9;" edge="1" parent="1" source="n3" target="n4"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" value="sanitized req" style="html=1;endArrow=block;startArrow=none;fontSize=9;" edge="1" parent="1" source="n4" target="n5"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" value="req.user attached" style="html=1;endArrow=block;startArrow=none;fontSize=9;" edge="1" parent="1" source="n5" target="n6"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="e6" value="JSON response" style="html=1;endArrow=block;startArrow=none;fontSize=9;dashed=1;exitX=0.5;exitY=1;entryX=0.5;entryY=1;" edge="1" parent="1" source="n6" target="n1">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1285" y="260"/><mxPoint x="125" y="260"/></Array></mxGeometry>
+        </mxCell>
+
+        <mxCell id="note401" value="On a 401 response, apiClient.js transparently retries the request once after refreshing the access token via the stored refresh token, before surfacing an error to the component." style="text;align=left;verticalAlign=top;whiteSpace=wrap;html=1;fontSize=10;fontStyle=2;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="500" y="280" width="440" height="50" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

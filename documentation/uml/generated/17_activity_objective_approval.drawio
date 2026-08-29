@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" agent="claude-code" version="24.0.0">
+  <diagram id="activity-objective-approval" name="Activity - Objective Approval Workflow">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1080" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Lanes -->
+        <mxCell id="laneCollab" value="Collaborator" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;fontStyle=1;fontSize=13;align=center;fillColor=#F5F5F5;strokeColor=#666666;" vertex="1" parent="1"><mxGeometry x="20" y="0" width="340" height="660" as="geometry" /></mxCell>
+        <mxCell id="laneLeader" value="Team Leader" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;fontStyle=1;fontSize=13;align=center;fillColor=#F5F5F5;strokeColor=#666666;" vertex="1" parent="1"><mxGeometry x="360" y="0" width="340" height="660" as="geometry" /></mxCell>
+        <mxCell id="laneSystem" value="System" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;fontStyle=1;fontSize=13;align=center;fillColor=#F5F5F5;strokeColor=#666666;" vertex="1" parent="1"><mxGeometry x="700" y="0" width="340" height="660" as="geometry" /></mxCell>
+
+        <mxCell id="initial" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1"><mxGeometry x="175" y="50" width="30" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="n1" value="Create Objective (draft)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1"><mxGeometry x="60" y="110" width="260" height="60" as="geometry" /></mxCell>
+        <mxCell id="n2" value="Define KPIs &amp; Weight" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1"><mxGeometry x="60" y="200" width="260" height="60" as="geometry" /></mxCell>
+        <mxCell id="n3" value="Submit Objective for Approval" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1"><mxGeometry x="60" y="300" width="260" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="d1" value="Weight in&#10;[1, 100]?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1"><mxGeometry x="770" y="290" width="120" height="80" as="geometry" /></mxCell>
+
+        <mxCell id="nInvalid" value="Return validation error" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="1"><mxGeometry x="740" y="420" width="220" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="n4" value="Review Objective" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1"><mxGeometry x="420" y="290" width="260" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="d2" value="Decision?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1"><mxGeometry x="490" y="390" width="120" height="80" as="geometry" /></mxCell>
+
+        <mxCell id="nApprove" value="Set status = Approved" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1"><mxGeometry x="740" y="490" width="220" height="60" as="geometry" /></mxCell>
+        <mxCell id="finalApprove" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1"><mxGeometry x="835" y="590" width="30" height="30" as="geometry" /></mxCell>
+        <mxCell id="finalApproveRing" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1"><mxGeometry x="829" y="584" width="42" height="42" as="geometry" /></mxCell>
+
+        <mxCell id="nReject" value="Set status = Rejected" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="1"><mxGeometry x="230" y="480" width="220" height="60" as="geometry" /></mxCell>
+        <mxCell id="finalReject" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1"><mxGeometry x="325" y="580" width="30" height="30" as="geometry" /></mxCell>
+        <mxCell id="finalRejectRing" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1"><mxGeometry x="319" y="574" width="42" height="42" as="geometry" /></mxCell>
+
+        <mxCell id="nRevisionReq" value="Set status = RevisionRequested" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1"><mxGeometry x="480" y="560" width="220" height="60" as="geometry" /></mxCell>
+        <mxCell id="nRevise" value="Revise Objective" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1"><mxGeometry x="60" y="560" width="260" height="60" as="geometry" /></mxCell>
+
+        <!-- Flow -->
+        <mxCell id="e1" style="html=1;endArrow=block;rounded=0;" edge="1" parent="1" source="initial" target="n1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="html=1;endArrow=block;rounded=0;" edge="1" parent="1" source="n1" target="n2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="html=1;endArrow=block;rounded=0;" edge="1" parent="1" source="n2" target="n3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" style="html=1;endArrow=block;rounded=0;" edge="1" parent="1" source="n3" target="d1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" value="invalid" style="html=1;endArrow=block;rounded=0;fontSize=10;" edge="1" parent="1" source="d1" target="nInvalid"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" value="loop back" style="html=1;endArrow=block;rounded=0;fontSize=10;" edge="1" parent="1" source="nInvalid" target="n2">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="850" y="230" /><mxPoint x="190" y="230" /></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e7" value="valid" style="html=1;endArrow=block;rounded=0;fontSize=10;" edge="1" parent="1" source="d1" target="n4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e8" style="html=1;endArrow=block;rounded=0;" edge="1" parent="1" source="n4" target="d2"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e9" value="Approve" style="html=1;endArrow=block;rounded=0;fontSize=10;" edge="1" parent="1" source="d2" target="nApprove"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e10" style="html=1;endArrow=block;rounded=0;" edge="1" parent="1" source="nApprove" target="finalApprove"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e11" value="Reject" style="html=1;endArrow=block;rounded=0;fontSize=10;exitX=0;exitY=0.7;entryX=1;entryY=0.3;" edge="1" parent="1" source="d2" target="nReject">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e12" style="html=1;endArrow=block;rounded=0;" edge="1" parent="1" source="nReject" target="finalReject"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e13" value="Request Revision" style="html=1;endArrow=block;rounded=0;fontSize=10;" edge="1" parent="1" source="d2" target="nRevisionReq"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e14" style="html=1;endArrow=block;rounded=0;" edge="1" parent="1" source="nRevisionReq" target="nRevise"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e15" value="resubmit" style="html=1;endArrow=block;rounded=0;fontSize=10;" edge="1" parent="1" source="nRevise" target="n3">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="190" y="330" /></Array></mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

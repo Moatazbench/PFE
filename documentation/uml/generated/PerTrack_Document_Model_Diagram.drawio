@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" agent="claude-code" version="24.0.0">
+  <diagram id="doc-model" name="Document Model">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="720" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Objective (central document, with embedded sub-schemas) -->
+        <mxCell id="objBox" value="Objective" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=1;resizeParent=1;resizeParentMax=0;collapsible=0;swimlaneFillColor=#ffffff;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="330" height="430" as="geometry" />
+        </mxCell>
+        <mxCell id="objAttr" value="- title, description, successIndicator&#10;- owner (FK-&gt;User), cycle (FK-&gt;Cycle)&#10;- team (FK-&gt;Team, opt.), category&#10;- assignedUsers[] (FK-&gt;User)&#10;- weight [1..100], priority&#10;- achievementPercent, weightedScore&#10;- status (14 values, see state machine)&#10;- source, assignedBy (FK-&gt;User)&#10;- submittedTo, submittedBy (FK-&gt;User)&#10;- rejectionReason, revisionReason&#10;- evaluationRating/Comment/By/At&#10;- visibility, parentObjective (FK, self)&#10;- labels[]" style="text;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;html=1;fontSize=10;" vertex="1" parent="objBox">
+          <mxGeometry y="26" width="330" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="objEmbed" value="embeds: kpis[], progressUpdates[],&#10;comments[], attachments[],&#10;changeRequests[], activityLog[]" style="text;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;html=1;fontSize=10;fontStyle=2;fontColor=#555555;" vertex="1" parent="objBox">
+          <mxGeometry y="296" width="330" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="objOp" value="+ submit() / approve() / reject()&#10;+ requestRevision()&#10;pre-save: sync weightedScore" style="text;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;html=1;fontSize=10;" vertex="1" parent="objBox">
+          <mxGeometry y="356" width="330" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Embedded KPI subdocument -->
+        <mxCell id="kpiBox" value="KPI (embedded)" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=1;resizeParent=1;resizeParentMax=0;collapsible=0;swimlaneFillColor=#ffffff;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="510" width="330" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="kpiAttr" value="- title, metricType&#10;  {percent, number, currency, boolean, milestone}&#10;- initialValue, targetValue, currentValue&#10;- unit&#10;- status {not_started, in_progress, completed}" style="text;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;html=1;fontSize=10;" vertex="1" parent="kpiBox">
+          <mxGeometry y="26" width="330" height="124" as="geometry" />
+        </mxCell>
+
+        <!-- Task -->
+        <mxCell id="taskBox" value="Task" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=1;resizeParent=1;resizeParentMax=0;collapsible=0;swimlaneFillColor=#ffffff;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="470" y="40" width="330" height="330" as="geometry" />
+        </mxCell>
+        <mxCell id="taskAttr" value="- title, description&#10;- assignee, assignedBy (FK-&gt;User)&#10;- status {todo, in_progress, done, cancelled}&#10;- priority {low, medium, high, urgent}&#10;- workflowStage&#10;  {backlog, todo, in_progress, review,&#10;   completed, cancelled}&#10;- progress [0..100]&#10;- labels[], dueDate, completedAt&#10;- recurring {none, daily, weekly, monthly}&#10;- linkedGoal (FK-&gt;Objective, opt.)&#10;- linkedMeeting (FK-&gt;Meeting, opt.)&#10;- team (FK-&gt;Team, opt.)&#10;- timeTracking { totalSeconds, sessions[] }" style="text;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;html=1;fontSize=10;" vertex="1" parent="taskBox">
+          <mxGeometry y="26" width="330" height="244" as="geometry" />
+        </mxCell>
+        <mxCell id="taskOp" value="+ assign() / updateStatus() / trackTime()" style="text;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;html=1;fontSize=10;" vertex="1" parent="taskBox">
+          <mxGeometry y="270" width="330" height="34" as="geometry" />
+        </mxCell>
+
+        <!-- CorrectionRequest -->
+        <mxCell id="crBox" value="CorrectionRequest" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=1;resizeParent=1;resizeParentMax=0;collapsible=0;swimlaneFillColor=#ffffff;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="900" y="40" width="330" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="crAttr" value="- objectiveId (FK-&gt;Objective)&#10;- field {description, successIndicator}&#10;- oldValue, newValue&#10;- correctionReason&#10;- requestedBy (FK-&gt;User)&#10;- status {PENDING, APPROVED, REJECTED}&#10;- reviewedBy (FK-&gt;User), reviewedAt&#10;- resolutionNote" style="text;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;html=1;fontSize=10;" vertex="1" parent="crBox">
+          <mxGeometry y="26" width="330" height="184" as="geometry" />
+        </mxCell>
+        <mxCell id="crOp" value="pre-save: touch updatedAt" style="text;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;html=1;fontSize=10;" vertex="1" parent="crBox">
+          <mxGeometry y="210" width="330" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Relationships -->
+        <mxCell id="r1" value="embeds 0..*" style="html=1;endArrow=diamondThin;endFill=1;fontSize=10;" edge="1" parent="1" source="objBox" target="kpiBox">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="r2" value="0..* tracked via 0..1" style="html=1;endArrow=open;endFill=1;fontSize=10;" edge="1" parent="1" source="objBox" target="taskBox">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="r3" value="1 amended via 0..*" style="html=1;endArrow=open;endFill=1;fontSize=10;exitX=0.7;exitY=0;entryX=0.3;entryY=0;" edge="1" parent="1" source="objBox" target="crBox">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="270" y="15"/><mxPoint x="995" y="15"/></Array></mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
