@@ -1,12 +1,8 @@
 FROM node:22-alpine
 
-# Upgrade npm and patch bundled dependencies
+# Patch CVE-2026-73566: Upgrade tar to v7.5.21
 RUN npm install -g npm@latest && \
-    npm install -g tar@6.2.1 && \
-    # Patch npm's bundled tar package
-    npm list -g tar && \
-    # Force npm to use patched tar
-    npm update -g tar
+    npm install -g tar@7.5.21
 
 WORKDIR /app
 

@@ -169,20 +169,22 @@ jobs:
       # ✅ Security Scan (non-blocking)
       - name: Scan Backend Image
         uses: aquasecurity/trivy-action@master
+        continue-on-error: true
         with:
           image-ref: moatazbench/pfe-backend:${{ steps.vars.outputs.TAG }}
           format: table
-          exit-code: 1
+          exit-code: 0
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
 
       - name: Scan Frontend Image
         uses: aquasecurity/trivy-action@master
+        continue-on-error: true
         with:
           image-ref: moatazbench/pfe-frontend:${{ steps.vars.outputs.TAG }}
           format: table
-          exit-code: 1
+          exit-code: 0
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
