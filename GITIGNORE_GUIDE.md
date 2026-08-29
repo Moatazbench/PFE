@@ -96,7 +96,7 @@ ENV/
 ---
 
 ### 6. Upload Directories
-```D
+```DS
 backend/uploads/......
 uploads/
 ```
