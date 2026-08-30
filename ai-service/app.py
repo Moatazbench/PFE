@@ -28,6 +28,8 @@ Example request body for /predict:
 """
 
 import json
+from pathlib import Path
+
 import joblib
 import pandas as pd
 from flask import Flask, request, jsonify
@@ -35,13 +37,15 @@ from flask import Flask, request, jsonify
 from performance_text import generate_text_outputs
 
 app = Flask(__name__)
+BASE_DIR = Path(__file__).resolve().parent
+MODEL_DIR = BASE_DIR / "models"
 
-with open("models/feature_columns.json") as f:
+with open(MODEL_DIR / "feature_columns.json") as f:
     FEATURE_COLUMNS = json.load(f)
 
-rating_model = joblib.load("models/rating_xgb.joblib")
-rating_label_encoder = joblib.load("models/rating_label_encoder.joblib")
-promotion_model = joblib.load("models/promotion_xgb.joblib")
+rating_model = joblib.load(MODEL_DIR / "rating_xgb.joblib")
+rating_label_encoder = joblib.load(MODEL_DIR / "rating_label_encoder.joblib")
+promotion_model = joblib.load(MODEL_DIR / "promotion_xgb.joblib")
 
 FEATURE_BOUNDS = {
     "kpi_score": (0, 100),

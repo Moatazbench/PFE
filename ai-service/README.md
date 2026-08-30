@@ -72,9 +72,8 @@ model "cheat" via a trivial threshold lookup instead of learning patterns.
 python3 app.py
 ```
 
-Runs on `http://0.0.0.0:5000`. For real deployment, put it behind a
-production WSGI server (e.g. `gunicorn app:app`) instead of Flask's dev
-server.
+Runs on `http://0.0.0.0:5000`. The Docker image runs it behind Gunicorn for
+deployment.
 
 ### `POST /predict`
 
@@ -140,5 +139,5 @@ app.post('/api/employees/:id/analyze', async (req, res) => {
 ```
 
 If Node and Flask run in separate Docker containers (matching your existing
-`pfe-dev` Kubernetes setup), point `axios` at the Flask service's in-cluster
-DNS name instead of `localhost`, e.g. `http://flask-api-service:5000/predict`.
+`pfe-dev` Kubernetes setup), set `PERFORMANCE_AI_URL` to the Flask service's
+in-cluster DNS name, e.g. `http://ai-service:5000/predict`.

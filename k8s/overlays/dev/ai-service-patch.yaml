@@ -8,6 +8,7 @@ spec:
     spec:
       containers:
         - name: ai-service
+          imagePullPolicy: Never
           env:
             - name: FLASK_ENV
               value: "development"

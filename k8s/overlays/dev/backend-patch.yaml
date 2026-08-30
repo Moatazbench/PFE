@@ -11,6 +11,8 @@ spec:
           env:
             - name: LOG_LEVEL
               value: "debug"
+            - name: PERFORMANCE_AI_URL
+              value: "http://ai-service:5000/predict"
           resources:
             requests:
               cpu: "100m"

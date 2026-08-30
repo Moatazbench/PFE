@@ -82,6 +82,7 @@ demo-trigger.txt
 
 # Docker
 .dockerignore
+*.tar
 
 # Database files
 *.db
