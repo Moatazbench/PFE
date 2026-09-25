@@ -8,7 +8,8 @@ spec:
     spec:
       containers:
         - name: ai-service
-          imagePullPolicy: Never
+          # Dev deploys immutable tags produced by CI; nodes must pull a newly published tag.
+          imagePullPolicy: Always
           env:
             - name: FLASK_ENV
               value: "development"
