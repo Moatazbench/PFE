@@ -1,0 +1,138 @@
+PFE DEV / ARGO CD INCIDENT HANDOFF
+Generated: 2026-09-25
+
+Scope
+-----
+- Argo CD Application: pfe-dev
+- Target namespace: pfe-dev
+- Git repository: https://github.com/Moatazbench/PFE.git
+- Branch / overlay: develop / k8s/overlays/dev
+
+Initial symptoms
+----------------
+- backend and frontend were Running.
+- ai-service was missing from the desired healthy workload state.
+- Existing AI Pods were failing with ErrImageNeverPull.
+- Argo CD had previously shown Unknown/Degraded because repo-server Git operations timed out.
+
+What was inspected
+------------------
+- Application, Deployment, ReplicaSets, Pods, Pod events, and Argo logs.
+- Git source for develop and k8s/overlays/dev.
+- GitHub Actions workflow definition and published Docker image manifests.
+- Docker Desktop Kubernetes / registry-mirror runtime.
+
+Root causes found
+-----------------
+1. AI workload pull policy
+   k8s/overlays/dev/ai-service-patch.yaml explicitly set:
+     imagePullPolicy: Never
+
+   CI publishes immutable SHA image tags. A newly published tag is not already
+   present on the Kubernetes node, so the kubelet cannot start it when its pull
+   policy is Never. The exact Pod failure was ErrImageNeverPull.
+
+2. Local Docker Desktop registry mirror
+   During recovery the Kubernetes runtime temporarily failed pulls through
+   registry-mirror:1273. The image existed in Docker Hub. Restarting Docker
+   Desktop and allowing the AI image pull to complete restored the runtime.
+   The AI image is large (about 1.34 GB), so its initial pull took several minutes.
+
+3. Argo CD repo-server Git fetches
+   Argo repo-server repeatedly runs:
+     git fetch origin --tags --force --prune
+
+   The repository object store is approximately 1.34 GB. A shallow clone from
+   repo-server succeeds, but the full tagged fetch exceeds repo-server's 90-second
+   Git timeout. This leaves Application pfe-dev in Unknown even while the live
+   Kubernetes workload is healthy.
+
+Changes made
+------------
+1. Git source-of-truth fix (committed and pushed)
+   Commit: 9b1de60 fix(dev): allow AI service image pull
+   File:   k8s/overlays/dev/ai-service-patch.yaml
+   Change: imagePullPolicy: Never -> Always
+
+   Render validation confirmed the dev overlay produces:
+     image: moatazbench/pfe-ai-service:<immutable SHA>
+     imagePullPolicy: Always
+
+2. CI follow-up image update
+   GitHub Actions subsequently committed:
+     292f2b1 ci: update dev image to 9b1de6072df0cb35934b88d87078c355c84e8ae9
+
+   Docker manifest inspection confirmed that AI image tag exists in the registry.
+
+3. Runtime recovery
+   - Refreshed Argo application reconciliation.
+   - Restarted Docker Desktop after confirming the embedded Kubernetes registry
+     mirror was cancelling image resolution requests.
+   - Pulled the AI image successfully and verified ai-service Running.
+   - Recovered Argo repo-server Pods after their copyutil init containers were
+     crash-looping with: /bin/ln: Already exists
+   - Restarted only argocd-repo-server and argocd-application-controller; no
+     Deployment, namespace, or Argo CD installation was deleted.
+   - Added attempted Argo timeout settings in argocd-cmd-params-cm:
+       controller.repo.server.timeout.seconds: "180"
+       reposerver.git.request.timeout: "180s"
+     Repo-server still logged its internal full-fetch timeout at 90 seconds.
+
+Current verified workload state at last check
+---------------------------------------------
+- ai-service: 1/1 Running
+- backend:    1/1 Running
+- frontend:   1/1 Running
+- Current running AI image:
+    moatazbench/pfe-ai-service:2303a23ec295a398045845da5605481103c5da3f
+- Current AI Deployment settings:
+    replicas: 1
+    imagePullPolicy: Always
+- No running ai-service Pod has ErrImageNeverPull.
+
+Current unresolved state
+------------------------
+- Argo pfe-dev is Healthy but Sync status is Unknown.
+- This is caused by repo-server's full tagged Git fetch timing out, not by the
+  AI image, AI Deployment replica count, or CI image publication.
+- Because Argo cannot complete its full fetch, it has not yet advanced the live
+  Deployment to the newer CI-generated 9b1de607... image tag.
+
+Permanent remediation (requires explicit approval)
+---------------------------------------------------
+The lasting fix is to reduce Git history size:
+
+1. Identify the large blobs and determine which must remain available.
+2. Move required large assets/models to Git LFS or a model/artifact registry.
+3. Use git-filter-repo (or BFG Repo-Cleaner) to remove the historical large
+   blobs from every affected ref.
+4. Create backup refs before rewriting history.
+5. Force-push rewritten branches/tags to GitHub.
+6. All users and CI checkout environments must re-clone the repository.
+7. Restart/refresh Argo repo-server and pfe-dev.
+8. Verify Git -> Argo CD -> Kubernetes converges to:
+     Argo CD: Synced / Healthy
+     ai-service: 1/1 Running with latest immutable CI tag
+     backend: 1/1 Running
+     frontend: 1/1 Running
+
+Why approval is required
+------------------------
+History rewriting changes commit IDs and requires force-pushing shared branches.
+It is intentionally not performed without explicit authorization.
+
+Important do-not-do items
+-------------------------
+- Do not delete the pfe-dev namespace, AI Deployment, or Argo CD installation.
+- Do not blindly run rollout undo.
+- Do not set ai-service replicas to 0; intended replicas are 1.
+- Do not use imagePullPolicy: Never for CI-published immutable image tags.
+
+Useful verification commands
+----------------------------
+kubectl get application pfe-dev -n argocd
+kubectl get pods -n pfe-dev
+kubectl get deployment ai-service -n pfe-dev -o jsonpath='{.spec.replicas} {.spec.template.spec.containers[0].image}{"\\n"}'
+kubectl get rs -n pfe-dev -l app=ai-service -o wide
+kubectl logs -n argocd deploy/argocd-repo-server --tail=200
+
