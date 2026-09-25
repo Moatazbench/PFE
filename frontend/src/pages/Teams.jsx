@@ -244,7 +244,8 @@ function Teams() {
       closeModal();
       fetchData();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save team');
+      const message = err.response?.data?.message || 'Failed to save team';
+      setError(message === 'This manager is already assigned to another team.' ? '' : message);
     }
   }
 

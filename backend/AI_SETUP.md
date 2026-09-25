@@ -2,13 +2,15 @@
 
 This backend uses a **provider-agnostic AI service** for generating review drafts and development plans.
 
-Supported providers: **Grok (xAI)** (default), **OpenAI**.
+Supported providers: **Gemini**, **Groq**, **Grok (xAI)** (default), and **OpenAI**.
 
 ## Environment Variables
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `AI_PROVIDER` | No | `grok` | AI provider: `grok` or `openai` |
+| `AI_PROVIDER` | No | `grok` | AI provider: `gemini`, `groq`, `grok`, or `openai` |
+| `GEMINI_API_KEY` | Yes (if Gemini) | â€” | Your Google AI Studio API key |
+| `GROQ_API_KEY` | Yes (if Groq) | â€” | Your GroqCloud API key |
 | `XAI_API_KEY` | Yes (if grok) | — | Your xAI API key from [console.x.ai](https://console.x.ai) |
 | `OPENAI_API_KEY` | Yes (if openai) | — | Your OpenAI API key |
 | `AI_MODEL` | No | `grok-3-mini-fast` / `gpt-4o-mini` | Model to use |
@@ -21,6 +23,22 @@ Supported providers: **Grok (xAI)** (default), **OpenAI**.
 AI_PROVIDER=grok
 XAI_API_KEY=xai-...
 AI_MODEL=grok-3-mini-fast
+```
+
+## Example `.env` (Gemini)
+
+```env
+AI_PROVIDER=gemini
+GEMINI_API_KEY=AIza...
+AI_MODEL=gemini-3.5-flash
+```
+
+## Example `.env` (Groq)
+
+```env
+AI_PROVIDER=groq
+GROQ_API_KEY=gsk_...
+AI_MODEL=openai/gpt-oss-20b
 ```
 
 ## Example `.env` (OpenAI)

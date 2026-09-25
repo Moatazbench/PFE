@@ -432,20 +432,6 @@ function AnalyticsPage() {
               </ChartCard>
             ) : null}
 
-            <ChartCard title="Needs Attention">
-              {performance.bottomPerformers && performance.bottomPerformers.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {performance.bottomPerformers.slice(0, 5).map(function (entry) {
-                    return (
-                      <div key={entry._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: '#fef2f2', borderRadius: 8 }}>
-                        <span style={{ fontSize: '0.88rem', color: '#991b1b', fontWeight: 500 }}>{entry.user?.name || 'Unknown'}</span>
-                        <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#dc2626' }}>{(entry.finalScore || 0).toFixed(1)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : <EmptyState title="No data available" />}
-            </ChartCard>
           </div>
         </div>
       ) : null}

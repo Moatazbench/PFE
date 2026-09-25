@@ -1,8 +1,8 @@
 /**
  * aiService.js — Provider-agnostic AI service
  * 
- * Supports: grok (xAI), openai
- * Uses the OpenAI SDK since Grok's API is OpenAI-compatible.
+ * Supports: Gemini, Groq, grok (xAI), OpenAI
+ * Uses the OpenAI SDK for OpenAI-compatible providers.
  * All AI logic is centralized here — single entry point.
  */
 
@@ -12,12 +12,17 @@ const OpenAI = require('openai');
 const PROVIDERS = {
   gemini: {
     envKey: 'GEMINI_API_KEY',
-    defaultModel: 'gemini-1.5-flash',
+    defaultModel: 'gemini-3.5-flash',
   },
   grok: {
     baseURL: 'https://api.x.ai/v1',
     envKey: 'XAI_API_KEY',
     defaultModel: 'grok-3-mini-fast',
+  },
+  groq: {
+    baseURL: 'https://api.groq.com/openai/v1',
+    envKey: 'GROQ_API_KEY',
+    defaultModel: 'openai/gpt-oss-20b',
   },
   openai: {
     baseURL: 'https://api.openai.com/v1',
@@ -29,13 +34,24 @@ const PROVIDERS = {
 const DEFAULT_TIMEOUT_MS = 15000;
 const DEFAULT_MAX_INPUT_CHARS = 12000;
 const MAX_TOKENS = 2500;
+const MAX_RETRIES = 3;
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isTransientAIError(error) {
+  const status = error?.status || error?.statusCode || error?.response?.status;
+  return status === 408 || status === 429 || (status >= 500 && status < 600)
+    || /(?:timeout|timed out|high demand|temporarily unavailable|service unavailable)/i.test(error?.message || '');
+}
 
 // ─── Config ───
 function getConfig() {
   const provider = (process.env.AI_PROVIDER || 'grok').toLowerCase();
   const providerConfig = PROVIDERS[provider];
   if (!providerConfig) {
-    throw new Error(`Unsupported AI_PROVIDER: ${provider}. Use 'grok' or 'openai'.`);
+    throw new Error(`Unsupported AI_PROVIDER: ${provider}. Use 'gemini', 'groq', 'grok', or 'openai'.`);
   }
 
   const apiKey = process.env[providerConfig.envKey];
@@ -177,42 +193,50 @@ async function callAI(messages, temperature = 0.2) {
   const config = getConfig();
   const client = getClient();
 
-  if (config.provider === 'gemini') {
-    let systemInstruction = "";
-    const contents = [];
-    for (const msg of messages) {
-      if (msg.role === 'system') {
-        systemInstruction += msg.content + "\n";
-      } else {
-        contents.push({
-          role: msg.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: msg.content }]
-        });
-      }
-    }
-    
-    const modelConfig = { 
-      model: config.model, 
-      generationConfig: { temperature, maxOutputTokens: MAX_TOKENS } 
-    };
-    if (systemInstruction) {
-      modelConfig.systemInstruction = systemInstruction.trim();
-    }
-    
-    const genModel = client.getGenerativeModel(modelConfig);
-    const result = await genModel.generateContent({ contents });
-    const response = await result.response;
-    return response.text();
-  } else {
-    const completion = await client.chat.completions.create({
-      model: config.model,
-      messages,
-      max_tokens: MAX_TOKENS,
-      temperature,
-    });
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt += 1) {
+    try {
+      if (config.provider === 'gemini') {
+        let systemInstruction = '';
+        const contents = [];
+        for (const msg of messages) {
+          if (msg.role === 'system') {
+            systemInstruction += `${msg.content}\n`;
+          } else {
+            contents.push({
+              role: msg.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: msg.content }],
+            });
+          }
+        }
 
-    const text = completion?.choices?.[0]?.message?.content || '';
-    return text;
+        const modelConfig = {
+          model: config.model,
+          generationConfig: { temperature, maxOutputTokens: MAX_TOKENS },
+        };
+        if (systemInstruction) modelConfig.systemInstruction = systemInstruction.trim();
+
+        const genModel = client.getGenerativeModel(modelConfig, { timeout: config.timeoutMs });
+        const result = await genModel.generateContent({ contents }, { timeout: config.timeoutMs });
+        const text = (await result.response).text();
+        if (!text) throw new Error('Gemini returned an empty response');
+        return text;
+      }
+
+      const completion = await client.chat.completions.create({
+        model: config.model,
+        messages,
+        max_tokens: MAX_TOKENS,
+        temperature,
+      });
+      const text = completion?.choices?.[0]?.message?.content || '';
+      if (!text) throw new Error('AI provider returned an empty response');
+      return text;
+    } catch (error) {
+      if (attempt === MAX_RETRIES - 1 || !isTransientAIError(error)) throw error;
+      const backoffMs = 500 * (2 ** attempt);
+      console.warn(`AI request failed; retrying in ${backoffMs}ms (${attempt + 1}/${MAX_RETRIES - 1}):`, error.message);
+      await wait(backoffMs);
+    }
   }
 }
 
@@ -410,6 +434,15 @@ function normalizeObjectiveTemplateList(templates) {
   }).filter(Boolean).slice(0, 3);
 }
 
+function normalizeRecommendedFormat(format) {
+  const value = String(format || '').trim();
+  // Do not show this generic legacy template in the objective-refinement UI.
+  if (/^by\s*\[time period\],\s*achieve\s*\[specific metric\]\s*in\s*\[specific area\]$/i.test(value)) {
+    return '';
+  }
+  return value;
+}
+
 function normalizeObjectiveQualityAnalysis(parsed) {
   if (!parsed || typeof parsed !== 'object') {
     return null;
@@ -465,7 +498,7 @@ function normalizeObjectiveRefinement(parsed) {
     : [];
 
   return {
-    recommendedFormat: String(parsed.recommendedFormat || '').trim(),
+    recommendedFormat: normalizeRecommendedFormat(parsed.recommendedFormat),
     suggestions: suggestions,
     refinementTemplates: normalizeObjectiveTemplateList(parsed.refinementTemplates),
   };

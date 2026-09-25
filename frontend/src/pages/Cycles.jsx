@@ -391,6 +391,7 @@ async function handlePhasePreCheck(cycle) {
                     <p className="cycle-form__section-note">Dates must be sequential and non-overlapping.</p>
                   </div>
 
+                <div className="cycle-form__phases">
                 {[
                   { label: 'Phase 1: Goal Setting', startKey: 'phase1Start', endKey: 'phase1End', color: '#4F46E5' },
                   { label: 'Phase 2: Mid-Year Execution', startKey: 'phase2Start', endKey: 'phase2End', color: '#2563EB' },
@@ -414,6 +415,7 @@ async function handlePhasePreCheck(cycle) {
                     </div>
                   );
                 })}
+                </div>
                 </section>
               </form>
             </div>

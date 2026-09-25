@@ -1286,6 +1286,121 @@ body:has(.goal-panel-overlay) {
   overflow: hidden !important;
 }
 
+/* Annual-cycle form: use the width available on desktop instead of creating a
+   very tall, narrow modal. The phase cards retain a clear reading order on
+   laptop and mobile viewports. */
+@media (min-width: 981px) {
+  .cycle-modal {
+    --modal-width: 1040px;
+    --modal-max-width: 1080px;
+  }
+
+  .cycle-modal .ent-modal__header {
+    padding-bottom: 16px;
+  }
+
+  .cycle-modal .ent-modal__body {
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
+
+  .cycle-form {
+    gap: 16px;
+  }
+
+  .cycle-form__section {
+    padding: 18px 20px;
+  }
+
+  .cycle-form__phases {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .cycle-phase-card {
+    align-content: start;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .cycle-phase-card__grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .cycle-phase-card .ent-label {
+    margin-bottom: 4px;
+  }
+
+  .cycle-phase-card .ent-input {
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 980px) {
+  .cycle-form__phases {
+    display: grid;
+    gap: 14px;
+  }
+}
+
+.goal-panel {
+  width: min(96vw, 1320px) !important;
+  max-width: min(96vw, 1320px) !important;
+}
+
+@media (min-width: 981px) {
+  .goal-panel__header {
+    padding: 1rem 2rem 0.75rem !important;
+  }
+
+  .goal-panel__header > p {
+    margin-bottom: 0.75rem !important;
+  }
+
+  .goal-panel__summary-grid {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .goal-panel__summary-card {
+    min-height: 76px;
+    padding: 10px 12px;
+  }
+
+  .goal-panel__details--desktop {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .goal-panel__detail-section {
+    padding: 16px;
+  }
+
+  .goal-panel__detail-grid {
+    gap: 10px;
+  }
+
+  .goal-panel__detail-item {
+    min-height: 58px;
+    padding: 10px 12px;
+  }
+
+  .goal-panel__success-text {
+    padding: 12px;
+    line-height: 1.4;
+  }
+
+  .goal-panel__tabs {
+    padding: 0.55rem 2rem !important;
+  }
+
+  .goal-panel__content {
+    padding: 1rem 2rem 1.25rem !important;
+  }
+}
+
 .side-panel__header,
 .side-panel__actions,
 .tab-bar,

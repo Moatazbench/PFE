@@ -186,7 +186,7 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
 
     return (
         <div className="goal-panel-overlay" onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.58)', backdropFilter: 'blur(3px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 'clamp(18px, 3vw, 42px)' }}>
-            <div className="goal-panel" onClick={function (e) { e.stopPropagation(); }} style={{ width: 'min(96vw, 1320px)', minHeight: 'min(760px, calc(100dvh - 64px))', maxHeight: 'calc(100dvh - 48px)', overflowY: 'auto', background: 'var(--bg-surface, #fff)', boxShadow: '0 30px 90px rgba(15,23,42,0.35)', display: 'flex', flexDirection: 'column', borderRadius: '18px' }}>
+            <div className="goal-panel" onClick={function (e) { e.stopPropagation(); }} style={{ width: 'min(96vw, 1320px)', minHeight: 0, maxHeight: 'calc(100dvh - 48px)', overflowY: 'auto', background: 'var(--bg-surface, #fff)', boxShadow: '0 30px 90px rgba(15,23,42,0.35)', display: 'flex', flexDirection: 'column', borderRadius: '18px' }}>
                 {/* Header */}
                 <div className="goal-panel__header" style={{ padding: '2.25rem 3rem 1.75rem', borderBottom: '1px solid #e2e8f0', background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', marginBottom: '0.75rem' }}>
@@ -320,7 +320,7 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
                                     <p>{detail.managerComments}</p>
                                 </div>
                             ) : null}
-                            <section className="goal-panel__detail-section">
+                            <section className="goal-panel__detail-section goal-panel__detail-section--ownership">
                                 <h3>Ownership</h3>
                                 <div className="goal-panel__detail-grid">
                                     <DetailItem label="Owner" value={detail.owner?.name || 'Unknown'} />
@@ -330,7 +330,7 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
                                 </div>
                             </section>
 
-                            <section className="goal-panel__detail-section">
+                            <section className="goal-panel__detail-section goal-panel__detail-section--assignment">
                                 <h3>Assignment</h3>
                                 <div className="goal-panel__detail-grid">
                                     <DetailItem label="Category" value={detail.category || 'individual'} />
@@ -350,7 +350,7 @@ function GoalDetailsPanel({ goal, onClose, onRefresh }) {
                                 </div>
                             </section>
 
-                            <section className="goal-panel__detail-section">
+                            <section className="goal-panel__detail-section goal-panel__detail-section--workflow">
                                 <h3>Workflow</h3>
                                 <div className="goal-panel__detail-grid">
                                     <div className="goal-panel__detail-item"><span>Status</span><strong><GoalStatusBadge status={detail.status} type="workflow" /></strong></div>

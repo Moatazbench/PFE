@@ -39,7 +39,7 @@ function BonusPenaltyPage() {
         const recordsRes = await api.get('/bonus-penalty');
         setRecords(recordsRes.data.records || []);
         if (canRecommend) {
-          const usersRes = await api.get('/users');
+          const usersRes = await api.get('/users/filter/list');
           setUsers(usersRes.data?.users || []);
         } else {
           setUsers([]);

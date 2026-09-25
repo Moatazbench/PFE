@@ -1,0 +1,340 @@
+diff --git a/backend/services/scoreCalculationService.js b/backend/services/scoreCalculationService.js
+--- a/backend/services/scoreCalculationService.js
++++ b/backend/services/scoreCalculationService.js
+@@
+ const FINAL_SCORE_OBJECTIVE_STATUSES = ['approved', 'validated', 'evaluated', 'locked'];
++
++// The report defines one four-band taxonomy for final evaluations. Objective
++// completion labels and ML prediction outputs are separate concepts.
++const FINAL_EVALUATION_RATING_BANDS = Object.freeze([
++  { min: 90, label: 'exceptional' },
++  { min: 75, label: 'exceeds_expectations' },
++  { min: 60, label: 'meets_expectations' },
++  { min: 0, label: 'needs_improvement' },
++]);
+@@
+ const determineRatingLabel = (score) => {
+   const normalizedScore = clampPercentage(score);
+-  if (normalizedScore >= 90) return 'exceptional';
+-  if (normalizedScore >= 75) return 'strong';
+-  if (normalizedScore >= 50) return 'meets_expectations';
+-  if (normalizedScore >= 30) return 'needs_improvement';
+-  return 'unsatisfactory';
++  return FINAL_EVALUATION_RATING_BANDS.find((band) => normalizedScore >= band.min).label;
+ };
+@@
+   getConfirmedAchievement,
+   FINAL_SCORE_OBJECTIVE_STATUSES,
++  FINAL_EVALUATION_RATING_BANDS,
+ };
+
+diff --git a/backend/models/FinalEvaluation.js b/backend/models/FinalEvaluation.js
+--- a/backend/models/FinalEvaluation.js
++++ b/backend/models/FinalEvaluation.js
+@@
+-  manager_score: { type: Number }, // manager override
++  manager_score: { type: Number }, // retained for legacy records; equals auto_score for new evaluations
+   final_score: { type: Number }, // resolved final
+-  rating_label: { type: String, enum: ['exceptional','strong','meets_expectations','needs_improvement','unsatisfactory'] },
++  rating_label: { type: String, enum: ['exceptional', 'exceeds_expectations', 'meets_expectations', 'needs_improvement'] },
+
+diff --git a/backend/controllers/finalEvaluationController.js b/backend/controllers/finalEvaluationController.js
+--- a/backend/controllers/finalEvaluationController.js
++++ b/backend/controllers/finalEvaluationController.js
+@@
+-const SIGNIFICANT_SCORE_ADJUSTMENT = 10;
+-
+ function roundScore(value) {
+@@
+-  const resolvedScore = evaluation.manager_score != null
+-    ? Number(evaluation.manager_score)
+-    : snapshot.scoring.score;
+-  evaluation.final_score = roundScore(resolvedScore);
+-  evaluation.score_difference = roundScore(evaluation.final_score - evaluation.auto_score);
++  // The final score is reproducible from manager-confirmed objective evidence.
++  // A cycle-level override would break the documented weighted calculation.
++  evaluation.manager_score = snapshot.scoring.score;
++  evaluation.final_score = snapshot.scoring.score;
++  evaluation.score_difference = 0;
+   evaluation.rating_label = determineRatingLabel(evaluation.final_score);
+@@
+-  const difference = Math.abs(Number(evaluation.final_score || 0) - Number(evaluation.auto_score || 0));
+@@
+-  if (difference >= SIGNIFICANT_SCORE_ADJUSTMENT && !String(evaluation.manager_adjustment_justification || '').trim()) {
+-    warnings.push(`Manager score differs from the suggested score by ${roundScore(difference)} points without justification.`);
+-  }
+@@
+-      evaluation.manager_score = null;
+       evaluation.manager_adjustment_justification = '';
+@@
+-      manager_score,
+-      manager_adjustment_justification,
+       recommendation,
+@@
+-    if (manager_score !== undefined) {
+-      const parsedManagerScore = Number(manager_score);
+-      if (!Number.isFinite(parsedManagerScore) || parsedManagerScore < 0 || parsedManagerScore > 100) {
+-        return res.status(400).json({ success: false, message: 'Manager score must be between 0 and 100.' });
+-      }
+-      evaluation.manager_score = roundScore(parsedManagerScore);
+-      evaluation.final_score = evaluation.manager_score;
+-    }
+-    if (manager_adjustment_justification !== undefined) {
+-      evaluation.manager_adjustment_justification = String(manager_adjustment_justification || '').trim();
++    if (req.body.manager_score !== undefined || req.body.manager_adjustment_justification !== undefined) {
++      return res.status(400).json({
++        success: false,
++        message: 'The final score is calculated from manager-confirmed objective achievements and cannot be overridden.'
++      });
+     }
+@@
+-    const resolvedScore = evaluation.manager_score != null ? evaluation.manager_score : evaluation.auto_score;
+-    evaluation.final_score = roundScore(resolvedScore);
+-    evaluation.score_difference = roundScore(evaluation.final_score - evaluation.auto_score);
+-    evaluation.rating_label = determineRatingLabel(evaluation.final_score);
+-
+-    const significantAdjustment = Math.abs(evaluation.score_difference) >= SIGNIFICANT_SCORE_ADJUSTMENT;
+-    if (significantAdjustment && !String(evaluation.manager_adjustment_justification || '').trim()) {
+-      return res.status(400).json({
+-        success: false,
+-        message: `A justification is required when the manager score differs by ${SIGNIFICANT_SCORE_ADJUSTMENT} points or more.`,
+-        errors: [{ field: 'manager_adjustment_justification', message: 'Explain the significant score adjustment.' }]
+-      });
+-    }
++    const snapshot = await calculateEvaluationSnapshot(evaluation.employee_id, evaluation.cycle_id);
++    applyEvaluationSnapshot(evaluation, snapshot);
+@@
+-      manager_score,
+-      score_difference: evaluation.score_difference,
+-      adjustmentJustified: Boolean(evaluation.manager_adjustment_justification),
++      final_score: evaluation.final_score,
+       aiReviewedByManager: evaluation.ai_reviewed_by_manager
+@@
+-    doc.text(`Manager Score: ${evaluation.manager_score ?? 'Not adjusted'}`);
++    doc.text(`Manager-Confirmed Weighted Score: ${evaluation.final_score ?? 'Not available'}`);
+@@
+-    if (evaluation.manager_adjustment_justification) {
+-      doc.text(`Manager Adjustment Justification: ${evaluation.manager_adjustment_justification}`);
+-    }
+
+diff --git a/backend/controllers/evaluationController.js b/backend/controllers/evaluationController.js
+--- a/backend/controllers/evaluationController.js
++++ b/backend/controllers/evaluationController.js
+@@
+ const { createNotification } = require('../utils/notificationHelper');
+ const { createAuditLog } = require('../utils/auditHelper');
++const {
++  calculateWeightedScoreFromObjectives,
++  determineRatingLabel,
++  getConfirmedAchievement,
++} = require('../services/scoreCalculationService');
+@@
+-function calculateObjectiveScore(objective) {
+-  return roundScore((Number(objective.weight || 0) * clampPercent(objective.achievementPercent)) / 100);
+-}
+-
+ function calculateEvaluationScore(objectives) {
+-  return roundScore((objectives || []).reduce((sum, objective) => sum + calculateObjectiveScore(objective), 0));
++  return calculateWeightedScoreFromObjectives(objectives).score;
+@@
+ function getRubricBand(score) {
+   if (score == null) return null;
+-  if (score >= 90) return { label: 'Exceeded Expectations', range: '90-100', color: '#7c3aed' };
+-  if (score >= 75) return { label: 'Achieved', range: '75-89', color: '#16a34a' };
+-  if (score >= 50) return { label: 'Partially Achieved', range: '50-74', color: '#ca8a04' };
+-  return { label: 'Below Expectations', range: '0-49', color: '#dc2626' };
++  const rating = determineRatingLabel(score);
++  return getFullRubric().find((band) => band.key === rating);
+ }
+@@
+-    { min: 0, max: 49, label: 'Below Expectations', range: '0-49', color: '#dc2626', description: 'Results remain below target and need corrective action.' },
+-    { min: 50, max: 74, label: 'Partially Achieved', range: '50-74', color: '#ca8a04', description: 'Core objectives progressed, but gaps remain.' },
+-    { min: 75, max: 89, label: 'Achieved', range: '75-89', color: '#16a34a', description: 'Objectives were delivered consistently and on target.' },
+-    { min: 90, max: 100, label: 'Exceeded Expectations', range: '90-100', color: '#7c3aed', description: 'Performance exceeded the expected objective outcomes.' },
++    { key: 'needs_improvement', min: 0, max: 59, label: 'Needs Improvement', range: '0-59', color: '#dc2626', description: 'Results remain below target and need corrective action.' },
++    { key: 'meets_expectations', min: 60, max: 74, label: 'Meets Expectations', range: '60-74', color: '#ca8a04', description: 'Core objectives progressed as expected.' },
++    { key: 'exceeds_expectations', min: 75, max: 89, label: 'Exceeds Expectations', range: '75-89', color: '#16a34a', description: 'Objectives were delivered consistently above expectations.' },
++    { key: 'exceptional', min: 90, max: 100, label: 'Exceptional', range: '90-100', color: '#7c3aed', description: 'Performance was exceptional across the objective portfolio.' },
+@@
+-  const achievementPercent = clampPercent(objective.achievementPercent);
+-  const weightedScore = calculateObjectiveScore(objective);
++  const achievementPercent = getConfirmedAchievement(objective);
++  const weightedScore = roundScore((Number(objective.weight || 0) * achievementPercent) / 100);
+@@
+-    if (req.body.finalScore !== undefined) {
+-      const newScore = clampPercent(req.body.finalScore);
+-      evaluation.scoreHistory.push({
+-        previousScore: evaluation.finalScore,
+-        newScore,
+-        changedBy: req.user.id,
+-        reason: req.body.scoreChangeReason || 'Manual override',
+-      });
+-      evaluation.finalScore = newScore;
+-    }
++    if (req.body.finalScore !== undefined) {
++      return res.status(400).json({ success: false, message: 'Final score is calculated from manager-confirmed objective achievements and cannot be overridden.' });
++    }
++    evaluation.finalScore = evaluation.suggestedScore;
+
+diff --git a/frontend/src/pages/EvaluationScoringPage.jsx b/frontend/src/pages/EvaluationScoringPage.jsx
+--- a/frontend/src/pages/EvaluationScoringPage.jsx
++++ b/frontend/src/pages/EvaluationScoringPage.jsx
+@@
+-  const [finalScoreInput, setFinalScoreInput] = useState('');
+@@
+-      setFinalScoreInput(record.finalScore != null ? String(record.finalScore) : '');
+@@
+-      if (finalScoreInput !== '') payload.finalScore = Number(finalScoreInput);
+@@
+-      if (finalScoreInput !== '') payload.finalScore = Number(finalScoreInput);
+@@
+-  const liveScore = finalScoreInput !== '' ? Number(finalScoreInput) : (evaluation?.finalScore ?? evaluation?.suggestedScore ?? 0);
++  const liveScore = evaluation?.finalScore ?? evaluation?.suggestedScore ?? 0;
+@@
+-              <span className="eval-score-label">Final Score Override</span>
+-              <input type="number" min="0" max="100" step="0.01" value={finalScoreInput} onChange={(event) => setFinalScoreInput(event.target.value)} disabled={!canEdit} className="eval-score-input" placeholder={String(evaluation.suggestedScore ?? 0)} />
++              <span className="eval-score-label">Final Weighted Score</span>
+@@
+-        message={`Submit this evaluation with a score of ${finalScoreInput || evaluation.finalScore || evaluation.suggestedScore || 0}/100? Objectives will lock after submission.`}
++        message={`Submit this evaluation with a score of ${evaluation.finalScore ?? evaluation.suggestedScore ?? 0}/100? Objectives will lock after submission.`}
+
+diff --git a/frontend/src/pages/FinalEvaluationManager.jsx b/frontend/src/pages/FinalEvaluationManager.jsx
+--- a/frontend/src/pages/FinalEvaluationManager.jsx
++++ b/frontend/src/pages/FinalEvaluationManager.jsx
+@@
+-function ratingForScore(score) {
+-  const value = Math.max(0, Math.min(100, Number(score) || 0));
+-  if (value >= 90) return 'exceptional';
+-  if (value >= 75) return 'strong';
+-  if (value >= 50) return 'meets_expectations';
+-  if (value >= 30) return 'needs_improvement';
+-  return 'unsatisfactory';
+-}
+@@
+-    manager_score: '',
+-    rating_label: 'meets_expectations',
+     recommendation: 'no_action',
+@@
+-    manager_adjustment_justification: ''
+@@
+-      manager_score: evaluation.manager_score ?? evaluation.auto_score ?? '',
+-      rating_label: evaluation.rating_label || 'meets_expectations',
+       recommendation: evaluation.recommendation || 'no_action',
+@@
+-      manager_adjustment_justification: evaluation.manager_adjustment_justification || ''
+@@
+-      const previousAutoScore = Number(selectedEvaluation.auto_score || 0);
+       const recalculateResponse = await api.post(`/final-evaluations/${selectedEvaluation._id}/recalculate`);
+       const recalculated = recalculateResponse.data.evaluation;
+       setSelectedEvaluation(recalculated);
+-      setFormData((current) => {
+-        const currentManagerScore = Number(current.manager_score);
+-        const followsSuggestedScore = !Number.isFinite(currentManagerScore) || Math.abs(currentManagerScore - previousAutoScore) < 0.01;
+-        const nextManagerScore = followsSuggestedScore ? recalculated.auto_score : current.manager_score;
+-        return { ...current, manager_score: String(nextManagerScore), rating_label: ratingForScore(nextManagerScore) };
+-      });
+@@
+-        existing_score: Number(formData.manager_score || selectedEvaluation.auto_score || 0),
+-        rating_label: ratingForScore(formData.manager_score || selectedEvaluation.auto_score)
++        existing_score: Number(selectedEvaluation.final_score || selectedEvaluation.auto_score || 0),
++        rating_label: selectedEvaluation.rating_label
+@@
+-        const score = formData.manager_score === '' ? Number(selectedEvaluation.auto_score) : Number(formData.manager_score);
+-        const difference = Math.abs(score - Number(selectedEvaluation.auto_score || 0));
+@@
+-        if (difference >= 10 && !String(formData.manager_adjustment_justification || '').trim()) errors.push('Explain the manager score adjustment of 10 points or more.');
+@@
+-        manager_score: formData.manager_score === '' ? selectedEvaluation.auto_score : Number(formData.manager_score),
+-        manager_adjustment_justification: formData.manager_adjustment_justification,
+@@
+-  const displayedManagerScore = formData.manager_score === '' ? selectedEvaluation.auto_score : Number(formData.manager_score);
+-  const scoreDifference = Number((displayedManagerScore - Number(selectedEvaluation.auto_score || 0)).toFixed(1));
+-  const requiresAdjustmentJustification = Math.abs(scoreDifference) >= 10;
+@@
+-              <label className="ent-label">Manager Final Rating Score (%)</label>
+-              <input type="number" min="0" max="100" className="ent-input" value={formData.manager_score} onChange={(e) => { const nextScore = e.target.value; setFormData({ ...formData, manager_score: nextScore, rating_label: ratingForScore(nextScore) }); }} disabled={readOnly} />
+-              <div className="text-muted">Difference from suggested score: <strong>{scoreDifference} points</strong></div>
+@@
+-              <input className="ent-input" value={renderRatingLabel(ratingForScore(displayedManagerScore))} readOnly />
++              <input className="ent-input" value={renderRatingLabel(selectedEvaluation.rating_label)} readOnly />
+@@
+-          {requiresAdjustmentJustification && (
+-            <div>
+-              <label className="ent-label">Score Adjustment Justification *</label>
+-              <textarea className="ent-input" value={formData.manager_adjustment_justification} onChange={(e) => setFormData({ ...formData, manager_adjustment_justification: e.target.value })} disabled={readOnly} />
+-            </div>
+-          )}
+
+diff --git a/backend/tests/scoreCalculationService.test.js b/backend/tests/scoreCalculationService.test.js
+--- a/backend/tests/scoreCalculationService.test.js
++++ b/backend/tests/scoreCalculationService.test.js
+@@
+   test.each([
+-    [95, 'exceptional'],
+-    [80, 'strong'],
++    [0, 'needs_improvement'],
++    [59.99, 'needs_improvement'],
+     [60, 'meets_expectations'],
+-    [40, 'needs_improvement'],
+-    [20, 'unsatisfactory'],
++    [74.99, 'meets_expectations'],
++    [75, 'exceeds_expectations'],
++    [89.99, 'exceeds_expectations'],
++    [90, 'exceptional'],
++    [100, 'exceptional'],
+   ])('maps score %s to rating %s', (score, expected) => {
+@@
++  test('clamps invalid and decimal achievements to the documented 0-100 score range', () => {
++    const result = calculateWeightedScoreFromObjectives([
++      { weight: 50, managerAdjustedPercent: -20, status: 'evaluated' },
++      { weight: 50, managerAdjustedPercent: 88.888, status: 'evaluated' },
++    ]);
++    expect(result.score).toBe(44.44);
++  });
++
++  test('uses zero for a missing achievement without treating it as a missing objective', () => {
++    const result = calculateWeightedScoreFromObjectives([
++      { weight: 50, status: 'evaluated' },
++      { weight: 50, managerAdjustedPercent: 100, status: 'evaluated' },
++    ]);
++    expect(result.score).toBe(50);
++  });
+ });
+
+diff --git a/backend/package.json b/backend/package.json
+--- a/backend/package.json
++++ b/backend/package.json
+@@
+     "seed:historical-demo": "node scripts/seed-historical-demo.js",
++    "migrate:final-evaluation-ratings": "node scripts/migrate-final-evaluation-ratings.js",
+     "verify:historical-demo": "node scripts/verify-historical-demo.js",
+
+diff --git a/backend/scripts/migrate-final-evaluation-ratings.js b/backend/scripts/migrate-final-evaluation-ratings.js
+new file mode 100644
+--- /dev/null
++++ b/backend/scripts/migrate-final-evaluation-ratings.js
+@@
++require('dotenv').config();
++const connectDB = require('../config/db');
++const FinalEvaluation = require('../models/FinalEvaluation');
++const { determineRatingLabel } = require('../services/scoreCalculationService');
++
++async function migrateFinalEvaluationRatings() {
++  await connectDB();
++  const evaluations = await FinalEvaluation.find({ final_score: { $ne: null } }).select('_id final_score rating_label');
++  let updated = 0;
++  for (const evaluation of evaluations) {
++    const rating = determineRatingLabel(evaluation.final_score);
++    if (evaluation.rating_label !== rating) {
++      evaluation.rating_label = rating;
++      await evaluation.save();
++      updated += 1;
++    }
++  }
++  console.log(`Updated ${updated} final evaluation rating label(s).`);
++  process.exit(0);
++}
++migrateFinalEvaluationRatings().catch((error) => {
++  console.error('Final evaluation rating migration failed:', error);
++  process.exit(1);
++});
